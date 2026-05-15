@@ -15,7 +15,7 @@ Production-ready web tool to visually design, run, and monitor FIX protocol simu
 - Realtime: WebSocket STOMP/SockJS
 - Build: Maven multi-module + Vite (frontend built into JAR static resources)
 - Architecture: Monolithic fat-JAR with hexagonal internals (ports + adapters)
-- FIX versions: FIX 4.2, FIX 4.4 (QuickFIX/J data dictionaries for both)
+- FIX versions: FIX 4.2, FIX 4.4, FIX 5.0 SP2 (FIXT.1.1 session layer) — selected per session, configurable via GUI and REST API
 
 ---
 
@@ -184,6 +184,8 @@ edges:
 ```
 FIXSessionManager
 ├── owns Map<sessionId, QuickFIX/J Session>
+├── builds QuickFIX/J SessionSettings from persisted FIXSession config at connect time
+├── supports FIX 4.2, FIX 4.4, FIXT.1.1/FIX50SP2 — data dictionary selected by fixVersion field
 ├── start/stop sessions independently of scenarios
 ├── emits: SESSION_UP, SESSION_DOWN events
 └── on reconnect: notifies all active executions
@@ -283,10 +285,35 @@ Extensible via `VariableResolverPlugin` interface.
 | GET | /executions/{id}/report | Downloadable report |
 | GET | /sessions | List sessions |
 | POST | /sessions | Create/configure session |
+| PUT | /sessions/{id} | Update session config (including FIX version) |
+| DELETE | /sessions/{id} | Delete session |
 | PUT | /sessions/{id}/connect | Connect session |
 | PUT | /sessions/{id}/disconnect | Disconnect session |
 | GET | /sessions/{id}/status | Live session status |
 | POST | /scenarios/{id}/reload | Hot reload |
+
+**FIX Session config payload (POST/PUT /sessions):**
+```json
+{
+  "name": "SIMULATOR",
+  "mode": "INITIATOR",
+  "fixVersion": "FIXT.1.1",
+  "defaultApplVerID": "FIX.5.0SP2",
+  "senderCompID": "CLIENT",
+  "targetCompID": "SERVER",
+  "host": "localhost",
+  "port": 9878,
+  "heartbeatInterval": 30,
+  "reconnectInterval": 5,
+  "resetOnLogon": false,
+  "resetOnLogout": false
+}
+```
+`fixVersion` accepted values: `"FIX.4.2"`, `"FIX.4.4"`, `"FIXT.1.1"` (FIX 5.0 SP2).
+- FIX 4.2 / 4.4: standard session + application layer, single data dictionary.
+- FIXT.1.1 + FIX50SP2: split session/application dictionaries, QuickFIX/J `DefaultApplVerID=FIX.5.0SP2`.
+
+QuickFIX/J loads the corresponding data dictionary at session creation. Changing `fixVersion` requires session disconnect + reconnect (enforced by API — 409 if session connected).
 
 ### WebSocket STOMP Topics
 ```
@@ -303,7 +330,8 @@ Extensible via `VariableResolverPlugin` interface.
 ```sql
 scenarios         (id, name, version, yaml_dsl, created_at, updated_at)
 scenario_versions (id, scenario_id, version, yaml_dsl, created_at)
-fix_sessions      (id, name, config_json, mode, fix_version)
+fix_sessions      (id, name, config_json, mode, fix_version, default_appl_ver_id,
+                   sender_comp_id, target_comp_id, host, port, heartbeat_interval)
 executions        (id, scenario_id, scenario_version, session_id,
                    status, start_time, end_time)
 execution_events  (id, execution_id, type, node_id, timestamp, detail_json)
@@ -379,7 +407,7 @@ fix-flow-ui/src/
 │   │   │   ├── ValidateConfig.tsx
 │   │   │   ├── DateRulesEditor.tsx
 │   │   │   └── TimeoutConfig.tsx
-│   │   └── SessionPanel.tsx
+│   │   └── SessionPanel.tsx       ← session selector, FIX version dropdown (4.2/4.4/5.0SP2), connect/disconnect
 │   └── bottom/
 │       ├── RuntimePanel.tsx       ← tabs: Events | FIX Messages | Errors | Stats
 │       ├── EventLog.tsx           ← live execution events (WS feed)
