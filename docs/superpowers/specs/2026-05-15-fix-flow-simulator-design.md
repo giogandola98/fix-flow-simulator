@@ -407,7 +407,12 @@ fix-flow-ui/src/
 │   │   │   ├── ValidateConfig.tsx
 │   │   │   ├── DateRulesEditor.tsx
 │   │   │   └── TimeoutConfig.tsx
-│   │   └── SessionPanel.tsx       ← session selector, FIX version dropdown (4.2/4.4/5.0SP2), connect/disconnect
+│   │   └── SessionPanel.tsx       ← session selector + full session config form:
+│   │                                   name, mode (INITIATOR/ACCEPTOR),
+│   │                                   FIX version dropdown (4.2/4.4/5.0SP2),
+│   │                                   SenderCompID, TargetCompID,
+│   │                                   host, port, heartbeat interval,
+│   │                                   connect/disconnect button
 │   └── bottom/
 │       ├── RuntimePanel.tsx       ← tabs: Events | FIX Messages | Errors | Stats
 │       ├── EventLog.tsx           ← live execution events (WS feed)
