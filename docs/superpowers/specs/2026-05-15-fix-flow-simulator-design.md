@@ -15,6 +15,7 @@ Production-ready web tool to visually design, run, and monitor FIX protocol simu
 - Realtime: WebSocket STOMP/SockJS
 - Build: Maven multi-module + Vite (frontend built into JAR static resources)
 - Architecture: Monolithic fat-JAR with hexagonal internals (ports + adapters)
+- FIX versions: FIX 4.2, FIX 4.4 (QuickFIX/J data dictionaries for both)
 
 ---
 
@@ -58,11 +59,24 @@ Scenario
 ├── id, name, description, version
 ├── sessionRef (FIXSessionId)
 ├── runtimePolicy (SEQUENTIAL | PARALLEL)
+│     SEQUENTIAL: only one execution of this scenario runs at a time
+│     PARALLEL: multiple concurrent executions of the same scenario allowed
 ├── routingRules: List<RoutingRule>
 ├── correlationRules: List<CorrelationRule>
 ├── nodes: List<Node>
 ├── edges: List<Edge>
 └── variables: Map<String, VariableDef>
+
+RoutingRule
+├── criteria: Map<String, String>   ← tag/field matchers (e.g. MsgType=R, SenderCompID=BROKER)
+├── scenarioId: String              ← route to this scenario
+└── priority: int                   ← higher = evaluated first
+
+CorrelationRule
+├── sourceTag: int                  ← tag in incoming message (e.g. 131)
+├── targetNode: String              ← node whose sent/received message provides reference value
+├── targetTag: int                  ← tag from that node's message
+└── timeWindowMs: long              ← max age of reference message (0 = no limit)
 ```
 
 ### Node (polymorphic)
