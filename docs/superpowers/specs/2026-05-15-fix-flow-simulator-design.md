@@ -416,7 +416,9 @@ fix-flow-ui/src/
 │   └── bottom/
 │       ├── RuntimePanel.tsx       ← tabs: Events | FIX Messages | Errors | Stats
 │       ├── EventLog.tsx           ← live execution events (WS feed)
-│       ├── FIXMessageLog.tsx      ← raw + parsed FIX
+│       ├── FIXMessageLog.tsx      ← raw + parsed FIX messages
+│       │                              ☑ "Hide Heartbeats" checkbox filters MsgType=0 (Heartbeat)
+│       │                              and MsgType=1 (TestRequest) from display; messages still persisted
 │       ├── ValidationErrors.tsx
 │       └── ExecutionStats.tsx
 ├── store/
