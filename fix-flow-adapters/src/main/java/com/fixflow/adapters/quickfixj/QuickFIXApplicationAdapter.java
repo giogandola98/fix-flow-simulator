@@ -7,12 +7,15 @@ import com.fixflow.core.ports.outbound.InboundMessageListener;
 import quickfix.*;
 import quickfix.Message;
 
+import org.springframework.stereotype.Component;
+
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 
+@Component
 public class QuickFIXApplicationAdapter implements Application {
 
     private final InboundMessageListener listener;

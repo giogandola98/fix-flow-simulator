@@ -3,6 +3,7 @@ package com.fixflow.engine.handlers;
 import com.fixflow.core.domain.scenario.NodeType;
 import com.fixflow.core.domain.scenario.ScenarioNode;
 import com.fixflow.engine.execution.ExecutionContext;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -10,7 +11,7 @@ public class LoopHandler implements NodeHandler {
 
     private final NodeDispatcher dispatcher;
 
-    public LoopHandler(NodeDispatcher dispatcher) { this.dispatcher = dispatcher; }
+    public LoopHandler(@Lazy NodeDispatcher dispatcher) { this.dispatcher = dispatcher; }
 
     @Override
     public NodeType getSupportedType() { return NodeType.LOOP; }

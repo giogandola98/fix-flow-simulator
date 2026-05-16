@@ -15,5 +15,15 @@ spring:
     console:
       enabled: true
       path: /h2-console
+  threads:
+    virtual:
+      enabled: true
+  application:
+    name: fix-flow
+
 server:
   port: 8080
+
+logging:
+  level:
+    com.fixflow: DEBUG

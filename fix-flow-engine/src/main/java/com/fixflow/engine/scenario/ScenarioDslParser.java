@@ -7,12 +7,14 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import com.fixflow.core.domain.scenario.*;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Component
 public class ScenarioDslParser {
 
     private final ObjectMapper mapper;
