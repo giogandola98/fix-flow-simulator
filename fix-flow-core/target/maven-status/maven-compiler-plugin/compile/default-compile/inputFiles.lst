@@ -20,3 +20,11 @@
 /home/giorgio/Documenti/FIx Flow SImulator/fix-flow-core/src/main/java/com/fixflow/core/domain/session/FIXMode.java
 /home/giorgio/Documenti/FIx Flow SImulator/fix-flow-core/src/main/java/com/fixflow/core/domain/session/FIXSessionConfig.java
 /home/giorgio/Documenti/FIx Flow SImulator/fix-flow-core/src/main/java/com/fixflow/core/domain/session/FIXVersion.java
+/home/giorgio/Documenti/FIx Flow SImulator/fix-flow-core/src/main/java/com/fixflow/core/ports/inbound/ExecutionUseCase.java
+/home/giorgio/Documenti/FIx Flow SImulator/fix-flow-core/src/main/java/com/fixflow/core/ports/inbound/ScenarioUseCase.java
+/home/giorgio/Documenti/FIx Flow SImulator/fix-flow-core/src/main/java/com/fixflow/core/ports/inbound/SessionUseCase.java
+/home/giorgio/Documenti/FIx Flow SImulator/fix-flow-core/src/main/java/com/fixflow/core/ports/outbound/EventPublisherPort.java
+/home/giorgio/Documenti/FIx Flow SImulator/fix-flow-core/src/main/java/com/fixflow/core/ports/outbound/ExecutionRepositoryPort.java
+/home/giorgio/Documenti/FIx Flow SImulator/fix-flow-core/src/main/java/com/fixflow/core/ports/outbound/FIXSessionPort.java
+/home/giorgio/Documenti/FIx Flow SImulator/fix-flow-core/src/main/java/com/fixflow/core/ports/outbound/InboundMessageListener.java
+/home/giorgio/Documenti/FIx Flow SImulator/fix-flow-core/src/main/java/com/fixflow/core/ports/outbound/ScenarioRepositoryPort.java
