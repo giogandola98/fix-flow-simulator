@@ -1,0 +1,6 @@
+package com.fixflow.core.domain.execution;
+
+public enum ExecutionEventType {
+    EXECUTION_STARTED, EXECUTION_FINISHED, NODE_ENTERED, NODE_EXITED,
+    MESSAGE_SENT, MESSAGE_RECEIVED, TIMEOUT, ERROR, SESSION_UP, SESSION_DOWN
+}
