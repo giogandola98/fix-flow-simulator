@@ -31,8 +31,8 @@
         <module>fix-flow-core</module>
         <module>fix-flow-engine</module>
         <module>fix-flow-adapters</module>
-        <module>fix-flow-api</module>
         <module>fix-flow-ui</module>
+        <module>fix-flow-api</module>
     </modules>
 
     <dependencyManagement>
