@@ -27,6 +27,7 @@ public class FIXSessionManager {
     }
 
     public void disconnect(UUID id) {
+        known.remove(id);
         port.disconnect(id);
     }
 
