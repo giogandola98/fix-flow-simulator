@@ -144,7 +144,7 @@ public class ScenarioDslParser {
     }
 
     public record RoutingRuleDto(Map<String, String> criteria, String scenarioId, int priority) {
-        RoutingRule toDomain() { return new RoutingRule(criteria, scenarioId, priority); }
+        RoutingRule toDomain() { return new RoutingRule(criteria == null ? Map.of() : criteria, scenarioId, priority); }
         static RoutingRuleDto fromDomain(RoutingRule r) {
             return new RoutingRuleDto(r.criteria(), r.scenarioId(), r.priority());
         }
