@@ -21,6 +21,7 @@ export default function TopBar() {
       return executeScenario(activeScenario.id, activeSession.id);
     },
     onSuccess: (exec) => {
+      useExecutionStore.getState().reset();
       setActiveExecution(exec.executionId);
       updateStatus('RUNNING');
     },
