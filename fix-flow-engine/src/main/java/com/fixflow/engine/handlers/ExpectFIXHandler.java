@@ -42,6 +42,10 @@ public class ExpectFIXHandler implements NodeHandler {
         } catch (TimeoutException timeout) {
             correlation.cancel(ctx.executionId().toString());
             return onTimeout(node);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            correlation.cancel(ctx.executionId().toString());
+            throw ie;
         } catch (Exception other) {
             correlation.cancel(ctx.executionId().toString());
             return NodeHandlerResult.failure(node.onFailure(), other.getMessage());
