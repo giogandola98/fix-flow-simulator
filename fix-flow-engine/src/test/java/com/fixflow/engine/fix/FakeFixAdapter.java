@@ -1,0 +1,53 @@
+package com.fixflow.engine.fix;
+
+import com.fixflow.core.domain.session.FIXSessionConfig;
+import com.fixflow.core.ports.outbound.FIXSessionPort;
+import com.fixflow.core.ports.outbound.InboundMessageListener;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+public class FakeFixAdapter implements FIXSessionPort {
+
+    private final Map<UUID, Boolean> connected = new ConcurrentHashMap<>();
+    private final List<Map<Integer, String>> sentMessages = new CopyOnWriteArrayList<>();
+    private volatile InboundMessageListener listener;
+
+    @Override
+    public void connect(FIXSessionConfig config) {
+        connected.put(config.id(), true);
+    }
+
+    @Override
+    public void disconnect(UUID sessionId) {
+        connected.put(sessionId, false);
+    }
+
+    @Override
+    public boolean isConnected(UUID sessionId) {
+        return connected.getOrDefault(sessionId, false);
+    }
+
+    @Override
+    public void sendMessage(UUID sessionId, Map<Integer, String> fields) {
+        sentMessages.add(new HashMap<>(fields));
+    }
+
+    @Override
+    public void setInboundListener(InboundMessageListener l) { this.listener = l; }
+
+    public void injectInbound(UUID sessionId, Map<Integer, String> fields) {
+        InboundMessageListener l = listener;
+        if (l != null) l.onMessage(sessionId.toString(), fields);
+    }
+
+    public List<Map<Integer, String>> getSentMessages() {
+        return List.copyOf(sentMessages);
+    }
+
+    public void reset() {
+        sentMessages.clear();
+        connected.clear();
+    }
+}
