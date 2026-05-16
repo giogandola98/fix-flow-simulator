@@ -22,14 +22,17 @@ public class CorrelationEngine {
                                                             CorrelationRule rule,
                                                             String expectedValue) {
         CompletableFuture<Map<Integer, String>> future = new CompletableFuture<>();
-        waiters.put(executionId, new CorrelationWaiter(executionId, rule, expectedValue, future));
+        CorrelationWaiter waiter = new CorrelationWaiter(executionId, rule, expectedValue, future);
+        if (waiters.putIfAbsent(executionId, waiter) != null) {
+            throw new IllegalStateException("duplicate executionId: " + executionId);
+        }
         return future;
     }
 
     public boolean onMessage(String sessionId, Map<Integer, String> fields) {
         for (CorrelationWaiter w : waiters.values()) {
-            String actual = fields.getOrDefault(w.rule().sourceTag(), "");
-            if (actual.equals(w.expectedValue())) {
+            String actual = fields.get(w.rule().sourceTag());
+            if (actual != null && actual.equals(w.expectedValue())) {
                 waiters.remove(w.executionId());
                 w.future().complete(Map.copyOf(fields));
                 return true;
