@@ -1,0 +1,117 @@
+package com.fixflow.adapters.persistence;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fixflow.adapters.persistence.entity.*;
+import com.fixflow.adapters.persistence.jpa.*;
+import com.fixflow.core.domain.execution.*;
+import com.fixflow.core.ports.outbound.ExecutionRepositoryPort;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.io.UncheckedIOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+@Component
+public class ExecutionRepositoryAdapter implements ExecutionRepositoryPort {
+
+    private final JpaExecutionRepository executionRepo;
+    private final JpaExecutionEventRepository eventRepo;
+    private final JpaFIXMessageRepository messageRepo;
+    private final JpaNodeResultRepository nodeResultRepo;
+    private final ObjectMapper json = new ObjectMapper();
+
+    public ExecutionRepositoryAdapter(JpaExecutionRepository executionRepo,
+                                      JpaExecutionEventRepository eventRepo,
+                                      JpaFIXMessageRepository messageRepo,
+                                      JpaNodeResultRepository nodeResultRepo) {
+        this.executionRepo = executionRepo;
+        this.eventRepo = eventRepo;
+        this.messageRepo = messageRepo;
+        this.nodeResultRepo = nodeResultRepo;
+    }
+
+    @Override
+    @Transactional
+    public Execution save(Execution execution) {
+        ExecutionEntity e = executionRepo.findById(execution.id()).orElseGet(ExecutionEntity::new);
+        e.setId(execution.id());
+        e.setScenarioId(execution.scenarioId());
+        e.setScenarioVersion(execution.scenarioVersion());
+        e.setSessionId(execution.sessionId());
+        e.setStatus(execution.status());
+        e.setStartTime(execution.startTime());
+        e.setEndTime(execution.endTime());
+        e.setCurrentNodeId(execution.currentNodeId());
+        e.setVariablesJson(writeJson(execution.variables()));
+        executionRepo.save(e);
+        return execution;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Execution> findById(UUID id) {
+        return executionRepo.findById(id).map(e -> new Execution(
+                e.getId(), e.getScenarioId(), e.getScenarioVersion(), e.getSessionId(),
+                e.getStatus(), e.getStartTime(), e.getEndTime(), e.getCurrentNodeId(),
+                readStringMap(e.getVariablesJson()),
+                List.of(), List.of()
+        ));
+    }
+
+    @Override
+    @Transactional
+    public void addEvent(UUID executionId, ExecutionEvent event) {
+        ExecutionEventEntity e = new ExecutionEventEntity();
+        e.setId(event.id() == null ? UUID.randomUUID() : event.id());
+        e.setExecutionId(executionId);
+        e.setType(event.type());
+        e.setNodeId(event.nodeId());
+        e.setTimestamp(event.timestamp());
+        e.setDetail(event.detail());
+        e.setRawFix(event.rawFix());
+        eventRepo.save(e);
+    }
+
+    @Override
+    @Transactional
+    public void addMessage(UUID executionId, FIXMessage message) {
+        FIXMessageEntity e = new FIXMessageEntity();
+        e.setId(message.id() == null ? UUID.randomUUID() : message.id());
+        e.setExecutionId(executionId);
+        e.setDirection(message.direction());
+        e.setRawFix(message.rawFix());
+        e.setFieldsJson(writeJson(message.fields()));
+        e.setReceivedAt(message.receivedAt());
+        messageRepo.save(e);
+    }
+
+    @Override
+    @Transactional
+    public void addNodeResult(UUID executionId, NodeResult result) {
+        NodeResultEntity e = new NodeResultEntity();
+        e.setId(result.id() == null ? UUID.randomUUID() : result.id());
+        e.setExecutionId(executionId);
+        e.setNodeId(result.nodeId());
+        e.setStatus(result.status());
+        e.setStartTime(result.startTime());
+        e.setEndTime(result.endTime());
+        e.setError(result.error());
+        nodeResultRepo.save(e);
+    }
+
+    private String writeJson(Object obj) {
+        try { return json.writeValueAsString(obj == null ? Map.of() : obj); }
+        catch (JsonProcessingException ex) { throw new UncheckedIOException(ex); }
+    }
+
+    private Map<String, String> readStringMap(String s) {
+        if (s == null || s.isBlank()) return Map.of();
+        try { return json.readValue(s, new TypeReference<Map<String, String>>() {}); }
+        catch (Exception ex) { throw new RuntimeException(ex); }
+    }
+}
