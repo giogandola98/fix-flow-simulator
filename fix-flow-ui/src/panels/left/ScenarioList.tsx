@@ -4,15 +4,6 @@ import { getScenarios, createScenario } from '../../api/scenarios';
 import { useScenarioStore } from '../../store/scenarioStore';
 import { Scenario } from '../../types';
 
-const EMPTY_YAML = `id: new-scenario
-name: New Scenario
-description: ''
-version: '1.0'
-sessionRef: default
-nodes: []
-edges: []
-`;
-
 export function ScenarioList() {
   const queryClient = useQueryClient();
   const setScenarios = useScenarioStore((s) => s.setScenarios);
@@ -36,7 +27,7 @@ export function ScenarioList() {
         name: 'New Scenario',
         description: '',
         sessionRef: 'default',
-        yamlDsl: EMPTY_YAML,
+        yamlDsl: '',
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['scenarios'] }),
   });

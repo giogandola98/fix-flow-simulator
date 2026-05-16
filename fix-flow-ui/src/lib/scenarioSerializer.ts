@@ -56,7 +56,6 @@ export function serializeToYaml(
       onSuccess: n.onSuccess,
       onFailure: n.onFailure,
       onTimeout: n.onTimeout,
-      position: n.position,
     })),
     edges: edges.map((e) => ({ from: e.from, to: e.to, label: e.label })),
   };
