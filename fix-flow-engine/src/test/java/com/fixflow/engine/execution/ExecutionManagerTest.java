@@ -5,6 +5,7 @@ import com.fixflow.core.domain.scenario.*;
 import com.fixflow.core.domain.session.*;
 import com.fixflow.engine.fix.FakeFixAdapter;
 import com.fixflow.engine.handlers.*;
+import com.fixflow.engine.variable.VariableResolver;
 import com.fixflow.engine.scenario.ScenarioRegistry;
 import org.junit.jupiter.api.Test;
 
@@ -25,7 +26,7 @@ class ExecutionManagerTest {
 
         NodeDispatcher dispatcher = new NodeDispatcher(List.of(
                 new StartHandler(),
-                new SendFIXHandler(fake),
+                new SendFIXHandler(fake, new VariableResolver()),
                 new EndHandler(),
                 new EndFailHandler()
         ));

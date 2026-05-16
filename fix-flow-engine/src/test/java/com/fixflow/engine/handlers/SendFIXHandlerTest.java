@@ -4,6 +4,7 @@ import com.fixflow.core.domain.scenario.*;
 import com.fixflow.core.domain.session.*;
 import com.fixflow.engine.execution.ExecutionContext;
 import com.fixflow.engine.fix.FakeFixAdapter;
+import com.fixflow.engine.variable.VariableResolver;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -21,7 +22,7 @@ class SendFIXHandlerTest {
         fake.connect(new FIXSessionConfig(sessionId, "s1", FIXMode.INITIATOR, FIXVersion.FIX_44,
                 null, "S", "T", "h", 1, 30, 5, true, false));
 
-        SendFIXHandler handler = new SendFIXHandler(fake);
+        SendFIXHandler handler = new SendFIXHandler(fake, new VariableResolver());
 
         ScenarioNode node = new ScenarioNode("n2", "send", NodeType.SEND_FIX,
                 Map.of("msgType", "D", "fields", Map.of("11", "CL-1", "55", "AAPL")),

@@ -9,6 +9,7 @@ import com.fixflow.engine.fix.FakeFixAdapter;
 import com.fixflow.engine.fix.MessageBuffer;
 import com.fixflow.engine.fix.MessageRouter;
 import com.fixflow.engine.handlers.*;
+import com.fixflow.engine.variable.VariableResolver;
 import com.fixflow.engine.scenario.ScenarioRegistry;
 import org.junit.jupiter.api.Test;
 
@@ -32,7 +33,7 @@ class MultiScenarioIntegrationTest {
 
         NodeDispatcher dispatcher = new NodeDispatcher(List.of(
                 new StartHandler(),
-                new SendFIXHandler(fake),
+                new SendFIXHandler(fake, new VariableResolver()),
                 new ExpectFIXHandler(correlation),
                 new EndHandler(),
                 new EndFailHandler()
