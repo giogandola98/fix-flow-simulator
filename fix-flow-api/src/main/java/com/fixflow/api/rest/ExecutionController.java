@@ -1,13 +1,18 @@
 package com.fixflow.api.rest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fixflow.api.dto.ReportDto;
 import com.fixflow.api.rest.dto.ExecutionDto;
 import com.fixflow.api.rest.dto.ExecutionReportDto;
 import com.fixflow.api.rest.dto.StartExecutionRequest;
+import com.fixflow.api.service.ReportService;
 import com.fixflow.core.domain.execution.Execution;
 import com.fixflow.core.domain.execution.ExecutionEvent;
 import com.fixflow.core.domain.execution.ExecutionEventType;
 import com.fixflow.core.ports.outbound.ExecutionRepositoryPort;
 import com.fixflow.engine.execution.ExecutionManager;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,10 +27,15 @@ public class ExecutionController {
 
     private final ExecutionManager manager;
     private final ExecutionRepositoryPort repo;
+    private final ReportService reportService;
+    private final ObjectMapper objectMapper;
 
-    public ExecutionController(ExecutionManager manager, ExecutionRepositoryPort repo) {
+    public ExecutionController(ExecutionManager manager, ExecutionRepositoryPort repo,
+                               ReportService reportService, ObjectMapper objectMapper) {
         this.manager = manager;
         this.repo = repo;
+        this.reportService = reportService;
+        this.objectMapper = objectMapper;
     }
 
     @PostMapping("/api/v1/scenarios/{scenarioId}/execute")
@@ -65,8 +75,19 @@ public class ExecutionController {
     }
 
     @GetMapping("/api/v1/executions/{id}/report")
-    public ExecutionReportDto report(@PathVariable UUID id) {
-        return ExecutionReportDto.from(load(id));
+    public ReportDto getReport(@PathVariable UUID id) {
+        return reportService.buildReport(id);
+    }
+
+    @GetMapping("/api/v1/executions/{id}/report/download")
+    public ResponseEntity<byte[]> downloadReport(@PathVariable UUID id) throws Exception {
+        ReportDto report = reportService.buildReport(id);
+        byte[] bytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(report);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"execution-" + id + "-report.json\"")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(bytes);
     }
 
     private Execution load(UUID id) {

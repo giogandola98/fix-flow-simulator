@@ -52,6 +52,24 @@ public class ScenarioController {
             .orElseThrow(() -> new NoSuchElementException("scenario not found: " + id)));
     }
 
+    @PutMapping("/{id}")
+    public ScenarioDto update(@PathVariable UUID id, @RequestBody ScenarioRequest req) {
+        Scenario existing = repo.findById(id)
+            .orElseThrow(() -> new NoSuchElementException("scenario not found: " + id));
+        Scenario updated = req.yamlDsl() != null && !req.yamlDsl().isBlank()
+            ? parser.parseYaml(req.yamlDsl())
+            : new Scenario(existing.id(),
+                           req.name() != null ? req.name() : existing.name(),
+                           req.description() != null ? req.description() : existing.description(),
+                           existing.version(), existing.sessionRef(),
+                           existing.runtimePolicy(), existing.routingRules(),
+                           existing.correlationRules(), existing.nodes(),
+                           existing.edges(), existing.variables());
+        Scenario saved = repo.save(updated);
+        registry.register(saved);
+        return ScenarioDto.from(saved);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         repo.delete(id);

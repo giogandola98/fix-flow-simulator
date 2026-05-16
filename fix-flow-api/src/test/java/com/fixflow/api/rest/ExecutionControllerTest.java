@@ -1,7 +1,9 @@
 package com.fixflow.api.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fixflow.api.dto.ReportDto;
 import com.fixflow.api.rest.dto.StartExecutionRequest;
+import com.fixflow.api.service.ReportService;
 import com.fixflow.core.domain.execution.Execution;
 import com.fixflow.core.domain.execution.ExecutionStatus;
 import com.fixflow.core.ports.outbound.ExecutionRepositoryPort;
@@ -14,6 +16,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -29,6 +33,7 @@ class ExecutionControllerTest {
     @Autowired ObjectMapper json;
     @MockBean ExecutionManager manager;
     @MockBean ExecutionRepositoryPort repo;
+    @MockBean ReportService reportService;
 
     private Execution minExecution(UUID id, ExecutionStatus status) {
         return new Execution(id, UUID.randomUUID(), "1", UUID.randomUUID(),
@@ -85,9 +90,11 @@ class ExecutionControllerTest {
     @Test
     void getReportReturnsJson() throws Exception {
         UUID id = UUID.randomUUID();
-        when(repo.findById(id)).thenReturn(Optional.of(minExecution(id, ExecutionStatus.PASSED)));
+        ReportDto report = new ReportDto(id.toString(), "test-scenario", "1", "test-session",
+                "PASSED", null, null, 0L, List.of(), List.of(), List.of(), Map.of());
+        when(reportService.buildReport(id)).thenReturn(report);
         mvc.perform(get("/api/v1/executions/" + id + "/report"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.execution.id").value(id.toString()));
+            .andExpect(jsonPath("$.executionId").value(id.toString()));
     }
 }
