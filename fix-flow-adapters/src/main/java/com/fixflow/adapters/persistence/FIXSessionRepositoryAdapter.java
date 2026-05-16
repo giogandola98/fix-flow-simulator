@@ -47,6 +47,9 @@ public class FIXSessionRepositoryAdapter {
         return repo.findAll().stream().map(this::toDomain).toList();
     }
 
+    @Transactional
+    public void delete(UUID id) { repo.deleteById(id); }
+
     private FIXSessionConfig toDomain(FIXSessionEntity e) {
         return new FIXSessionConfig(
                 e.getId(), e.getName(), e.getMode(), e.getFixVersion(),
