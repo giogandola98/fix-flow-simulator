@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useExecutionStore } from '../../store/executionStore';
+import { ExecutionReport } from './ExecutionReport';
 
 export function ExecutionStats() {
   const events = useExecutionStore((s) => s.events);
@@ -28,12 +29,17 @@ export function ExecutionStats() {
   }, [events, startedAt, endedAt]);
 
   return (
-    <div className="h-full overflow-y-auto px-3 py-2 grid grid-cols-2 gap-2 text-xs">
-      <Stat label="Status" value={executionStatus} />
-      <Stat label="Nodes passed" value={String(stats.nodesPassed)} />
-      <Stat label="Nodes failed" value={String(stats.nodesFailed)} />
-      <Stat label="Avg node time" value={`${stats.avgNodeMs} ms`} />
-      <Stat label="Total duration" value={`${stats.duration} ms`} />
+    <div className="h-full overflow-y-auto px-3 py-2 space-y-2 text-xs">
+      <div className="flex justify-end">
+        <ExecutionReport />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Stat label="Status" value={executionStatus} />
+        <Stat label="Nodes passed" value={String(stats.nodesPassed)} />
+        <Stat label="Nodes failed" value={String(stats.nodesFailed)} />
+        <Stat label="Avg node time" value={`${stats.avgNodeMs} ms`} />
+        <Stat label="Total duration" value={`${stats.duration} ms`} />
+      </div>
     </div>
   );
 }

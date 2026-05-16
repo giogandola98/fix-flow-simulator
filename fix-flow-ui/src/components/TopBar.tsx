@@ -2,13 +2,16 @@ import { useMutation } from '@tanstack/react-query';
 import { useScenarioStore } from '../store/scenarioStore';
 import { useSessionStore } from '../store/sessionStore';
 import { useExecutionStore } from '../store/executionStore';
-import { executeScenario } from '../api/scenarios';
+import { executeScenario, updateScenario } from '../api/scenarios';
 import { stopExecution } from '../api/executions';
+import { serializeToYaml } from '../lib/scenarioSerializer';
 
 export default function TopBar() {
   const activeScenario = useScenarioStore((s) => s.activeScenario);
   const isDirty = useScenarioStore((s) => s.isDirty);
   const markClean = useScenarioStore((s) => s.markClean);
+  const nodes = useScenarioStore((s) => s.nodes);
+  const edges = useScenarioStore((s) => s.edges);
   const activeSession = useSessionStore((s) => s.activeSession);
   const activeExecutionId = useExecutionStore((s) => s.activeExecutionId);
   const executionStatus = useExecutionStore((s) => s.executionStatus);
@@ -35,6 +38,26 @@ export default function TopBar() {
     onSuccess: () => updateStatus('STOPPED'),
   });
 
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeScenario) throw new Error('No active scenario');
+      const yamlDsl = serializeToYaml(nodes, edges, {
+        id: activeScenario.id,
+        name: activeScenario.name,
+        description: activeScenario.description,
+        version: activeScenario.version,
+        sessionRef: activeScenario.sessionRef,
+      });
+      return updateScenario(activeScenario.id, {
+        name: activeScenario.name,
+        description: activeScenario.description,
+        sessionRef: activeScenario.sessionRef,
+        yamlDsl,
+      });
+    },
+    onSuccess: () => markClean(),
+  });
+
   const isRunning = executionStatus === 'RUNNING';
 
   return (
@@ -58,9 +81,8 @@ export default function TopBar() {
       </button>
       <button
         className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-sm"
-        onClick={() => markClean()}
+        onClick={() => saveMutation.mutate()}
         disabled={!activeScenario || !isDirty}
-        title="Save (backend sync in Task 45)"
       >
         Save{isDirty ? ' •' : ''}
       </button>
