@@ -33,6 +33,9 @@ public class ExecutionEventEntity {
     @Column(columnDefinition = "CLOB")
     private String rawFix;
 
+    @PrePersist
+    void onInsert() { if (timestamp == null) timestamp = Instant.now(); }
+
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
     public UUID getExecutionId() { return executionId; }

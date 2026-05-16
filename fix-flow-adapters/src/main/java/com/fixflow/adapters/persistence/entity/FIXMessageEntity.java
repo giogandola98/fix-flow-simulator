@@ -31,6 +31,9 @@ public class FIXMessageEntity {
     @Column(nullable = false)
     private Instant receivedAt;
 
+    @PrePersist
+    void onInsert() { if (receivedAt == null) receivedAt = Instant.now(); }
+
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
     public UUID getExecutionId() { return executionId; }

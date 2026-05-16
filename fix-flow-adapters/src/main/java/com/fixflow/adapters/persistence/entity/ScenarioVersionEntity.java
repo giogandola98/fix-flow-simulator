@@ -7,7 +7,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "scenario_versions",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"scenarioId", "version"}))
+       uniqueConstraints = @UniqueConstraint(columnNames = {"scenario_id", "version"}))
 public class ScenarioVersionEntity {
 
     @Id
