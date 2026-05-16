@@ -60,3 +60,5 @@ export interface ExecutionReport {
 }
 
 export interface ErrorResponse { status: number; error: string; message: string; timestamp: string; }
+
+export interface ValidationError { tag: number; rule: string; expected: string; actual: string; message?: string; }
