@@ -62,7 +62,7 @@ public class ScenarioDslParser {
     ) {
         Scenario toDomain() {
             return new Scenario(
-                    id,
+                    id != null ? id : java.util.UUID.randomUUID(),
                     name,
                     description,
                     version,

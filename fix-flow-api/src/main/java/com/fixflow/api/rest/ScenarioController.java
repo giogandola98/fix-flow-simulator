@@ -5,6 +5,7 @@ import com.fixflow.api.rest.dto.ScenarioRequest;
 import com.fixflow.core.domain.scenario.Scenario;
 import com.fixflow.core.ports.outbound.ScenarioRepositoryPort;
 import com.fixflow.engine.scenario.ScenarioDslParser;
+import com.fixflow.engine.scenario.ScenarioRegistry;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,10 +22,12 @@ public class ScenarioController {
 
     private final ScenarioRepositoryPort repo;
     private final ScenarioDslParser parser;
+    private final ScenarioRegistry registry;
 
-    public ScenarioController(ScenarioRepositoryPort repo, ScenarioDslParser parser) {
+    public ScenarioController(ScenarioRepositoryPort repo, ScenarioDslParser parser, ScenarioRegistry registry) {
         this.repo = repo;
         this.parser = parser;
+        this.registry = registry;
     }
 
     @PostMapping
@@ -34,6 +37,7 @@ public class ScenarioController {
             : new Scenario(UUID.randomUUID(), req.name(), req.description(), "1",
                            req.sessionRef(), null, null, null, null, null, null);
         Scenario saved = repo.save(parsed);
+        registry.register(saved);
         return ResponseEntity.status(201).body(ScenarioDto.from(saved));
     }
 
@@ -58,7 +62,9 @@ public class ScenarioController {
     public ResponseEntity<ScenarioDto> importYaml(@RequestParam("file") MultipartFile file) throws Exception {
         String yaml = new String(file.getBytes());
         Scenario s = parser.parseYaml(yaml);
-        return ResponseEntity.status(201).body(ScenarioDto.from(repo.save(s)));
+        Scenario saved = repo.save(s);
+        registry.register(saved);
+        return ResponseEntity.status(201).body(ScenarioDto.from(saved));
     }
 
     @GetMapping("/{id}/export")

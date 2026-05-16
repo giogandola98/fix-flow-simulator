@@ -5,6 +5,7 @@ import com.fixflow.api.rest.dto.ScenarioRequest;
 import com.fixflow.core.domain.scenario.Scenario;
 import com.fixflow.core.ports.outbound.ScenarioRepositoryPort;
 import com.fixflow.engine.scenario.ScenarioDslParser;
+import com.fixflow.engine.scenario.ScenarioRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
@@ -40,6 +41,7 @@ class ScenarioControllerTest {
     @Autowired ObjectMapper json;
     @MockBean ScenarioRepositoryPort repo;
     @MockBean ScenarioDslParser parser;
+    @MockBean ScenarioRegistry registry;
 
     private Scenario minScenario(UUID id, String name) {
         return new Scenario(id, name, null, "1", null, null, null, null, null, null, null);
