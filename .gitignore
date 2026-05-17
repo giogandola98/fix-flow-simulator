@@ -1,3 +1,5 @@
+github.sshk.*
+github.sshk
 **/target/
 *.class
 .idea/
