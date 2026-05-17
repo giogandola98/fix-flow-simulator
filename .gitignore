@@ -7,3 +7,5 @@ github.sshk
 .DS_Store
 data/
 fix-flow-ui/node/*
+*/*.jar
+start_claude.sh
