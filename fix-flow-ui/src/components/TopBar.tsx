@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useScenarioStore } from '../store/scenarioStore';
 import { useSessionStore } from '../store/sessionStore';
@@ -17,6 +18,7 @@ export default function TopBar() {
   const executionStatus = useExecutionStore((s) => s.executionStatus);
   const setActiveExecution = useExecutionStore((s) => s.setActiveExecution);
   const updateStatus = useExecutionStore((s) => s.updateStatus);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const runMutation = useMutation({
     mutationFn: async () => {
@@ -24,9 +26,13 @@ export default function TopBar() {
       return executeScenario(activeScenario.id, activeSession.id);
     },
     onSuccess: (exec) => {
+      setErrorMsg(null);
       useExecutionStore.getState().reset();
       setActiveExecution(exec.executionId);
       updateStatus('RUNNING');
+    },
+    onError: (err: unknown) => {
+      setErrorMsg(err instanceof Error ? err.message : String(err));
     },
   });
 
@@ -64,6 +70,12 @@ export default function TopBar() {
     <div className="h-12 bg-[#1a1d27] border-b border-[#2a2d3a] flex items-center px-4 gap-4">
       <div className="font-semibold text-blue-400">FIX Flow Simulator</div>
       <div className="text-sm text-gray-400">{activeScenario?.name ?? 'No scenario loaded'}</div>
+      {errorMsg && (
+        <div className="text-xs text-red-400 bg-red-900/40 border border-red-700 rounded px-2 py-0.5 max-w-xs truncate"
+          title={errorMsg} onClick={() => setErrorMsg(null)}>
+          ✕ {errorMsg}
+        </div>
+      )}
       <div className="flex-1" />
       <button
         className="px-3 py-1 rounded bg-green-600 hover:bg-green-500 disabled:opacity-40 text-sm"

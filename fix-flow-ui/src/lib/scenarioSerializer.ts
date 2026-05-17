@@ -56,6 +56,7 @@ export function serializeToYaml(
       onSuccess: n.onSuccess,
       onFailure: n.onFailure,
       onTimeout: n.onTimeout,
+      position: n.position,
     })),
     edges: edges.map((e) => ({ from: e.from, to: e.to, label: e.label })),
   };
@@ -89,7 +90,7 @@ export function parseFromYaml(yamlStr: string): {
     version: String(doc.version ?? '1.0'),
     sessionRef: doc.sessionRef ?? '',
   };
-  const nodes: ScenarioNode[] = (doc.nodes ?? []).map((n) => ({
+  const nodes: ScenarioNode[] = (doc.nodes ?? []).map((n, idx) => ({
     id: n.id,
     name: n.name,
     type: n.type,
@@ -99,7 +100,7 @@ export function parseFromYaml(yamlStr: string): {
     onSuccess: n.onSuccess,
     onFailure: n.onFailure,
     onTimeout: n.onTimeout,
-    position: n.position,
+    position: n.position ?? { x: 300, y: 80 + idx * 160 },
   }));
   const edges: ScenarioEdge[] = (doc.edges ?? []).map((e) => ({
     from: e.from,
