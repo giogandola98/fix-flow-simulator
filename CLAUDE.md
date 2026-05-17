@@ -1,5 +1,22 @@
 # FIX Flow Simulator
-always act in caveman mode
+
+## Claude Behavior (mandatory)
+
+- **Always use caveman mode**: invoke `/caveman:caveman` at session start. Applies to all responses and commit messages — drop articles, filler, pleasantries; keep full technical substance.
+- **Branch discipline**: never commit features or bugfixes directly to `master`. Always create a dedicated branch (`feat/<name>` or `fix/<name>`), work there, then open a PR or merge to master when done.
+
+## Environment
+
+- OS: Linux (Ubuntu-based)
+- Java: 21 (via `JAVA_HOME` or system default)
+- Maven: `~/maven/bin/mvn` — **not** system `mvn`
+- Node: system node + npm
+- Shell: bash
+- DB: H2 file at `./data/fixflow` (auto-created on first run)
+- App URL: `http://localhost:8080`
+- Dev UI URL: `http://localhost:5173` (Vite hot-reload)
+- H2 console: `http://localhost:8080/h2-console` — JDBC URL `jdbc:h2:file:./data/fixflow`
+- GitHub: `gh` CLI authenticated as `giogandola98`, repo `giogandola98/fix-flow-simulator`
 
 ## Commands
 
@@ -19,6 +36,9 @@ cd fix-flow-ui && npm run dev                       # frontend
 
 # UI build only
 cd fix-flow-ui && npm run build   # outputs to fix-flow-ui/target/dist
+
+# Kill app on port 8080
+fuser -k 8080/tcp
 ```
 
 ## Architecture
@@ -32,8 +52,7 @@ fix-flow-ui        — React 18 + Vite + @xyflow/react v12 + Zustand + TanStack 
 ```
 
 - Package root: `com.fixflow`
-- Java 21, Maven at `~/maven/bin/mvn` (not system mvn)
-- H2 file DB: `jdbc:h2:file:./data/fixflow` | console: `http://localhost:8080/h2-console`
+- H2 file DB: `jdbc:h2:file:./data/fixflow`
 - WebSocket STOMP endpoint: `/ws` (SockJS fallback)
 - Fat JAR copies `fix-flow-ui/target/dist` → `BOOT-INF/classes/static` via maven-resources-plugin
 
@@ -42,12 +61,14 @@ fix-flow-ui        — React 18 + Vite + @xyflow/react v12 + Zustand + TanStack 
 | File | Purpose |
 |---|---|
 | `fix-flow-api/src/main/java/.../config/ScenarioRegistryInitializer.java` | Populates engine registry from DB on startup |
-| `fix-flow-engine/src/main/java/.../execution/ExecutionManager.java` | Runs scenarios node-by-node |
+| `fix-flow-engine/src/main/java/.../execution/ExecutionManager.java` | Runs scenarios node-by-node; emits events + persists node results/messages |
 | `fix-flow-engine/src/main/java/.../scenario/ScenarioRegistry.java` | In-memory scenario store for engine |
 | `fix-flow-adapters/src/main/java/.../quickfixj/QuickFIXAdapter.java` | QuickFIX/J connector lifecycle |
+| `fix-flow-adapters/src/main/java/.../persistence/ExecutionRepositoryAdapter.java` | Persists executions, events, messages, node results |
 | `fix-flow-ui/src/canvas/FlowCanvas.tsx` | ReactFlow canvas (local state pattern — see Gotchas) |
 | `fix-flow-ui/src/lib/scenarioSerializer.ts` | Nodes/edges ↔ YAML DSL |
 | `fix-flow-ui/src/store/scenarioStore.ts` | Zustand: scenarios, nodes, edges, dirty flag |
+| `fix-flow-ui/src/hooks/useSessionSubscription.ts` | WS subscription for real-time session status |
 | `docs/dsl-reference.md` | YAML DSL reference |
 | `docs/api-reference.md` | REST + WebSocket API |
 
@@ -55,8 +76,10 @@ fix-flow-ui        — React 18 + Vite + @xyflow/react v12 + Zustand + TanStack 
 
 - `POST /api/v1/scenarios/{id}/execute` returns `{ executionId }` — **not** `{ id }`
 - `PUT /api/v1/sessions/{id}/connect` and `disconnect` return `void` — call `GET /{id}` to refresh state
+- `GET /api/v1/executions/{id}/messages` currently reads from events table filtered by `MESSAGE_SENT`/`MESSAGE_RECEIVED` — **known bug #23**: should query message table directly
 - `ExecutionEventType` values: `EXECUTION_STARTED, EXECUTION_FINISHED, NODE_ENTERED, NODE_EXITED, MESSAGE_SENT, MESSAGE_RECEIVED, TIMEOUT, ERROR, SESSION_UP, SESSION_DOWN`
 - WS topics: `/topic/executions/{id}/events`, `/topic/executions/{id}/messages`, `/topic/sessions/{id}/status`
+- ScenarioRequest body field is `yamlDsl` (not `yaml`)
 
 ## Gotchas
 
@@ -71,6 +94,8 @@ settings.setString("ResetOnLogon", cfg.resetOnLogon() ? "Y" : "N");
 
 **ReactFlow v12 (`@xyflow/react`) — local state pattern** — `rfNodes`/`rfEdges` in `FlowCanvas.tsx` must be local `useState`, not derived from Zustand store. Recomputing from store on every `onNodesChange` strips React Flow's internal `measured` field, causing `visibility: hidden` forever. Use `applyNodeChanges` on local state; only sync final drag positions back to store.
 
-**YAML DSL** — `id` field must be valid UUID (or omitted). `fields` in SEND_FIX `config` must be `Map<Integer, String>` format, not a list of `{tag, value}` objects.
+**YAML DSL** — `id` field must be valid UUID (or omitted). `fields` in SEND_FIX `config` must be `Map<Integer, String>` format. Nodes need explicit `onSuccess`/`onFailure` fields — edges array is visual only, not used for traversal.
 
-**Session connect on restart** — QuickFIX/J connectors are not persisted. After restart, call `PUT /api/v1/sessions/{id}/connect` again for each session.
+**Session connect on restart** — QuickFIX/J connectors are not persisted. After restart, call `PUT /api/v1/sessions/{id}/connect` again for each session. ACCEPTOR must connect before INITIATOR.
+
+**Loopback FIX testing** — ACCEPTOR (SERVER/CLIENT, port 9001) + INITIATOR (CLIENT/SERVER, port 9001) both in same app instance. Acceptor shows `connected=false` while waiting for logon — expected. Initiator shows `connected=true` once logon completes.
