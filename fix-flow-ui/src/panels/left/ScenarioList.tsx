@@ -16,6 +16,7 @@ export function ScenarioList() {
 
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [search, setSearch] = useState('');
   const renameRef = useRef<HTMLInputElement>(null);
 
   const { data } = useQuery({
@@ -93,19 +94,31 @@ export function ScenarioList() {
     }
   };
 
+  const q = search.trim().toLowerCase();
+  const filtered = (data ?? []).filter((s) => !q || s.name.toLowerCase().includes(q));
+
   return (
-    <div className="p-2 overflow-y-auto border-t border-[#2a2d3a]">
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-xs uppercase tracking-wider text-gray-500">Scenarios</div>
-        <button
-          className="text-xs px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500"
-          onClick={() => createMutation.mutate()}
-        >
-          + New
-        </button>
+    <div className="flex flex-col min-h-0 border-t border-[#2a2d3a]">
+      <div className="p-2 pb-0">
+        <div className="flex items-center justify-between mb-1">
+          <div className="text-xs uppercase tracking-wider text-gray-500">Scenarios</div>
+          <button
+            className="text-xs px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500"
+            onClick={() => createMutation.mutate()}
+          >
+            + New
+          </button>
+        </div>
+        <input
+          type="text"
+          placeholder="Search scenarios…"
+          className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 text-xs mb-2 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
-      <div className="flex flex-col gap-1">
-        {(data ?? []).map((s) => (
+      <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2 flex flex-col gap-1">
+        {filtered.map((s) => (
           <div
             key={s.id}
             className={`rounded text-xs group relative ${
@@ -151,6 +164,11 @@ export function ScenarioList() {
             )}
           </div>
         ))}
+        {filtered.length === 0 && (
+          <div className="text-[10px] text-gray-600 italic px-1">
+            {q ? `No scenarios match "${search}"` : 'No scenarios'}
+          </div>
+        )}
       </div>
     </div>
   );
