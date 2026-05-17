@@ -188,19 +188,20 @@ function InnerCanvas() {
 
   const onDragOver = useCallback((evt: React.DragEvent) => {
     evt.preventDefault();
-    evt.dataTransfer.dropEffect = 'move';
-  }, []);
+    evt.dataTransfer.dropEffect = activeScenarioId ? 'move' : 'none';
+  }, [activeScenarioId]);
 
   const onDrop = useCallback(
     (evt: React.DragEvent) => {
       evt.preventDefault();
+      if (!activeScenarioId) return;
       const type = evt.dataTransfer.getData('application/fix-flow-node-type') as NodeType;
       if (!type) return;
       const pos = screenToFlowPosition({ x: evt.clientX, y: evt.clientY });
       const id = `node-${Date.now()}`;
       addNode({ id, name: type, type, config: {}, position: pos });
     },
-    [addNode, screenToFlowPosition],
+    [activeScenarioId, addNode, screenToFlowPosition],
   );
 
   return (
