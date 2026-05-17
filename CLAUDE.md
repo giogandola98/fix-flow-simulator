@@ -2,8 +2,8 @@
 
 ## Claude Behavior (mandatory)
 
-- **Always use caveman mode**: invoke `/caveman:caveman` at session start. Applies to all responses and commit messages — drop articles, filler, pleasantries; keep full technical substance.
-- **Branch discipline**: never commit features or bugfixes directly to `master`. Always create a dedicated branch (`feat/<name>` or `fix/<name>`), work there, then open a PR or merge to master when done.
+- **Always use caveman mode**: invoke `/caveman:caveman` at session start. All responses + commit messages — drop articles, filler, pleasantries; keep full technical substance.
+- **Branch discipline**: never commit features or bugfixes directly to `master`. Create dedicated branch (`feat/<name>` or `fix/<name>`), work there, open PR or merge to master when done.
 
 ## Environment
 
@@ -12,7 +12,7 @@
 - Maven: `~/maven/bin/mvn` — **not** system `mvn`
 - Node: system node + npm
 - Shell: bash
-- DB: H2 file at `./data/fixflow` (auto-created on first run)
+- DB: H2 file at `./data/fixflow` (auto-created first run)
 - App URL: `http://localhost:8080`
 - Dev UI URL: `http://localhost:5173` (Vite hot-reload)
 - H2 console: `http://localhost:8080/h2-console` — JDBC URL `jdbc:h2:file:./data/fixflow`
@@ -88,23 +88,23 @@ fix-flow-ui        — React 18 + Vite + @xyflow/react v12 + Zustand + TanStack 
 settings.setString("ResetOnLogon", cfg.resetOnLogon() ? "Y" : "N");
 ```
 
-**QuickFIX/J heartbeats** — handled at session layer (`fromAdmin`), never reach `fromApp`. They will never appear in the execution message log. Expected behavior.
+**QuickFIX/J heartbeats** — handled at session layer (`fromAdmin`), never reach `fromApp`. Never appear in execution message log. Expected.
 
-**ScenarioRegistry** — in-memory only. `ScenarioRegistryInitializer` populates it from DB on startup. Scenarios created/updated via REST are registered immediately via `registry.register(saved)`.
+**ScenarioRegistry** — in-memory only. `ScenarioRegistryInitializer` populates from DB on startup. Scenarios created/updated via REST registered immediately via `registry.register(saved)`.
 
-**ReactFlow v12 (`@xyflow/react`) — local state pattern** — `rfNodes`/`rfEdges` in `FlowCanvas.tsx` must be local `useState`, not derived from Zustand store. Recomputing from store on every `onNodesChange` strips React Flow's internal `measured` field, causing `visibility: hidden` forever. Use `applyNodeChanges` on local state; only sync final drag positions back to store.
+**ReactFlow v12 (`@xyflow/react`) — local state pattern** — `rfNodes`/`rfEdges` in `FlowCanvas.tsx` must be local `useState`, not derived from Zustand store. Recomputing from store on every `onNodesChange` strips React Flow's internal `measured` field → `visibility: hidden` forever. Use `applyNodeChanges` on local state; sync final drag positions back to store only.
 
-**YAML DSL** — `id` field must be valid UUID (or omitted). `fields` in SEND_FIX `config` must be `Map<Integer, String>` format. Nodes need explicit `onSuccess`/`onFailure` fields — edges array is visual only, not used for traversal.
+**YAML DSL** — `id` must be valid UUID (or omitted). `fields` in SEND_FIX `config` must be `Map<Integer, String>`. Nodes need explicit `onSuccess`/`onFailure` — edges array visual only, not used for traversal.
 
-**UAT requires clean environment** — before any UAT run, wipe all saved data so prior sessions/scenarios don't pollute results:
+**UAT requires clean environment** — before any UAT run, wipe all saved data; prior sessions/scenarios pollute results:
 ```bash
 # Stop app, delete H2 DB, restart
 fuser -k 8080/tcp
 rm -rf ./data/fixflow.*
 java -jar fix-flow-api/target/fix-flow-api-0.1.0-SNAPSHOT.jar
 ```
-Then recreate sessions and scenarios from scratch. Never UAT against a DB with leftover state.
+Recreate sessions + scenarios from scratch. Never UAT against DB with leftover state.
 
-**Session connect on restart** — QuickFIX/J connectors are not persisted. After restart, call `PUT /api/v1/sessions/{id}/connect` again for each session. ACCEPTOR must connect before INITIATOR.
+**Session connect on restart** — QuickFIX/J connectors not persisted. After restart, call `PUT /api/v1/sessions/{id}/connect` for each session. ACCEPTOR must connect before INITIATOR.
 
-**Loopback FIX testing** — ACCEPTOR (SERVER/CLIENT, port 9001) + INITIATOR (CLIENT/SERVER, port 9001) both in same app instance. Acceptor shows `connected=false` while waiting for logon — expected. Initiator shows `connected=true` once logon completes.
+**Loopback FIX testing** — ACCEPTOR (SERVER/CLIENT, port 9001) + INITIATOR (CLIENT/SERVER, port 9001) both in same app instance. Acceptor shows `connected=false` waiting for logon — expected. Initiator shows `connected=true` once logon completes.
