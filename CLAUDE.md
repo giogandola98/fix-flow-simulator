@@ -96,6 +96,15 @@ settings.setString("ResetOnLogon", cfg.resetOnLogon() ? "Y" : "N");
 
 **YAML DSL** — `id` field must be valid UUID (or omitted). `fields` in SEND_FIX `config` must be `Map<Integer, String>` format. Nodes need explicit `onSuccess`/`onFailure` fields — edges array is visual only, not used for traversal.
 
+**UAT requires clean environment** — before any UAT run, wipe all saved data so prior sessions/scenarios don't pollute results:
+```bash
+# Stop app, delete H2 DB, restart
+fuser -k 8080/tcp
+rm -rf ./data/fixflow.*
+java -jar fix-flow-api/target/fix-flow-api-0.1.0-SNAPSHOT.jar
+```
+Then recreate sessions and scenarios from scratch. Never UAT against a DB with leftover state.
+
 **Session connect on restart** — QuickFIX/J connectors are not persisted. After restart, call `PUT /api/v1/sessions/{id}/connect` again for each session. ACCEPTOR must connect before INITIATOR.
 
 **Loopback FIX testing** — ACCEPTOR (SERVER/CLIENT, port 9001) + INITIATOR (CLIENT/SERVER, port 9001) both in same app instance. Acceptor shows `connected=false` while waiting for logon — expected. Initiator shows `connected=true` once logon completes.
