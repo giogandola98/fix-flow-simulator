@@ -1,5 +1,6 @@
 # FIX Flow Simulator
-always load /caveman as first skill
+always act in caveman mode
+
 ## Commands
 
 ```bash

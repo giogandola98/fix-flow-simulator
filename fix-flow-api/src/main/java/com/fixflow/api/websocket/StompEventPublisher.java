@@ -33,6 +33,7 @@ public class StompEventPublisher implements EventPublisherPort {
         );
     }
 
+    @Override
     public void publishSessionStatus(UUID sessionId, String status) {
         messaging.convertAndSend(
             "/topic/sessions/" + sessionId + "/status",

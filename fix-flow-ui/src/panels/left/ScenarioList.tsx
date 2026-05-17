@@ -11,6 +11,7 @@ export function ScenarioList() {
   const setActiveScenario = useScenarioStore((s) => s.setActiveScenario);
   const setNodes = useScenarioStore((s) => s.setNodes);
   const setEdges = useScenarioStore((s) => s.setEdges);
+  const markDirty = useScenarioStore((s) => s.markDirty);
   const activeScenario = useScenarioStore((s) => s.activeScenario);
 
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -62,13 +63,17 @@ export function ScenarioList() {
     mutationFn: (s: Scenario) => getScenario(s.id),
     onSuccess: (full) => {
       setActiveScenario(full);
-      if (full.yamlDsl) {
-        const { nodes, edges } = parseFromYaml(full.yamlDsl);
+      const { nodes, edges } = full.yamlDsl ? parseFromYaml(full.yamlDsl) : { nodes: [], edges: [] };
+      if (nodes.length === 0) {
+        setNodes([
+          { id: crypto.randomUUID(), name: 'Start', type: 'START', config: {}, position: { x: 300, y: 80 } },
+          { id: crypto.randomUUID(), name: 'End', type: 'END_PASS', config: {}, position: { x: 300, y: 280 } },
+        ]);
+        setEdges([]);
+        markDirty();
+      } else {
         setNodes(nodes);
         setEdges(edges);
-      } else {
-        setNodes([]);
-        setEdges([]);
       }
     },
   });

@@ -1,6 +1,5 @@
 package com.fixflow.adapters.quickfixj;
 
-import com.fixflow.core.domain.execution.ExecutionEvent;
 import com.fixflow.core.ports.outbound.EventPublisherPort;
 import com.fixflow.core.ports.outbound.InboundMessageListener;
 import org.junit.jupiter.api.Test;
@@ -9,6 +8,7 @@ import quickfix.SessionID;
 import quickfix.field.MsgType;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,15 +43,41 @@ class QuickFIXApplicationAdapterTest {
 
     @Test
     void onLogonEmitsSessionUpEvent() {
-        AtomicReference<ExecutionEvent> captured = new AtomicReference<>();
-        EventPublisherPort publisher = captured::set;
+        AtomicReference<UUID> capturedId = new AtomicReference<>();
+        AtomicReference<String> capturedStatus = new AtomicReference<>();
+        EventPublisherPort publisher = new EventPublisherPort() {
+            @Override public void publish(com.fixflow.core.domain.execution.ExecutionEvent e) {}
+            @Override public void publishSessionStatus(UUID sessionId, String status) {
+                capturedId.set(sessionId);
+                capturedStatus.set(status);
+            }
+        };
+        InboundMessageListener noop = (s, f) -> {};
+
+        UUID uuid = UUID.randomUUID();
+        SessionID sid = new SessionID("FIX.4.4", "SENDER", "TARGET");
+        QuickFIXApplicationAdapter adapter = new QuickFIXApplicationAdapter(noop, publisher);
+        adapter.registerSession(sid, uuid);
+        adapter.onLogon(sid);
+
+        assertThat(capturedId.get()).isEqualTo(uuid);
+        assertThat(capturedStatus.get()).isEqualTo("UP");
+    }
+
+    @Test
+    void onLogonWithoutRegisteredSessionDoesNotPublish() {
+        AtomicReference<String> capturedStatus = new AtomicReference<>();
+        EventPublisherPort publisher = new EventPublisherPort() {
+            @Override public void publish(com.fixflow.core.domain.execution.ExecutionEvent e) {}
+            @Override public void publishSessionStatus(UUID sessionId, String status) {
+                capturedStatus.set(status);
+            }
+        };
         InboundMessageListener noop = (s, f) -> {};
 
         QuickFIXApplicationAdapter adapter = new QuickFIXApplicationAdapter(noop, publisher);
-        SessionID sid = new SessionID("FIX.4.4", "SENDER", "TARGET");
-        adapter.onLogon(sid);
+        adapter.onLogon(new SessionID("FIX.4.4", "SENDER", "TARGET"));
 
-        assertThat(captured.get()).isNotNull();
-        assertThat(captured.get().detail()).contains(sid.toString());
+        assertThat(capturedStatus.get()).isNull();
     }
 }

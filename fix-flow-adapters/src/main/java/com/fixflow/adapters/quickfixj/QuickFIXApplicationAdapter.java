@@ -1,7 +1,5 @@
 package com.fixflow.adapters.quickfixj;
 
-import com.fixflow.core.domain.execution.ExecutionEvent;
-import com.fixflow.core.domain.execution.ExecutionEventType;
 import com.fixflow.core.ports.outbound.EventPublisherPort;
 import com.fixflow.core.ports.outbound.InboundMessageListener;
 import quickfix.*;
@@ -9,21 +7,30 @@ import quickfix.Message;
 
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class QuickFIXApplicationAdapter implements Application {
 
     private final InboundMessageListener listener;
     private final EventPublisherPort publisher;
+    private final Map<SessionID, UUID> sessionUUIDs = new ConcurrentHashMap<>();
 
     public QuickFIXApplicationAdapter(InboundMessageListener listener, EventPublisherPort publisher) {
         this.listener = listener;
         this.publisher = publisher;
+    }
+
+    public void registerSession(SessionID sid, UUID uuid) {
+        sessionUUIDs.put(sid, uuid);
+    }
+
+    public void unregisterSession(SessionID sid) {
+        sessionUUIDs.remove(sid);
     }
 
     @Override
@@ -31,16 +38,14 @@ public class QuickFIXApplicationAdapter implements Application {
 
     @Override
     public void onLogon(SessionID sessionId) {
-        publisher.publish(new ExecutionEvent(
-                UUID.randomUUID(), null, ExecutionEventType.SESSION_UP, null,
-                Instant.now(), "Session up: " + sessionId, null));
+        UUID uuid = sessionUUIDs.get(sessionId);
+        if (uuid != null) publisher.publishSessionStatus(uuid, "UP");
     }
 
     @Override
     public void onLogout(SessionID sessionId) {
-        publisher.publish(new ExecutionEvent(
-                UUID.randomUUID(), null, ExecutionEventType.SESSION_DOWN, null,
-                Instant.now(), "Session down: " + sessionId, null));
+        UUID uuid = sessionUUIDs.get(sessionId);
+        if (uuid != null) publisher.publishSessionStatus(uuid, "DOWN");
     }
 
     @Override

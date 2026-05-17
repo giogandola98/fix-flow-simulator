@@ -1,9 +1,16 @@
 package com.fixflow.engine.execution;
 
 import com.fixflow.core.domain.execution.Execution;
+import com.fixflow.core.domain.execution.ExecutionEvent;
+import com.fixflow.core.domain.execution.ExecutionEventType;
 import com.fixflow.core.domain.execution.ExecutionStatus;
+import com.fixflow.core.domain.execution.Direction;
+import com.fixflow.core.domain.execution.FIXMessage;
+import com.fixflow.core.domain.execution.NodeResult;
+import com.fixflow.core.domain.scenario.NodeType;
 import com.fixflow.core.domain.scenario.Scenario;
 import com.fixflow.core.domain.scenario.ScenarioNode;
+import com.fixflow.core.ports.outbound.EventPublisherPort;
 import com.fixflow.core.ports.outbound.ExecutionRepositoryPort;
 import com.fixflow.engine.handlers.NodeDispatcher;
 import com.fixflow.engine.handlers.NodeHandlerResult;
@@ -25,20 +32,23 @@ public class ExecutionManager {
     private final ScenarioRegistry registry;
     private final NodeDispatcher dispatcher;
     private final ExecutionRepositoryPort executionRepo;
+    private final EventPublisherPort eventPublisher;
     private final Map<UUID, ExecutionContext> contexts = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
     @Autowired
     public ExecutionManager(ScenarioRegistry registry, NodeDispatcher dispatcher,
-                            ExecutionRepositoryPort executionRepo) {
+                            ExecutionRepositoryPort executionRepo,
+                            EventPublisherPort eventPublisher) {
         this.registry = registry;
         this.dispatcher = dispatcher;
         this.executionRepo = executionRepo;
+        this.eventPublisher = eventPublisher;
     }
 
     /** Convenience constructor for unit tests that don't need persistence. */
     public ExecutionManager(ScenarioRegistry registry, NodeDispatcher dispatcher) {
-        this(registry, dispatcher, null);
+        this(registry, dispatcher, null, null);
     }
 
     public UUID start(UUID scenarioId, UUID sessionId) {
@@ -73,13 +83,33 @@ public class ExecutionManager {
     }
 
     private void runScenario(ExecutionContext ctx) {
+        emitAndPersist(ctx.executionId(), ExecutionEventType.EXECUTION_STARTED, null,
+                "Execution started for scenario " + ctx.scenario().id());
         try {
             ScenarioNode current = ctx.scenario().startNode()
                     .orElseThrow(() -> new IllegalStateException("Scenario has no START node"));
 
             while (current != null && ctx.status() == ExecutionStatus.RUNNING) {
                 ctx.setCurrentNodeId(current.id());
+                emitAndPersist(ctx.executionId(), ExecutionEventType.NODE_ENTERED, current.id(),
+                        "Entering node " + current.name() + " [" + current.type() + "]");
+
+                Instant nodeStart = Instant.now();
                 NodeHandlerResult result = dispatcher.dispatch(current, ctx);
+                Instant nodeEnd = Instant.now();
+
+                persistNodeResult(ctx.executionId(), current.id(), result, nodeStart, nodeEnd);
+                if (current.type() == NodeType.SEND_FIX) {
+                    persistSentMessage(ctx, current.id());
+                }
+
+                if (result.success()) {
+                    emitAndPersist(ctx.executionId(), ExecutionEventType.NODE_EXITED, current.id(),
+                            "Node " + current.name() + " completed");
+                } else {
+                    emitAndPersist(ctx.executionId(), ExecutionEventType.ERROR, current.id(),
+                            result.errorMessage() != null ? result.errorMessage() : "Node failed");
+                }
 
                 if (ctx.status() != ExecutionStatus.RUNNING) break;
 
@@ -95,10 +125,51 @@ public class ExecutionManager {
                 ctx.setStatus(ExecutionStatus.PASSED);
             }
         } catch (Throwable t) {
+            emitAndPersist(ctx.executionId(), ExecutionEventType.ERROR, ctx.currentNodeId(),
+                    t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName());
             ctx.setStatus(ExecutionStatus.FAILED);
         } finally {
+            emitAndPersist(ctx.executionId(), ExecutionEventType.EXECUTION_FINISHED, null,
+                    "Execution finished with status " + ctx.status());
             persistFinalStatus(ctx);
         }
+    }
+
+    private void emitAndPersist(UUID executionId, ExecutionEventType type, String nodeId, String detail) {
+        ExecutionEvent event = ExecutionEvent.of(executionId, type, nodeId, detail);
+        if (eventPublisher != null) {
+            try { eventPublisher.publish(event); } catch (Throwable ignored) {}
+        }
+        if (executionRepo != null) {
+            try { executionRepo.addEvent(executionId, event); } catch (Throwable ignored) {}
+        }
+    }
+
+    private void persistSentMessage(ExecutionContext ctx, String nodeId) {
+        if (executionRepo == null) return;
+        Map<Integer, String> fields = ctx.getNodeMessage(nodeId);
+        if (fields == null || fields.isEmpty()) return;
+        try {
+            String raw = fields.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .map(e -> e.getKey() + "=" + e.getValue())
+                    .collect(java.util.stream.Collectors.joining("|"));
+            executionRepo.addMessage(ctx.executionId(), new FIXMessage(
+                    UUID.randomUUID(), ctx.executionId(), Direction.OUTBOUND, raw,
+                    fields, Instant.now()));
+        } catch (Throwable ignored) {}
+    }
+
+    private void persistNodeResult(UUID executionId, String nodeId, NodeHandlerResult result,
+                                   Instant start, Instant end) {
+        if (executionRepo == null) return;
+        try {
+            executionRepo.addNodeResult(executionId, new NodeResult(
+                    UUID.randomUUID(), executionId, nodeId,
+                    result.success() ? "PASSED" : "FAILED",
+                    start, end,
+                    result.success() ? null : result.errorMessage()));
+        } catch (Throwable ignored) {}
     }
 
     private void persistFinalStatus(ExecutionContext ctx) {

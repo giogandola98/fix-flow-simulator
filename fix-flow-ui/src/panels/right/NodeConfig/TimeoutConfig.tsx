@@ -1,4 +1,5 @@
-import { TimeUnit, TimeoutAction, TimeoutConfig as Cfg } from '../../../types';
+import { ScenarioNode, TimeUnit, TimeoutAction, TimeoutConfig as Cfg } from '../../../types';
+import { useScenarioStore } from '../../../store/scenarioStore';
 
 const UNITS: TimeUnit[] = ['MILLISECONDS', 'SECONDS', 'MINUTES', 'HOURS'];
 const ACTIONS: TimeoutAction[] = ['FAIL', 'RETRY', 'CONTINUE', 'JUMP'];
@@ -6,11 +7,14 @@ const ACTIONS: TimeoutAction[] = ['FAIL', 'RETRY', 'CONTINUE', 'JUMP'];
 interface Props {
   value: Cfg | undefined;
   onChange: (next: Cfg | undefined) => void;
+  currentNodeId?: string;
 }
 
-export function TimeoutConfig({ value, onChange }: Props) {
+export function TimeoutConfig({ value, onChange, currentNodeId }: Props) {
+  const allNodes = useScenarioStore((s) => s.nodes);
   const cfg: Cfg = value ?? { value: 30, unit: 'SECONDS', onTimeout: 'FAIL' };
   const update = (patch: Partial<Cfg>) => onChange({ ...cfg, ...patch });
+  const jumpTargets = allNodes.filter((n: ScenarioNode) => n.id !== currentNodeId);
 
   return (
     <div className="border border-[#2a2d3a] rounded p-2 mt-2">
@@ -43,12 +47,16 @@ export function TimeoutConfig({ value, onChange }: Props) {
       {cfg.onTimeout === 'JUMP' && (
         <div className="mt-1">
           <label className="text-[10px] text-gray-500">Jump To Node</label>
-          <input
-            type="text"
+          <select
             className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 text-xs"
             value={cfg.jumpTo ?? ''}
-            onChange={(e) => update({ jumpTo: e.target.value })}
-          />
+            onChange={(e) => update({ jumpTo: e.target.value || undefined })}
+          >
+            <option value="">-- select --</option>
+            {jumpTargets.map((n: ScenarioNode) => (
+              <option key={n.id} value={n.id}>{n.name}</option>
+            ))}
+          </select>
         </div>
       )}
     </div>

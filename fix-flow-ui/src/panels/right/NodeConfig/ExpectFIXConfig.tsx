@@ -51,7 +51,7 @@ export function ExpectFIXConfig({ node }: { node: ScenarioNode }) {
             value={corr.targetTag ?? 0} onChange={(e) => patchCorr({ targetTag: Number(e.target.value) })} />
         </div>
       </div>
-      <TimeoutConfig value={node.timeout} onChange={(next) => updateNode(node.id, { timeout: next })} />
+      <TimeoutConfig value={node.timeout} onChange={(next) => updateNode(node.id, { timeout: next })} currentNodeId={node.id} />
     </div>
   );
 }

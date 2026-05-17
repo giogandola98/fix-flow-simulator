@@ -55,12 +55,20 @@ public class ExecutionRepositoryAdapter implements ExecutionRepositoryPort {
     @Override
     @Transactional(readOnly = true)
     public Optional<Execution> findById(UUID id) {
-        return executionRepo.findById(id).map(e -> new Execution(
-                e.getId(), e.getScenarioId(), e.getScenarioVersion(), e.getSessionId(),
-                e.getStatus(), e.getStartTime(), e.getEndTime(), e.getCurrentNodeId(),
-                readStringMap(e.getVariablesJson()),
-                List.of(), List.of()
-        ));
+        return executionRepo.findById(id).map(e -> {
+            List<ExecutionEvent> events = eventRepo.findByExecutionIdOrderByTimestampAsc(id).stream()
+                    .map(ev -> new ExecutionEvent(ev.getId(), ev.getExecutionId(), ev.getType(),
+                            ev.getNodeId(), ev.getTimestamp(), ev.getDetail(), ev.getRawFix()))
+                    .toList();
+            List<NodeResult> nodeResults = nodeResultRepo.findByExecutionIdOrderByStartTimeAsc(id).stream()
+                    .map(nr -> new NodeResult(nr.getId(), nr.getExecutionId(), nr.getNodeId(),
+                            nr.getStatus(), nr.getStartTime(), nr.getEndTime(), nr.getError()))
+                    .toList();
+            return new Execution(
+                    e.getId(), e.getScenarioId(), e.getScenarioVersion(), e.getSessionId(),
+                    e.getStatus(), e.getStartTime(), e.getEndTime(), e.getCurrentNodeId(),
+                    readStringMap(e.getVariablesJson()), nodeResults, events);
+        });
     }
 
     @Override

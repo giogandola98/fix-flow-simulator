@@ -3,6 +3,27 @@ import { SendFIXConfig } from './NodeConfig/SendFIXConfig';
 import { ExpectFIXConfig } from './NodeConfig/ExpectFIXConfig';
 import { ValidateConfig } from './NodeConfig/ValidateConfig';
 import { RetryConfig } from './NodeConfig/RetryConfig';
+import { LoopConfig } from './NodeConfig/LoopConfig';
+import { DelayConfig } from './NodeConfig/DelayConfig';
+import { DecisionConfig } from './NodeConfig/DecisionConfig';
+import { WaitConfig } from './NodeConfig/WaitConfig';
+import { HttpRequestConfig } from './NodeConfig/HttpRequestConfig';
+import { RouteFIXConfig } from './NodeConfig/RouteFIXConfig';
+
+const NAME_ONLY_TYPES = ['START', 'END_PASS', 'END_FAIL'];
+
+function NameOnlyConfig({ node }: { node: { id: string; name: string } }) {
+  const updateNode = useScenarioStore((s) => s.updateNode);
+  return (
+    <div className="text-xs space-y-2">
+      <div>
+        <label className="text-[10px] text-gray-500">Node Name</label>
+        <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
+          value={node.name} onChange={(e) => updateNode(node.id, { name: e.target.value })} />
+      </div>
+    </div>
+  );
+}
 
 export function PropertiesPanel() {
   const selectedNodeId = useScenarioStore((s) => s.selectedNodeId);
@@ -17,10 +38,14 @@ export function PropertiesPanel() {
       {node?.type === 'SEND_FIX' && <SendFIXConfig node={node} />}
       {node?.type === 'EXPECT_FIX' && <ExpectFIXConfig node={node} />}
       {node?.type === 'VALIDATE' && <ValidateConfig node={node} />}
-      {(node?.type === 'RETRY' || node?.type === 'LOOP') && <RetryConfig node={node} />}
-      {node && !['SEND_FIX', 'EXPECT_FIX', 'VALIDATE', 'RETRY', 'LOOP'].includes(node.type) && (
-        <div className="text-xs text-gray-500 italic">No configuration available for {node.type}</div>
-      )}
+      {node?.type === 'RETRY' && <RetryConfig node={node} />}
+      {node?.type === 'LOOP' && <LoopConfig node={node} />}
+      {node?.type === 'DELAY' && <DelayConfig node={node} />}
+      {(node?.type === 'WAIT' || node?.type === 'TIMEOUT') && <WaitConfig node={node} />}
+      {(node?.type === 'DECISION' || node?.type === 'BRANCH') && <DecisionConfig node={node} />}
+      {node?.type === 'HTTP_REQUEST' && <HttpRequestConfig node={node} />}
+      {node?.type === 'ROUTE_FIX' && <RouteFIXConfig node={node} />}
+      {node && NAME_ONLY_TYPES.includes(node.type) && <NameOnlyConfig node={node} />}
     </div>
   );
 }

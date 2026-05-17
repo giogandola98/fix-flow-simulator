@@ -32,11 +32,64 @@ interface YamlEdge {
   from: string;
   to: string;
   label: string;
+  sourceHandle?: string;
 }
 
 interface YamlDoc extends ScenarioMeta {
   nodes: YamlNode[];
   edges: YamlEdge[];
+}
+
+function fieldsArrayToMap(fields: Array<{ tag: number; value: string }>): Record<number, string> {
+  const map: Record<number, string> = {};
+  for (const f of fields) map[f.tag] = f.value;
+  return map;
+}
+
+function fieldsMapToArray(fields: Record<string, string>): Array<{ tag: number; value: string }> {
+  return Object.entries(fields).map(([k, v]) => ({ tag: Number(k), value: v }));
+}
+
+function matcherArrayToMap(matchers: Array<{ tag: number; value: string }>): Record<string, string> {
+  const m: Record<string, string> = {};
+  for (const row of matchers) m[String(row.tag)] = row.value;
+  return m;
+}
+
+function matcherMapToArray(matchers: Record<string, string>): Array<{ tag: number; value: string }> {
+  return Object.entries(matchers).map(([k, v]) => ({ tag: Number(k), value: v }));
+}
+
+function serializeConfig(type: NodeType, config: Record<string, unknown>): Record<string, unknown> {
+  if (type === 'SEND_FIX' && Array.isArray(config.fields)) {
+    return { ...config, fields: fieldsArrayToMap(config.fields as Array<{ tag: number; value: string }>) };
+  }
+  if (type === 'ROUTE_FIX' && Array.isArray(config.rules)) {
+    const rules = (config.rules as Array<Record<string, unknown>>).map((r) => ({
+      ...r,
+      matchers: Array.isArray(r.matchers)
+        ? matcherArrayToMap(r.matchers as Array<{ tag: number; value: string }>)
+        : r.matchers,
+    }));
+    return { ...config, rules };
+  }
+  return config;
+}
+
+function parseConfig(type: NodeType, config: Record<string, unknown>): Record<string, unknown> {
+  if (type === 'SEND_FIX' && config.fields != null && !Array.isArray(config.fields)) {
+    return { ...config, fields: fieldsMapToArray(config.fields as Record<string, string>) };
+  }
+  if (type === 'ROUTE_FIX' && Array.isArray(config.rules)) {
+    const rules = (config.rules as Array<Record<string, unknown>>).map((r) => ({
+      ...r,
+      matchers: r.matchers != null && !Array.isArray(r.matchers)
+        ? matcherMapToArray(r.matchers as Record<string, string>)
+        : (r.matchers ?? []),
+    }));
+    return { ...config, rules };
+  }
+  return config;
 }
 
 export function serializeToYaml(
@@ -50,7 +103,7 @@ export function serializeToYaml(
       id: n.id,
       name: n.name,
       type: n.type,
-      config: n.config ?? {},
+      config: serializeConfig(n.type, n.config ?? {}),
       timeout: n.timeout,
       retryPolicy: n.retryPolicy,
       onSuccess: n.onSuccess,
@@ -58,7 +111,7 @@ export function serializeToYaml(
       onTimeout: n.onTimeout,
       position: n.position,
     })),
-    edges: edges.map((e) => ({ from: e.from, to: e.to, label: e.label })),
+    edges: edges.map((e) => ({ from: e.from, to: e.to, label: e.label, ...(e.sourceHandle ? { sourceHandle: e.sourceHandle } : {}) })),
   };
   return yaml.dump(doc, { noRefs: true, sortKeys: false, lineWidth: 120 });
 }
@@ -94,7 +147,7 @@ export function parseFromYaml(yamlStr: string): {
     id: n.id,
     name: n.name,
     type: n.type,
-    config: n.config ?? {},
+    config: parseConfig(n.type, n.config ?? {}),
     timeout: n.timeout,
     retryPolicy: n.retryPolicy,
     onSuccess: n.onSuccess,
@@ -106,6 +159,7 @@ export function parseFromYaml(yamlStr: string): {
     from: e.from,
     to: e.to,
     label: e.label,
+    ...(e.sourceHandle ? { sourceHandle: e.sourceHandle } : {}),
   }));
   return { nodes, edges, meta };
 }

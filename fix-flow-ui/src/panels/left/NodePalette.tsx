@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NodeType } from '../../types';
 import { colors } from '../../theme/colors';
 
@@ -19,10 +20,17 @@ const GROUPS: Array<{ title: string; items: PaletteItem[] }> = [
     title: 'Flow Control',
     items: [
       { type: 'DECISION', label: 'Decision' },
+      { type: 'ROUTE_FIX', label: 'Route FIX' },
       { type: 'RETRY', label: 'Retry' },
       { type: 'LOOP', label: 'Loop' },
       { type: 'WAIT', label: 'Wait' },
       { type: 'DELAY', label: 'Delay' },
+    ],
+  },
+  {
+    title: 'Integration',
+    items: [
+      { type: 'HTTP_REQUEST', label: 'HTTP Request' },
     ],
   },
   {
@@ -36,32 +44,54 @@ const GROUPS: Array<{ title: string; items: PaletteItem[] }> = [
 ];
 
 export function NodePalette() {
+  const [search, setSearch] = useState('');
+
   const onDragStart = (evt: React.DragEvent, type: NodeType) => {
     evt.dataTransfer.setData('application/fix-flow-node-type', type);
     evt.dataTransfer.effectAllowed = 'move';
   };
 
+  const q = search.trim().toLowerCase();
+  const filteredGroups = GROUPS.map((g) => ({
+    ...g,
+    items: q ? g.items.filter((it) => it.label.toLowerCase().includes(q) || it.type.toLowerCase().includes(q)) : g.items,
+  })).filter((g) => g.items.length > 0);
+
   return (
-    <div className="p-2 overflow-y-auto">
-      <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">Palette</div>
-      {GROUPS.map((g) => (
-        <div key={g.title} className="mb-3">
-          <div className="text-[10px] uppercase text-gray-400 mb-1">{g.title}</div>
-          <div className="flex flex-col gap-1">
-            {g.items.map((it) => (
-              <div
-                key={it.type}
-                draggable
-                onDragStart={(e) => onDragStart(e, it.type)}
-                className="px-2 py-1 rounded cursor-grab bg-[#0f1117] border text-xs hover:bg-[#22252f]"
-                style={{ borderColor: colors.node[it.type as keyof typeof colors.node] }}
-              >
-                {it.label}
-              </div>
-            ))}
+    <div className="h-full flex flex-col">
+      <div className="p-2 pb-0">
+        <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">Palette</div>
+        <input
+          type="text"
+          placeholder="Search blocks…"
+          className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 text-xs mb-2 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+      <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2">
+        {filteredGroups.map((g) => (
+          <div key={g.title} className="mb-3">
+            <div className="text-[10px] uppercase text-gray-400 mb-1">{g.title}</div>
+            <div className="flex flex-col gap-1">
+              {g.items.map((it) => (
+                <div
+                  key={it.type}
+                  draggable
+                  onDragStart={(e) => onDragStart(e, it.type)}
+                  className="px-2 py-1 rounded cursor-grab bg-[#0f1117] border text-xs hover:bg-[#22252f]"
+                  style={{ borderColor: colors.node[it.type as keyof typeof colors.node] }}
+                >
+                  {it.label}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+        {filteredGroups.length === 0 && (
+          <div className="text-xs text-gray-600 italic">No blocks match "{search}"</div>
+        )}
+      </div>
     </div>
   );
 }

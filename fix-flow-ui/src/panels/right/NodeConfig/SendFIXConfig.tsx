@@ -61,7 +61,7 @@ export function SendFIXConfig({ node }: Props) {
           </tbody>
         </table>
       </div>
-      <TimeoutConfig value={node.timeout} onChange={(next) => updateNode(node.id, { timeout: next })} />
+      <TimeoutConfig value={node.timeout} onChange={(next) => updateNode(node.id, { timeout: next })} currentNodeId={node.id} />
     </div>
   );
 }

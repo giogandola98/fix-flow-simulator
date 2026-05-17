@@ -35,10 +35,10 @@ export default function BottomPanel() {
       </div>
       {!collapsed && (
         <div className="flex-1 min-h-0">
-          {tab === 'events' && <EventLog />}
-          {tab === 'messages' && <FIXMessageLog />}
-          {tab === 'validation' && <ValidationErrors />}
-          {tab === 'stats' && <ExecutionStats />}
+          <div className={`h-full ${tab === 'events' ? '' : 'hidden'}`}><EventLog /></div>
+          <div className={`h-full ${tab === 'messages' ? '' : 'hidden'}`}><FIXMessageLog /></div>
+          <div className={`h-full ${tab === 'validation' ? '' : 'hidden'}`}><ValidationErrors /></div>
+          <div className={`h-full ${tab === 'stats' ? '' : 'hidden'}`}><ExecutionStats /></div>
         </div>
       )}
     </div>

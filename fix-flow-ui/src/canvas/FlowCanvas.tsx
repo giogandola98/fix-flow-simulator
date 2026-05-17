@@ -61,6 +61,7 @@ function InnerCanvas() {
         id: `e${i}-${e.from}-${e.to}-${e.label}`,
         source: e.from,
         target: e.to,
+        sourceHandle: e.sourceHandle ?? null,
         label: e.label,
         type: 'default',
       })),
@@ -95,6 +96,16 @@ function InnerCanvas() {
       const removedSet = new Set(removedIds);
       setRfNodes((prev) => prev.filter((n) => !removedSet.has(n.id)));
     }
+    // Sync data changes for existing nodes (e.g. rename).
+    setRfNodes((prev) =>
+      prev.map((rfNode) => {
+        const storeNode = nodes.find((n) => n.id === rfNode.id);
+        if (!storeNode) return rfNode;
+        const d = rfNode.data as Record<string, unknown>;
+        if (d.label === storeNode.name && d.config === storeNode.config) return rfNode;
+        return { ...rfNode, data: { ...d, label: storeNode.name, config: storeNode.config } };
+      }),
+    );
     trackedNodeIds.current = new Set(nodes.map((n) => n.id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes]);
@@ -117,6 +128,7 @@ function InnerCanvas() {
         id: `e${i}-${e.from}-${e.to}-${e.label}`,
         source: e.from,
         target: e.to,
+        sourceHandle: e.sourceHandle ?? null,
         label: e.label,
         type: 'default',
       })),
@@ -152,7 +164,12 @@ function InnerCanvas() {
         setEdges(
           rfEdges
             .filter((e) => !removedIds.has(e.id))
-            .map((e) => ({ from: e.source, to: e.target, label: String(e.label ?? 'success') })),
+            .map((e) => ({
+              from: e.source,
+              to: e.target,
+              label: String(e.label ?? 'success'),
+              ...(e.sourceHandle ? { sourceHandle: e.sourceHandle } : {}),
+            })),
         );
       }
     },
@@ -162,7 +179,8 @@ function InnerCanvas() {
   const onConnect = useCallback(
     (conn: Connection) => {
       if (conn.source && conn.target) {
-        addEdge({ from: conn.source, to: conn.target, label: 'success' });
+        const edge = { from: conn.source, to: conn.target, label: 'success' };
+        addEdge(conn.sourceHandle ? { ...edge, sourceHandle: conn.sourceHandle } : edge);
       }
     },
     [addEdge],

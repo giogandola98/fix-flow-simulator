@@ -1,4 +1,4 @@
-export type NodeType = 'START' | 'SEND_FIX' | 'EXPECT_FIX' | 'VALIDATE' | 'WAIT' | 'TIMEOUT' | 'DECISION' | 'BRANCH' | 'RETRY' | 'LOOP' | 'DELAY' | 'END' | 'END_PASS' | 'END_FAIL';
+export type NodeType = 'START' | 'SEND_FIX' | 'EXPECT_FIX' | 'VALIDATE' | 'WAIT' | 'TIMEOUT' | 'DECISION' | 'BRANCH' | 'RETRY' | 'LOOP' | 'DELAY' | 'END' | 'END_PASS' | 'END_FAIL' | 'HTTP_REQUEST' | 'ROUTE_FIX';
 export type ExecutionStatus = 'RUNNING' | 'PASSED' | 'FAILED' | 'STOPPED';
 export type FIXVersion = 'FIX_42' | 'FIX_44' | 'FIXT_11';
 export type FIXMode = 'INITIATOR' | 'ACCEPTOR';
@@ -14,7 +14,7 @@ export interface ScenarioNode {
   onSuccess?: string; onFailure?: string; onTimeout?: string;
   position?: { x: number; y: number };
 }
-export interface ScenarioEdge { from: string; to: string; label: string; }
+export interface ScenarioEdge { from: string; to: string; label: string; sourceHandle?: string; }
 
 export interface Scenario {
   id: string; name: string; description: string; version: string;

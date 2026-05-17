@@ -1,24 +1,64 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useScenarioStore } from '../store/scenarioStore';
 import { useSessionStore } from '../store/sessionStore';
 import { useExecutionStore } from '../store/executionStore';
 import { executeScenario, updateScenario } from '../api/scenarios';
 import { stopExecution } from '../api/executions';
-import { serializeToYaml } from '../lib/scenarioSerializer';
+import { serializeToYaml, parseFromYaml } from '../lib/scenarioSerializer';
 
 export default function TopBar() {
   const activeScenario = useScenarioStore((s) => s.activeScenario);
   const isDirty = useScenarioStore((s) => s.isDirty);
   const markClean = useScenarioStore((s) => s.markClean);
+  const markDirty = useScenarioStore((s) => s.markDirty);
   const nodes = useScenarioStore((s) => s.nodes);
   const edges = useScenarioStore((s) => s.edges);
+  const setNodes = useScenarioStore((s) => s.setNodes);
+  const setEdges = useScenarioStore((s) => s.setEdges);
   const activeSession = useSessionStore((s) => s.activeSession);
   const activeExecutionId = useExecutionStore((s) => s.activeExecutionId);
   const executionStatus = useExecutionStore((s) => s.executionStatus);
   const setActiveExecution = useExecutionStore((s) => s.setActiveExecution);
   const updateStatus = useExecutionStore((s) => s.updateStatus);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const importRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = () => {
+    if (!activeScenario) return;
+    const yamlDsl = serializeToYaml(nodes, edges, {
+      id: activeScenario.id,
+      name: activeScenario.name,
+      description: activeScenario.description,
+      version: activeScenario.version,
+      sessionRef: activeScenario.sessionRef,
+    });
+    const blob = new Blob([yamlDsl], { type: 'text/yaml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${activeScenario.name}.yaml`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const { nodes: n, edges: ed } = parseFromYaml(reader.result as string);
+        setNodes(n);
+        setEdges(ed);
+        markDirty();
+      } catch (err) {
+        setErrorMsg(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   const runMutation = useMutation({
     mutationFn: async () => {
@@ -99,8 +139,11 @@ export default function TopBar() {
         Save{isDirty ? ' •' : ''}
       </button>
       <div className="w-px h-6 bg-[#2a2d3a]" />
-      <button className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm">Import</button>
-      <button className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm">Export</button>
+      <input ref={importRef} type="file" accept=".yaml,.yml" className="hidden" onChange={handleImportFile} />
+      <button className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm"
+        onClick={() => importRef.current?.click()}>Import</button>
+      <button className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-sm"
+        disabled={!activeScenario} onClick={handleExport}>Export</button>
     </div>
   );
 }

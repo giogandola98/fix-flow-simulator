@@ -46,6 +46,7 @@ public class QuickFIXAdapter implements FIXSessionPort {
 
             SessionID sid = sessionIdFromConfig(config);
             sessions.put(config.id(), sid);
+            application.registerSession(sid, config.id());
         } catch (ConfigError e) {
             throw new IllegalStateException("Failed to start FIX session " + config.id(), e);
         }
@@ -55,7 +56,8 @@ public class QuickFIXAdapter implements FIXSessionPort {
     public void disconnect(UUID sessionId) {
         Connector c = connectors.remove(sessionId);
         if (c != null) c.stop(true);
-        sessions.remove(sessionId);
+        SessionID sid = sessions.remove(sessionId);
+        if (sid != null) application.unregisterSession(sid);
     }
 
     @Override
@@ -93,6 +95,8 @@ public class QuickFIXAdapter implements FIXSessionPort {
         settings.setString("ResetOnLogon", cfg.resetOnLogon() ? "Y" : "N");
         settings.setString("ResetOnLogout", cfg.resetOnLogout() ? "Y" : "N");
         settings.setString("FileStorePath", "./data/fix-store");
+        settings.setString("ValidateUserDefinedFields", "N");
+        settings.setString("ValidateIncomingMessage", "N");
 
         if (cfg.mode() == FIXMode.INITIATOR) {
             settings.setString("SocketConnectHost", cfg.host());

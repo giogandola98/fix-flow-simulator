@@ -8,6 +8,8 @@ import { EndPassNode } from './EndPassNode';
 import { EndFailNode } from './EndFailNode';
 import { RetryNode } from './RetryNode';
 import { WaitNode } from './WaitNode';
+import { HttpRequestNode } from './HttpRequestNode';
+import { RouteFIXNode } from './RouteFIXNode';
 
 export const nodeTypes: NodeTypes = {
   START: StartNode,
@@ -23,4 +25,6 @@ export const nodeTypes: NodeTypes = {
   WAIT: WaitNode,
   DELAY: WaitNode,
   TIMEOUT: WaitNode,
+  HTTP_REQUEST: HttpRequestNode,
+  ROUTE_FIX: RouteFIXNode,
 };

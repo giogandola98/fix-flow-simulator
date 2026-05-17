@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -10,6 +10,7 @@ import {
   getSession,
 } from '../../api/sessions';
 import { useSessionStore } from '../../store/sessionStore';
+import { useSessionSubscription } from '../../hooks/useSessionSubscription';
 import { FIXSessionCreateRequest, FIXVersion, FIXMode } from '../../types';
 
 const FIX_VERSIONS: Array<{ value: FIXVersion; label: string }> = [
@@ -37,6 +38,9 @@ export function SessionPanel() {
   const { data: sessions } = useQuery({ queryKey: ['sessions'], queryFn: getSessions });
 
   useEffect(() => { if (sessions) setSessions(sessions); }, [sessions, setSessions]);
+
+  const sessionIds = useMemo(() => (sessions ?? []).map((s) => s.id), [sessions]);
+  useSessionSubscription(sessionIds);
 
   useEffect(() => {
     if (activeSession) {
@@ -87,13 +91,18 @@ export function SessionPanel() {
   });
 
   const connected = activeSession?.connected ?? false;
+  const connecting = connectMutation.isPending;
 
   return (
     <div className="p-2 overflow-y-auto border-t border-[#2a2d3a]">
       <div className="flex items-center justify-between mb-2">
         <div className="text-xs uppercase tracking-wider text-gray-500">Session</div>
-        <div className={`px-2 py-0.5 rounded text-[10px] ${connected ? 'bg-green-700 text-white' : 'bg-gray-700 text-gray-300'}`}>
-          {connected ? 'CONNECTED' : 'DISCONNECTED'}
+        <div className={`px-2 py-0.5 rounded text-[10px] ${
+          connected ? 'bg-green-700 text-white' :
+          connecting ? 'bg-yellow-600 text-white' :
+          'bg-gray-700 text-gray-300'
+        }`}>
+          {connected ? 'CONNECTED' : connecting ? 'CONNECTING...' : 'DISCONNECTED'}
         </div>
       </div>
       <div className="mb-2">

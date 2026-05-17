@@ -41,7 +41,19 @@ export const useScenarioStore = create<ScenarioState>((set) => ({
   addNode: (node) => set((s) => ({ nodes: [...s.nodes, node], isDirty: true })),
   removeNode: (id) =>
     set((s) => ({
-      nodes: s.nodes.filter((n) => n.id !== id),
+      nodes: s.nodes
+        .filter((n) => n.id !== id)
+        .map((n) => {
+          const cfg = n.config as Record<string, unknown>;
+          const needsCfgClean = cfg?.targetNodeId === id;
+          const needsTimeoutClean = n.timeout?.jumpTo === id;
+          if (!needsCfgClean && !needsTimeoutClean) return n;
+          return {
+            ...n,
+            config: needsCfgClean ? { ...cfg, targetNodeId: undefined } : cfg,
+            timeout: needsTimeoutClean ? { ...n.timeout!, jumpTo: undefined } : n.timeout,
+          };
+        }),
       edges: s.edges.filter((e) => e.from !== id && e.to !== id),
       isDirty: true,
     })),

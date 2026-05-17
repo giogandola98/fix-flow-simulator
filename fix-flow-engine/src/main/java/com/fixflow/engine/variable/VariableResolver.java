@@ -28,7 +28,8 @@ public class VariableResolver {
             new SeqPlugin(sequences),
             new EnvPlugin(),
             new DateOffsetPlugin(),
-            new NodeFieldPlugin()
+            new NodeFieldPlugin(),
+            new VarPlugin()
         );
     }
 
@@ -123,6 +124,15 @@ public class VariableResolver {
             Map<Integer, String> fields = c.getNodeMessage(nodeId);
             if (fields == null) throw new IllegalStateException("No stored message for node: " + nodeId);
             String v = fields.get(tag);
+            return v == null ? "" : v;
+        }
+    }
+
+    static final class VarPlugin implements VariableResolverPlugin {
+        public boolean supports(String e) { return e.startsWith("var:"); }
+        public String resolve(String e, ExecutionContext c) {
+            String key = e.substring("var:".length());
+            String v = c.getVariable(key);
             return v == null ? "" : v;
         }
     }
