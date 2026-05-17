@@ -90,8 +90,8 @@ public class QuickFIXAdapter implements FIXSessionPort {
         settings.setLong("ReconnectInterval", cfg.reconnectInterval());
         settings.setString("StartTime", "00:00:00");
         settings.setString("EndTime", "00:00:00");
-        settings.setString("ResetOnLogon", String.valueOf(cfg.resetOnLogon()));
-        settings.setString("ResetOnLogout", String.valueOf(cfg.resetOnLogout()));
+        settings.setString("ResetOnLogon", cfg.resetOnLogon() ? "Y" : "N");
+        settings.setString("ResetOnLogout", cfg.resetOnLogout() ? "Y" : "N");
         settings.setString("FileStorePath", "./data/fix-store");
 
         if (cfg.mode() == FIXMode.INITIATOR) {
