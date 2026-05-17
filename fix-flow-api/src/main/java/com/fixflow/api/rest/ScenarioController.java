@@ -48,8 +48,9 @@ public class ScenarioController {
 
     @GetMapping("/{id}")
     public ScenarioDto get(@PathVariable UUID id) {
-        return ScenarioDto.from(repo.findById(id)
-            .orElseThrow(() -> new NoSuchElementException("scenario not found: " + id)));
+        Scenario s = repo.findById(id)
+            .orElseThrow(() -> new NoSuchElementException("scenario not found: " + id));
+        return ScenarioDto.withYaml(s, parser.toYaml(s));
     }
 
     @PutMapping("/{id}")
@@ -67,7 +68,7 @@ public class ScenarioController {
                            existing.edges(), existing.variables());
         Scenario saved = repo.save(updated);
         registry.register(saved);
-        return ScenarioDto.from(saved);
+        return ScenarioDto.withYaml(saved, parser.toYaml(saved));
     }
 
     @DeleteMapping("/{id}")
