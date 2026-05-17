@@ -8,7 +8,7 @@ import com.fixflow.api.rest.dto.StartExecutionRequest;
 import com.fixflow.api.service.ReportService;
 import com.fixflow.core.domain.execution.Execution;
 import com.fixflow.core.domain.execution.ExecutionEvent;
-import com.fixflow.core.domain.execution.ExecutionEventType;
+import com.fixflow.core.domain.execution.FIXMessage;
 import com.fixflow.core.ports.outbound.ExecutionRepositoryPort;
 import com.fixflow.engine.execution.ExecutionManager;
 import org.springframework.http.HttpHeaders;
@@ -67,11 +67,8 @@ public class ExecutionController {
     }
 
     @GetMapping("/api/v1/executions/{id}/messages")
-    public List<ExecutionEvent> messages(@PathVariable UUID id) {
-        return load(id).events().stream()
-            .filter(e -> e.type() == ExecutionEventType.MESSAGE_SENT
-                      || e.type() == ExecutionEventType.MESSAGE_RECEIVED)
-            .toList();
+    public List<FIXMessage> messages(@PathVariable UUID id) {
+        return repo.findMessages(id);
     }
 
     @GetMapping("/api/v1/executions/{id}/report")

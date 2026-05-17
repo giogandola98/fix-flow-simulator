@@ -112,6 +112,15 @@ public class ExecutionRepositoryAdapter implements ExecutionRepositoryPort {
         nodeResultRepo.save(e);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<FIXMessage> findMessages(UUID executionId) {
+        return messageRepo.findByExecutionIdOrderByReceivedAtAsc(executionId).stream()
+                .map(e -> new FIXMessage(e.getId(), e.getExecutionId(), e.getDirection(),
+                        e.getRawFix(), readIntMap(e.getFieldsJson()), e.getReceivedAt()))
+                .toList();
+    }
+
     private String writeJson(Object obj) {
         try { return json.writeValueAsString(obj == null ? Map.of() : obj); }
         catch (JsonProcessingException ex) { throw new UncheckedIOException(ex); }
@@ -121,5 +130,15 @@ public class ExecutionRepositoryAdapter implements ExecutionRepositoryPort {
         if (s == null || s.isBlank()) return Map.of();
         try { return json.readValue(s, new TypeReference<Map<String, String>>() {}); }
         catch (Exception ex) { throw new RuntimeException(ex); }
+    }
+
+    private Map<Integer, String> readIntMap(String s) {
+        if (s == null || s.isBlank()) return Map.of();
+        try {
+            Map<String, String> raw = json.readValue(s, new TypeReference<Map<String, String>>() {});
+            Map<Integer, String> result = new java.util.HashMap<>();
+            raw.forEach((k, v) -> result.put(Integer.parseInt(k), v));
+            return result;
+        } catch (Exception ex) { return Map.of(); }
     }
 }
