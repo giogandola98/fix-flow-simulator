@@ -6,3 +6,4 @@ github.sshk
 *.iml
 .DS_Store
 data/
+fix-flow-ui/node/*
