@@ -3,7 +3,9 @@ import { useExecutionStore } from '../../store/executionStore';
 
 export function FIXMessageLog() {
   const messages = useExecutionStore((s) => s.messages);
-  const [hideHeartbeats, setHideHeartbeats] = useState(true);
+  const [hideHeartbeats, setHideHeartbeats] = useState(
+    () => localStorage.getItem('hideHeartbeats') !== 'false',
+  );
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const ref = useRef<HTMLDivElement>(null);
 
@@ -23,7 +25,10 @@ export function FIXMessageLog() {
     <div className="h-full flex flex-col">
       <div className="px-2 py-1 border-b border-[#2a2d3a] flex items-center gap-2">
         <label className="text-xs flex items-center gap-1">
-          <input type="checkbox" checked={hideHeartbeats} onChange={(e) => setHideHeartbeats(e.target.checked)} />
+          <input type="checkbox" checked={hideHeartbeats} onChange={(e) => {
+            setHideHeartbeats(e.target.checked);
+            localStorage.setItem('hideHeartbeats', String(e.target.checked));
+          }} />
           Hide Heartbeats
         </label>
         <div className="ml-auto text-[10px] text-gray-500">{visible.length} / {messages.length} messages</div>

@@ -146,7 +146,6 @@ public class ExecutionManager {
     }
 
     private void persistSentMessage(ExecutionContext ctx, String nodeId) {
-        if (executionRepo == null) return;
         Map<Integer, String> fields = ctx.getNodeMessage(nodeId);
         if (fields == null || fields.isEmpty()) return;
         try {
@@ -154,9 +153,15 @@ public class ExecutionManager {
                     .sorted(Map.Entry.comparingByKey())
                     .map(e -> e.getKey() + "=" + e.getValue())
                     .collect(java.util.stream.Collectors.joining("|"));
-            executionRepo.addMessage(ctx.executionId(), new FIXMessage(
+            FIXMessage msg = new FIXMessage(
                     UUID.randomUUID(), ctx.executionId(), Direction.OUTBOUND, raw,
-                    fields, Instant.now()));
+                    fields, Instant.now());
+            if (executionRepo != null) {
+                try { executionRepo.addMessage(ctx.executionId(), msg); } catch (Throwable ignored) {}
+            }
+            if (eventPublisher != null) {
+                try { eventPublisher.publishMessage(ctx.executionId(), msg); } catch (Throwable ignored) {}
+            }
         } catch (Throwable ignored) {}
     }
 

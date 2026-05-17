@@ -4,6 +4,7 @@
 
 - **Always use caveman mode**: invoke `/caveman:caveman` at session start. All responses + commit messages — drop articles, filler, pleasantries; keep full technical substance.
 - **Branch discipline**: never commit features or bugfixes directly to `master`. Create dedicated branch (`feat/<name>` or `fix/<name>`), work there, open PR or merge to master when done.
+- **Browser UAT**: use Chromium only (no Firefox). No MCP browser automation — user performs Chromium UAT manually.
 
 ## Environment
 
@@ -76,7 +77,7 @@ fix-flow-ui        — React 18 + Vite + @xyflow/react v12 + Zustand + TanStack 
 
 - `POST /api/v1/scenarios/{id}/execute` returns `{ executionId }` — **not** `{ id }`
 - `PUT /api/v1/sessions/{id}/connect` and `disconnect` return `void` — call `GET /{id}` to refresh state
-- `GET /api/v1/executions/{id}/messages` currently reads from events table filtered by `MESSAGE_SENT`/`MESSAGE_RECEIVED` — **known bug #23**: should query message table directly
+- `GET /api/v1/executions/{id}/messages` queries message table directly (`FIXMessageEntity`)
 - `ExecutionEventType` values: `EXECUTION_STARTED, EXECUTION_FINISHED, NODE_ENTERED, NODE_EXITED, MESSAGE_SENT, MESSAGE_RECEIVED, TIMEOUT, ERROR, SESSION_UP, SESSION_DOWN`
 - WS topics: `/topic/executions/{id}/events`, `/topic/executions/{id}/messages`, `/topic/sessions/{id}/status`
 - ScenarioRequest body field is `yamlDsl` (not `yaml`)
