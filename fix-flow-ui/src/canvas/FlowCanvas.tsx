@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -19,7 +19,7 @@ import { useExecutionStore } from '../store/executionStore';
 import { CanvasToolbar } from './CanvasToolbar';
 import { FlowEdge } from './edges/FlowEdge';
 import { nodeTypes } from './nodes/nodeTypes';
-import { NodeType, ScenarioNode } from '../types';
+import { NodeType } from '../types';
 
 const edgeTypes = { default: FlowEdge };
 
@@ -31,26 +31,32 @@ function InnerCanvas() {
   const addNode = useScenarioStore((s) => s.addNode);
   const addEdge = useScenarioStore((s) => s.addEdge);
   const setSelectedNode = useScenarioStore((s) => s.setSelectedNode);
+  const activeScenarioId = useScenarioStore((s) => s.activeScenario?.id);
   const nodeStatuses = useExecutionStore((s) => s.nodeStatuses);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, fitView } = useReactFlow();
 
-  const rfNodes: Node[] = useMemo(
-    () =>
-      nodes.map((n) => ({
-        id: n.id,
-        type: n.type,
-        position: n.position ?? { x: 100, y: 100 },
-        data: {
-          label: n.name,
-          config: n.config,
-          status: nodeStatuses[n.id] ?? 'idle',
-        },
-      })),
-    [nodes, nodeStatuses],
-  );
+  // Local RF state so React Flow can manage measured/selected internally.
+  // Do NOT derive these as useMemo from the store — that strips React Flow's
+  // internal 'measured' state and keeps nodes visibility:hidden forever.
+  const [rfNodes, setRfNodes] = useState<Node[]>([]);
+  const [rfEdges, setRfEdges] = useState<Edge[]>([]);
 
-  const rfEdges: Edge[] = useMemo(
-    () =>
+  // Track which node ids are in rfNodes to detect drag-and-drop additions.
+  const trackedNodeIds = useRef(new Set<string>());
+
+  // Reset rfNodes/rfEdges when the active scenario changes.
+  // Must be declared before the nodes-sync effect so it runs first.
+  useEffect(() => {
+    const nextNodes = nodes.map((n) => ({
+      id: n.id,
+      type: n.type,
+      position: n.position ?? { x: 100, y: 100 },
+      data: { label: n.name, config: n.config, status: nodeStatuses[n.id] ?? 'idle' },
+    }));
+    setRfNodes(nextNodes);
+    trackedNodeIds.current = new Set(nodes.map((n) => n.id));
+
+    setRfEdges(
       edges.map((e, i) => ({
         id: `e${i}-${e.from}-${e.to}-${e.label}`,
         source: e.from,
@@ -58,35 +64,97 @@ function InnerCanvas() {
         label: e.label,
         type: 'default',
       })),
-    [edges],
-  );
+    );
+
+    if (nodes.length > 0) {
+      const t = setTimeout(() => fitView({ padding: 0.2 }), 300);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeScenarioId]);
+
+  // Append nodes added via drag-and-drop (scenario id unchanged, nodes grew).
+  useEffect(() => {
+    const newNodes = nodes.filter((n) => !trackedNodeIds.current.has(n.id));
+    if (newNodes.length > 0) {
+      setRfNodes((prev) => [
+        ...prev,
+        ...newNodes.map((n) => ({
+          id: n.id,
+          type: n.type,
+          position: n.position ?? { x: 100, y: 100 },
+          data: { label: n.name, config: n.config, status: nodeStatuses[n.id] ?? 'idle' },
+        })),
+      ]);
+    }
+    // Sync removals (e.g. node deleted from sidebar).
+    const removedIds = [...trackedNodeIds.current].filter(
+      (id) => !nodes.some((n) => n.id === id),
+    );
+    if (removedIds.length > 0) {
+      const removedSet = new Set(removedIds);
+      setRfNodes((prev) => prev.filter((n) => !removedSet.has(n.id)));
+    }
+    trackedNodeIds.current = new Set(nodes.map((n) => n.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes]);
+
+  // Sync execution status to rfNodes without resetting measured state.
+  useEffect(() => {
+    setRfNodes((prev) =>
+      prev.map((rfNode) => {
+        const status = nodeStatuses[rfNode.id] ?? 'idle';
+        if ((rfNode.data as Record<string, unknown>).status === status) return rfNode;
+        return { ...rfNode, data: { ...rfNode.data, status } };
+      }),
+    );
+  }, [nodeStatuses]);
+
+  // Keep rfEdges in sync with store (edges have no measured state issue).
+  useEffect(() => {
+    setRfEdges(
+      edges.map((e, i) => ({
+        id: `e${i}-${e.from}-${e.to}-${e.label}`,
+        source: e.from,
+        target: e.to,
+        label: e.label,
+        type: 'default',
+      })),
+    );
+  }, [edges]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      const updated = applyNodeChanges(changes, rfNodes);
-      setNodes(
-        updated.map((rn) => {
-          const orig = nodes.find((n) => n.id === rn.id);
-          return { ...(orig as ScenarioNode), position: rn.position };
-        }),
-      );
+      setRfNodes((prev) => applyNodeChanges(changes, prev));
+      // Only write final drag positions back to the store.
+      type PosChange = { id: string; type: 'position'; position?: { x: number; y: number }; dragging?: boolean };
+      const finalPositions = changes.filter(
+        (c) => c.type === 'position' && !(c as PosChange).dragging,
+      ) as PosChange[];
+      if (finalPositions.length > 0) {
+        setNodes(
+          nodes.map((n) => {
+            const change = finalPositions.find((c) => c.id === n.id);
+            return change?.position ? { ...n, position: change.position } : n;
+          }),
+        );
+      }
     },
-    [rfNodes, nodes, setNodes],
+    [nodes, setNodes],
   );
 
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
-      const updated = applyEdgeChanges(changes, rfEdges);
-      setEdges(
-        updated.map((e) => {
-          const orig = rfEdges.find((re) => re.id === e.id);
-          return {
-            from: e.source,
-            to: e.target,
-            label: String(orig?.label ?? 'success'),
-          };
-        }),
-      );
+      setRfEdges((prev) => applyEdgeChanges(changes, prev));
+      const removals = changes.filter((c) => c.type === 'remove') as { id: string }[];
+      if (removals.length > 0) {
+        const removedIds = new Set(removals.map((c) => c.id));
+        setEdges(
+          rfEdges
+            .filter((e) => !removedIds.has(e.id))
+            .map((e) => ({ from: e.source, to: e.target, label: String(e.label ?? 'success') })),
+        );
+      }
     },
     [rfEdges, setEdges],
   );
@@ -129,7 +197,7 @@ function InnerCanvas() {
         onConnect={onConnect}
         onNodeClick={(_, n) => setSelectedNode(n.id)}
         onPaneClick={() => setSelectedNode(null)}
-        fitView
+        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
       >
         <Background color="#2a2d3a" gap={20} />
         <Controls className="!bg-[#1a1d27] !border-[#2a2d3a]" />
