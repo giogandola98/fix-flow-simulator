@@ -24,7 +24,7 @@ type FormValues = FIXSessionCreateRequest;
 const DEFAULTS: FormValues = {
   name: 'default', mode: 'INITIATOR', fixVersion: 'FIX_44', defaultApplVerID: 'FIX.5.0SP2',
   senderCompID: 'CLIENT', targetCompID: 'SERVER', host: 'localhost', port: 9876,
-  heartbeatInterval: 30, reconnectInterval: 5, resetOnLogon: true, resetOnLogout: false,
+  heartbeatInterval: 30, resetOnLogon: true, resetOnLogout: false,
 };
 
 export function SessionPanel() {
@@ -49,7 +49,7 @@ export function SessionPanel() {
         name: activeSession.name, mode: activeSession.mode, fixVersion: activeSession.fixVersion,
         defaultApplVerID: activeSession.defaultApplVerID, senderCompID: activeSession.senderCompID,
         targetCompID: activeSession.targetCompID, host: activeSession.host, port: activeSession.port,
-        heartbeatInterval: activeSession.heartbeatInterval, reconnectInterval: activeSession.reconnectInterval,
+        heartbeatInterval: activeSession.heartbeatInterval,
         resetOnLogon: activeSession.resetOnLogon, resetOnLogout: activeSession.resetOnLogout,
       });
     } else {
@@ -175,9 +175,6 @@ export function SessionPanel() {
         </Field>
         <Field label="Heartbeat Interval (sec)" hint="Seconds between heartbeat messages (FIX tag 108). Standard is 30.">
           <input type="number" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('heartbeatInterval', { valueAsNumber: true })} />
-        </Field>
-        <Field label="Reconnect Interval (sec)" hint="Seconds to wait before reconnecting after disconnection (INITIATOR only).">
-          <input type="number" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('reconnectInterval', { valueAsNumber: true })} />
         </Field>
         <label className="flex items-center gap-2"><input type="checkbox" {...register('resetOnLogon')} /> Reset on Logon</label>
         <label className="flex items-center gap-2"><input type="checkbox" {...register('resetOnLogout')} /> Reset on Logout</label>
