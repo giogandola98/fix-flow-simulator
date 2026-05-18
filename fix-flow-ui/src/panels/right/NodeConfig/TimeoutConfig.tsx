@@ -19,23 +19,29 @@ export function TimeoutConfig({ value, onChange, currentNodeId }: Props) {
   return (
     <div className="border border-[#2a2d3a] rounded p-2 mt-2">
       <div className="text-[10px] uppercase text-gray-500 mb-1">Timeout</div>
-      <div className="flex gap-1">
-        <input
-          type="number"
-          className="w-20 bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 text-xs"
-          value={cfg.value}
-          onChange={(e) => update({ value: Number(e.target.value) })}
-        />
-        <select
-          className="bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 text-xs"
-          value={cfg.unit}
-          onChange={(e) => update({ unit: e.target.value as TimeUnit })}
-        >
-          {UNITS.map((u) => <option key={u}>{u}</option>)}
-        </select>
+      <div className="flex gap-1 items-end">
+        <div>
+          <label className="text-[10px] text-gray-500">Value<span title="How long to wait before triggering the timeout action." className="ml-1 text-gray-600 cursor-help">?</span></label>
+          <input
+            type="number"
+            className="w-20 bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 text-xs block"
+            value={cfg.value}
+            onChange={(e) => update({ value: Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <label className="text-[10px] text-gray-500">Unit<span title="Time unit: MILLISECONDS, SECONDS, MINUTES, or HOURS." className="ml-1 text-gray-600 cursor-help">?</span></label>
+          <select
+            className="bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 text-xs block"
+            value={cfg.unit}
+            onChange={(e) => update({ unit: e.target.value as TimeUnit })}
+          >
+            {UNITS.map((u) => <option key={u}>{u}</option>)}
+          </select>
+        </div>
       </div>
       <div className="mt-1">
-        <label className="text-[10px] text-gray-500">On Timeout</label>
+        <label className="text-[10px] text-gray-500">On Timeout<span title="Action when timeout fires: CONTINUE proceeds to next node, FAIL marks node failed, RETRY re-runs the node, JUMP goes to another node." className="ml-1 text-gray-600 cursor-help">?</span></label>
         <select
           className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 text-xs"
           value={cfg.onTimeout}
@@ -46,7 +52,7 @@ export function TimeoutConfig({ value, onChange, currentNodeId }: Props) {
       </div>
       {cfg.onTimeout === 'JUMP' && (
         <div className="mt-1">
-          <label className="text-[10px] text-gray-500">Jump To Node</label>
+          <label className="text-[10px] text-gray-500">Jump To Node<span title="Target node to jump to when On Timeout is JUMP." className="ml-1 text-gray-600 cursor-help">?</span></label>
           <select
             className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 text-xs"
             value={cfg.jumpTo ?? ''}

@@ -7,6 +7,9 @@ export function WaitConfig({ node }: { node: ScenarioNode }) {
 
   return (
     <div className="text-xs space-y-2">
+      <div className="text-[10px] text-gray-500 italic bg-[#1a1d27] rounded px-2 py-1">
+        Blocks execution for a configurable duration. On timeout: proceed to next node, fail, or jump to another node.
+      </div>
       <div>
         <label className="text-[10px] text-gray-500">Node Name</label>
         <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
