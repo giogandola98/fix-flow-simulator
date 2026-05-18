@@ -24,7 +24,7 @@ export function DelayConfig({ node }: { node: ScenarioNode }) {
         </label>
         <input type="number" min={0} className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
           value={cfg.delayMs ?? 0}
-          onChange={(e) => updateNode(node.id, { config: { ...cfg, delayMs: Number(e.target.value) } })} />
+          onChange={(e) => updateNode(node.id, { config: { ...cfg, delayMs: Math.max(0, Number(e.target.value)) } })} />
       </div>
     </div>
   );

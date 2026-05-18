@@ -55,7 +55,7 @@ export function NodePalette() {
   const q = search.trim().toLowerCase();
   const filteredGroups = GROUPS.map((g) => ({
     ...g,
-    items: q ? g.items.filter((it) => it.label.toLowerCase().includes(q) || it.type.toLowerCase().includes(q)) : g.items,
+    items: q ? g.items.filter((it) => it.label.toLowerCase().includes(q) || it.type.toLowerCase().includes(q) || (it.description?.toLowerCase().includes(q) ?? false)) : g.items,
   })).filter((g) => g.items.length > 0);
 
   return (
