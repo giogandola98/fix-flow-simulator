@@ -196,10 +196,14 @@ function InnerCanvas() {
         let label = 'success';
         if (conn.sourceHandle && conn.sourceHandle !== 'default') {
           const sourceRfNode = rfNodes.find((n) => n.id === conn.source);
-          const cfg = sourceRfNode?.data?.config as
-            { rules?: Array<{ ruleId: string; label: string }> } | undefined;
-          const rule = cfg?.rules?.find((r) => r.ruleId === conn.sourceHandle);
-          if (rule?.label) label = rule.label;
+          if (sourceRfNode?.type === 'DECISION') {
+            label = conn.sourceHandle === 'failure' ? 'failure' : 'success';
+          } else {
+            const cfg = sourceRfNode?.data?.config as
+              { rules?: Array<{ ruleId: string; label: string }> } | undefined;
+            const rule = cfg?.rules?.find((r) => r.ruleId === conn.sourceHandle);
+            if (rule?.label) label = rule.label;
+          }
         }
         const edge = { from: conn.source, to: conn.target, label };
         addEdge(conn.sourceHandle ? { ...edge, sourceHandle: conn.sourceHandle } : edge);
