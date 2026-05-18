@@ -1,0 +1,133 @@
+{
+  "topbar": {
+    "appName": "FIX Flow Simulator",
+    "noScenario": "Nessuno scenario caricato",
+    "run": "Esegui",
+    "stop": "Ferma",
+    "save": "Salva",
+    "import": "Importa",
+    "importing": "Importazione…",
+    "export": "Esporta"
+  },
+  "session": {
+    "noSession": "Nessuna sessione",
+    "connected": "CONNESSA",
+    "disconnected": "DISCONNESSA",
+    "connecting": "CONNESSIONE…",
+    "collapseTitle": "Comprimi pannello sessione",
+    "expandTitle": "Espandi pannello sessione",
+    "activeSession": "Sessione attiva",
+    "newSession": "-- nuova sessione --",
+    "connect": "Connetti",
+    "disconnect": "Disconnetti",
+    "save": "Salva",
+    "delete": "Elim.",
+    "deleteConfirm": "Eliminare la sessione \"{{name}}\"?",
+    "disconnectBeforeFIXVersion": "Disconnettersi prima di cambiare la versione FIX",
+    "fields": {
+      "name": "Nome",
+      "mode": "Modalità",
+      "fixVersion": "Versione FIX",
+      "defaultApplVerID": "DefaultApplVerID",
+      "senderCompID": "SenderCompID",
+      "targetCompID": "TargetCompID",
+      "host": "Host",
+      "port": "Porta",
+      "heartbeat": "Intervallo heartbeat (sec)",
+      "resetOnLogon": "Reset al Logon",
+      "resetOnLogout": "Reset al Logout"
+    },
+    "hints": {
+      "mode": "INITIATOR si connette a una controparte. ACCEPTOR ascolta le connessioni FIX in entrata.",
+      "fixVersion": "Versione del protocollo FIX. FIX 4.4 è la più comune. FIXT.1.1 (FIX 5.0 SP2) richiede DefaultApplVerID.",
+      "senderCompID": "Il tuo CompID — identifica questo lato della sessione FIX (tag 49).",
+      "targetCompID": "CompID della controparte — identifica il lato remoto (tag 56).",
+      "host": "IP o hostname dell'ACCEPTOR. Rilevante solo per la modalità INITIATOR.",
+      "port": "Porta TCP. L'ACCEPTOR ascolta; l'INITIATOR si connette.",
+      "heartbeat": "Secondi tra i messaggi heartbeat (tag FIX 108). Standard: 30."
+    }
+  },
+  "scenarios": {
+    "title": "Scenari",
+    "newScenario": "+ Nuovo",
+    "newScenarioName": "Nuovo Scenario",
+    "searchPlaceholder": "Cerca scenari…",
+    "renameTitle": "Rinomina",
+    "deleteTitle": "Elimina",
+    "noScenarios": "Nessuno scenario",
+    "noMatch": "Nessuno scenario corrisponde a \"{{search}}\""
+  },
+  "palette": {
+    "title": "Palette",
+    "searchPlaceholder": "Cerca blocchi…",
+    "noMatch": "Nessun blocco corrisponde a \"{{search}}\"",
+    "groups": {
+      "messages": "Messaggi",
+      "flowControl": "Controllo Flusso",
+      "integration": "Integrazione",
+      "terminals": "Terminali"
+    },
+    "nodes": {
+      "START": "Inizio",
+      "SEND_FIX": "Invia FIX",
+      "EXPECT_FIX": "Attendi FIX",
+      "VALIDATE": "Valida",
+      "DECISION": "Decisione",
+      "ROUTE_FIX": "Instrada FIX",
+      "RETRY": "Riprova",
+      "LOOP": "Ciclo",
+      "WAIT": "Attendi",
+      "DELAY": "Ritardo",
+      "HTTP_REQUEST": "Richiesta HTTP",
+      "END_PASS": "Fine OK",
+      "END_FAIL": "Fine Errore",
+      "TIMEOUT": "Timeout",
+      "BRANCH": "Diramazione"
+    },
+    "descriptions": {
+      "RETRY": "Riesegue un sottografo fino a N volte; si ferma al primo successo.",
+      "LOOP": "Esegue un sottografo esattamente N volte; tutte le iterazioni devono riuscire.",
+      "WAIT": "Blocca fino al timeout; azione configurabile (continua / fallisce / salta).",
+      "DELAY": "Pausa fissa (ms). Continua sempre al successo — nessuna diramazione."
+    }
+  },
+  "bottomPanel": {
+    "tabs": {
+      "events": "Eventi",
+      "messages": "Messaggi FIX",
+      "validation": "Errori di Validazione",
+      "stats": "Statistiche"
+    },
+    "expand": "Espandi",
+    "collapse": "Comprimi"
+  },
+  "events": {
+    "noEvents": "Nessun evento"
+  },
+  "messages": {
+    "count": "{{count}} messaggi",
+    "noMessages": "Nessun messaggio"
+  },
+  "validation": {
+    "noErrors": "Nessun errore di validazione",
+    "columns": {
+      "tag": "Tag",
+      "rule": "Regola",
+      "expected": "Atteso",
+      "actual": "Effettivo",
+      "message": "Messaggio"
+    }
+  },
+  "stats": {
+    "status": "Stato",
+    "nodesPassed": "Nodi superati",
+    "nodesFailed": "Nodi falliti",
+    "avgNodeTime": "Tempo medio nodo",
+    "totalDuration": "Durata totale"
+  },
+  "properties": {
+    "title": "Proprietà",
+    "noNode": "Seleziona un nodo da configurare",
+    "nodeName": "Nome Nodo"
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "topbar": {
+    "appName": "FIX Flow Simulator",
+    "noScenario": "No scenario loaded",
+    "run": "Run",
+    "stop": "Stop",
+    "save": "Save",
+    "import": "Import",
+    "importing": "Importing…",
+    "export": "Export"
+  },
+  "session": {
+    "noSession": "No session",
+    "connected": "CONNECTED",
+    "disconnected": "DISCONNECTED",
+    "connecting": "CONNECTING…",
+    "collapseTitle": "Collapse session panel",
+    "expandTitle": "Expand session panel",
+    "activeSession": "Active session",
+    "newSession": "-- new session --",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "save": "Save",
+    "delete": "Del",
+    "deleteConfirm": "Delete session \"{{name}}\"?",
+    "disconnectBeforeFIXVersion": "Disconnect before changing FIX version",
+    "fields": {
+      "name": "Name",
+      "mode": "Mode",
+      "fixVersion": "FIX Version",
+      "defaultApplVerID": "DefaultApplVerID",
+      "senderCompID": "SenderCompID",
+      "targetCompID": "TargetCompID",
+      "host": "Host",
+      "port": "Port",
+      "heartbeat": "Heartbeat Interval (sec)",
+      "resetOnLogon": "Reset on Logon",
+      "resetOnLogout": "Reset on Logout"
+    },
+    "hints": {
+      "mode": "INITIATOR connects to a counterparty. ACCEPTOR listens for incoming FIX connections.",
+      "fixVersion": "FIX protocol version. FIX 4.4 most common. FIXT.1.1 (FIX 5.0 SP2) requires DefaultApplVerID.",
+      "senderCompID": "Your CompID — identifies this side of the FIX session (tag 49).",
+      "targetCompID": "Counterparty CompID — identifies the remote side (tag 56).",
+      "host": "IP or hostname of the ACCEPTOR. Only relevant for INITIATOR mode.",
+      "port": "TCP port. ACCEPTOR listens; INITIATOR connects to it.",
+      "heartbeat": "Seconds between heartbeat messages (FIX tag 108). Standard is 30."
+    }
+  },
+  "scenarios": {
+    "title": "Scenarios",
+    "newScenario": "+ New",
+    "newScenarioName": "New Scenario",
+    "searchPlaceholder": "Search scenarios…",
+    "renameTitle": "Rename",
+    "deleteTitle": "Delete",
+    "noScenarios": "No scenarios",
+    "noMatch": "No scenarios match \"{{search}}\""
+  },
+  "palette": {
+    "title": "Palette",
+    "searchPlaceholder": "Search blocks…",
+    "noMatch": "No blocks match \"{{search}}\"",
+    "groups": {
+      "messages": "Messages",
+      "flowControl": "Flow Control",
+      "integration": "Integration",
+      "terminals": "Terminals"
+    },
+    "nodes": {
+      "START": "Start",
+      "SEND_FIX": "Send FIX",
+      "EXPECT_FIX": "Expect FIX",
+      "VALIDATE": "Validate",
+      "DECISION": "Decision",
+      "ROUTE_FIX": "Route FIX",
+      "RETRY": "Retry",
+      "LOOP": "Loop",
+      "WAIT": "Wait",
+      "DELAY": "Delay",
+      "HTTP_REQUEST": "HTTP Request",
+      "END_PASS": "End Pass",
+      "END_FAIL": "End Fail",
+      "TIMEOUT": "Timeout",
+      "BRANCH": "Branch"
+    },
+    "descriptions": {
+      "RETRY": "Re-execute a subgraph up to N times; stops on first success.",
+      "LOOP": "Execute a subgraph exactly N times; all iterations must succeed.",
+      "WAIT": "Block until timeout; configurable on-timeout action (proceed / fail / jump).",
+      "DELAY": "Fixed sleep (ms). Always continues on success — no branching."
+    }
+  },
+  "bottomPanel": {
+    "tabs": {
+      "events": "Events",
+      "messages": "FIX Messages",
+      "validation": "Validation Errors",
+      "stats": "Statistics"
+    },
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "events": {
+    "noEvents": "No events"
+  },
+  "messages": {
+    "count": "{{count}} messages",
+    "noMessages": "No messages"
+  },
+  "validation": {
+    "noErrors": "No validation errors",
+    "columns": {
+      "tag": "Tag",
+      "rule": "Rule",
+      "expected": "Expected",
+      "actual": "Actual",
+      "message": "Message"
+    }
+  },
+  "stats": {
+    "status": "Status",
+    "nodesPassed": "Nodes passed",
+    "nodesFailed": "Nodes failed",
+    "avgNodeTime": "Avg node time",
+    "totalDuration": "Total duration"
+  },
+  "properties": {
+    "title": "Properties",
+    "noNode": "Select a node to configure",
+    "nodeName": "Node Name"
+  }
+}

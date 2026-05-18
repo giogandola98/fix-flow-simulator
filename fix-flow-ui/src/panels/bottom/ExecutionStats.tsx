@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useExecutionStore } from '../../store/executionStore';
 import { ExecutionReport } from './ExecutionReport';
 
 export function ExecutionStats() {
+  const { t } = useTranslation();
   const events = useExecutionStore((s) => s.events);
   const startedAt = useExecutionStore((s) => s.startedAt);
   const endedAt = useExecutionStore((s) => s.endedAt);
@@ -34,11 +36,11 @@ export function ExecutionStats() {
         <ExecutionReport />
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <Stat label="Status" value={executionStatus} />
-        <Stat label="Nodes passed" value={String(stats.nodesPassed)} />
-        <Stat label="Nodes failed" value={String(stats.nodesFailed)} />
-        <Stat label="Avg node time" value={`${stats.avgNodeMs} ms`} />
-        <Stat label="Total duration" value={`${stats.duration} ms`} />
+        <Stat label={t('stats.status')} value={executionStatus ?? '—'} />
+        <Stat label={t('stats.nodesPassed')} value={String(stats.nodesPassed)} />
+        <Stat label={t('stats.nodesFailed')} value={String(stats.nodesFailed)} />
+        <Stat label={t('stats.avgNodeTime')} value={`${stats.avgNodeMs} ms`} />
+        <Stat label={t('stats.totalDuration')} value={`${stats.duration} ms`} />
       </div>
     </div>
   );

@@ -1,0 +1,133 @@
+{
+  "topbar": {
+    "appName": "FIX Flow Simulator",
+    "noScenario": "Aucun scénario chargé",
+    "run": "Exécuter",
+    "stop": "Arrêter",
+    "save": "Enregistrer",
+    "import": "Importer",
+    "importing": "Importation…",
+    "export": "Exporter"
+  },
+  "session": {
+    "noSession": "Aucune session",
+    "connected": "CONNECTÉE",
+    "disconnected": "DÉCONNECTÉE",
+    "connecting": "CONNEXION…",
+    "collapseTitle": "Réduire le panneau de session",
+    "expandTitle": "Développer le panneau de session",
+    "activeSession": "Session active",
+    "newSession": "-- nouvelle session --",
+    "connect": "Connecter",
+    "disconnect": "Déconnecter",
+    "save": "Enregistrer",
+    "delete": "Suppr.",
+    "deleteConfirm": "Supprimer la session « {{name}} » ?",
+    "disconnectBeforeFIXVersion": "Se déconnecter avant de changer la version FIX",
+    "fields": {
+      "name": "Nom",
+      "mode": "Mode",
+      "fixVersion": "Version FIX",
+      "defaultApplVerID": "DefaultApplVerID",
+      "senderCompID": "SenderCompID",
+      "targetCompID": "TargetCompID",
+      "host": "Hôte",
+      "port": "Port",
+      "heartbeat": "Intervalle heartbeat (sec)",
+      "resetOnLogon": "Réinitialiser au Logon",
+      "resetOnLogout": "Réinitialiser au Logout"
+    },
+    "hints": {
+      "mode": "INITIATOR se connecte à une contrepartie. ACCEPTOR écoute les connexions FIX entrantes.",
+      "fixVersion": "Version du protocole FIX. FIX 4.4 est la plus courante. FIXT.1.1 (FIX 5.0 SP2) nécessite DefaultApplVerID.",
+      "senderCompID": "Votre CompID — identifie ce côté de la session FIX (tag 49).",
+      "targetCompID": "CompID de la contrepartie — identifie le côté distant (tag 56).",
+      "host": "IP ou nom d'hôte de l'ACCEPTOR. Pertinent uniquement en mode INITIATOR.",
+      "port": "Port TCP. L'ACCEPTOR écoute ; l'INITIATOR se connecte.",
+      "heartbeat": "Secondes entre les messages heartbeat (tag FIX 108). Standard : 30."
+    }
+  },
+  "scenarios": {
+    "title": "Scénarios",
+    "newScenario": "+ Nouveau",
+    "newScenarioName": "Nouveau Scénario",
+    "searchPlaceholder": "Rechercher des scénarios…",
+    "renameTitle": "Renommer",
+    "deleteTitle": "Supprimer",
+    "noScenarios": "Aucun scénario",
+    "noMatch": "Aucun scénario ne correspond à « {{search}} »"
+  },
+  "palette": {
+    "title": "Palette",
+    "searchPlaceholder": "Rechercher des blocs…",
+    "noMatch": "Aucun bloc ne correspond à « {{search}} »",
+    "groups": {
+      "messages": "Messages",
+      "flowControl": "Contrôle de Flux",
+      "integration": "Intégration",
+      "terminals": "Terminaux"
+    },
+    "nodes": {
+      "START": "Début",
+      "SEND_FIX": "Envoyer FIX",
+      "EXPECT_FIX": "Attendre FIX",
+      "VALIDATE": "Valider",
+      "DECISION": "Décision",
+      "ROUTE_FIX": "Router FIX",
+      "RETRY": "Réessayer",
+      "LOOP": "Boucle",
+      "WAIT": "Attendre",
+      "DELAY": "Délai",
+      "HTTP_REQUEST": "Requête HTTP",
+      "END_PASS": "Fin OK",
+      "END_FAIL": "Fin Erreur",
+      "TIMEOUT": "Timeout",
+      "BRANCH": "Branchement"
+    },
+    "descriptions": {
+      "RETRY": "Réexécute un sous-graphe jusqu'à N fois ; s'arrête au premier succès.",
+      "LOOP": "Exécute un sous-graphe exactement N fois ; toutes les itérations doivent réussir.",
+      "WAIT": "Bloque jusqu'au timeout ; action configurable (continuer / échouer / sauter).",
+      "DELAY": "Pause fixe (ms). Continue toujours au succès — pas de branchement."
+    }
+  },
+  "bottomPanel": {
+    "tabs": {
+      "events": "Événements",
+      "messages": "Messages FIX",
+      "validation": "Erreurs de Validation",
+      "stats": "Statistiques"
+    },
+    "expand": "Développer",
+    "collapse": "Réduire"
+  },
+  "events": {
+    "noEvents": "Aucun événement"
+  },
+  "messages": {
+    "count": "{{count}} messages",
+    "noMessages": "Aucun message"
+  },
+  "validation": {
+    "noErrors": "Aucune erreur de validation",
+    "columns": {
+      "tag": "Tag",
+      "rule": "Règle",
+      "expected": "Attendu",
+      "actual": "Réel",
+      "message": "Message"
+    }
+  },
+  "stats": {
+    "status": "Statut",
+    "nodesPassed": "Nœuds réussis",
+    "nodesFailed": "Nœuds échoués",
+    "avgNodeTime": "Temps moyen nœud",
+    "totalDuration": "Durée totale"
+  },
+  "properties": {
+    "title": "Propriétés",
+    "noNode": "Sélectionner un nœud à configurer",
+    "nodeName": "Nom du Nœud"
+  }
+}

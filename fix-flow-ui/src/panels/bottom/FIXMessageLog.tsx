@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useExecutionStore } from '../../store/executionStore';
 
 export function FIXMessageLog() {
+  const { t } = useTranslation();
   const messages = useExecutionStore((s) => s.messages);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const ref = useRef<HTMLDivElement>(null);
@@ -13,10 +15,10 @@ export function FIXMessageLog() {
   return (
     <div className="h-full flex flex-col">
       <div className="px-2 py-1 border-b border-[#2a2d3a] flex items-center">
-        <div className="ml-auto text-[10px] text-gray-500">{messages.length} messages</div>
+        <div className="ml-auto text-[10px] text-gray-500">{t('messages.count', { count: messages.length })}</div>
       </div>
       <div ref={ref} className="flex-1 overflow-y-auto px-2 py-1 font-mono text-[11px]">
-        {messages.length === 0 && <div className="text-gray-500 italic">No messages</div>}
+        {messages.length === 0 && <div className="text-gray-500 italic">{t('messages.noMessages')}</div>}
         {messages.map((m) => {
           const isExp = expanded[m.id];
           const display = isExp ? m.rawFix : m.rawFix.slice(0, 80);

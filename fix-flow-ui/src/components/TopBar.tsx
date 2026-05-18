@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useScenarioStore } from '../store/scenarioStore';
 import { useSessionStore } from '../store/sessionStore';
 import { useExecutionStore } from '../store/executionStore';
@@ -7,7 +8,14 @@ import { executeScenario, updateScenario, importScenario } from '../api/scenario
 import { stopExecution } from '../api/executions';
 import { serializeToYaml, parseFromYaml } from '../lib/scenarioSerializer';
 
+const LANGUAGES = [
+  { code: 'en', label: 'EN' },
+  { code: 'it', label: 'IT' },
+  { code: 'fr', label: 'FR' },
+];
+
 export default function TopBar() {
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const activeScenario = useScenarioStore((s) => s.activeScenario);
   const setActiveScenario = useScenarioStore((s) => s.setActiveScenario);
@@ -114,11 +122,12 @@ export default function TopBar() {
   });
 
   const isRunning = executionStatus === 'RUNNING';
+  const currentLang = i18n.language?.slice(0, 2) ?? 'en';
 
   return (
     <div className="h-12 bg-[#1a1d27] border-b border-[#2a2d3a] flex items-center px-4 gap-4">
-      <div className="font-semibold text-blue-400">FIX Flow Simulator</div>
-      <div className="text-sm text-gray-400">{activeScenario?.name ?? 'No scenario loaded'}</div>
+      <div className="font-semibold text-blue-400">{t('topbar.appName')}</div>
+      <div className="text-sm text-gray-400">{activeScenario?.name ?? t('topbar.noScenario')}</div>
       {errorMsg && (
         <div className="text-xs text-red-400 bg-red-900/40 border border-red-700 rounded px-2 py-0.5 max-w-xs truncate"
           title={errorMsg} onClick={() => setErrorMsg(null)}>
@@ -126,6 +135,23 @@ export default function TopBar() {
         </div>
       )}
       <div className="flex-1" />
+      {/* Language switcher */}
+      <div className="flex items-center gap-0.5">
+        {LANGUAGES.map((l) => (
+          <button
+            key={l.code}
+            onClick={() => i18n.changeLanguage(l.code)}
+            className={`px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors ${
+              currentLang === l.code
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-400 hover:text-gray-200 hover:bg-[#2a2d3a]'
+            }`}
+          >
+            {l.label}
+          </button>
+        ))}
+      </div>
+      <div className="w-px h-6 bg-[#2a2d3a]" />
       <button
         className="px-3 py-1 rounded bg-green-600 hover:bg-green-500 disabled:opacity-40 text-sm"
         onClick={() => {
@@ -138,31 +164,31 @@ export default function TopBar() {
         }}
         disabled={!activeScenario || !activeSession || !activeSession.connected || isRunning}
       >
-        Run
+        {t('topbar.run')}
       </button>
       <button
         className="px-3 py-1 rounded bg-red-600 hover:bg-red-500 disabled:opacity-40 text-sm"
         onClick={() => stopMutation.mutate()}
         disabled={!isRunning}
       >
-        Stop
+        {t('topbar.stop')}
       </button>
       <button
         className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-sm"
         onClick={() => saveMutation.mutate()}
         disabled={!activeScenario || !isDirty}
       >
-        Save{isDirty ? ' •' : ''}
+        {t('topbar.save')}{isDirty ? ' •' : ''}
       </button>
       <div className="w-px h-6 bg-[#2a2d3a]" />
       <input ref={importRef} type="file" accept=".yaml,.yml" className="hidden" onChange={handleImportFile} />
       <button className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-sm"
         disabled={importMutation.isPending}
         onClick={() => importRef.current?.click()}>
-        {importMutation.isPending ? 'Importing…' : 'Import'}
+        {importMutation.isPending ? t('topbar.importing') : t('topbar.import')}
       </button>
       <button className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-sm"
-        disabled={!activeScenario} onClick={handleExport}>Export</button>
+        disabled={!activeScenario} onClick={handleExport}>{t('topbar.export')}</button>
     </div>
   );
 }

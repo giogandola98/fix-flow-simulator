@@ -1,50 +1,51 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { NodeType } from '../../types';
 import { colors } from '../../theme/colors';
 
 interface PaletteItem {
   type: NodeType;
-  label: string;
-  description?: string;
+  descKey?: string;
 }
 
-const GROUPS: Array<{ title: string; items: PaletteItem[] }> = [
+const GROUPS: Array<{ titleKey: string; items: PaletteItem[] }> = [
   {
-    title: 'Messages',
+    titleKey: 'palette.groups.messages',
     items: [
-      { type: 'SEND_FIX', label: 'Send FIX' },
-      { type: 'EXPECT_FIX', label: 'Expect FIX' },
-      { type: 'VALIDATE', label: 'Validate' },
+      { type: 'SEND_FIX' },
+      { type: 'EXPECT_FIX' },
+      { type: 'VALIDATE' },
     ],
   },
   {
-    title: 'Flow Control',
+    titleKey: 'palette.groups.flowControl',
     items: [
-      { type: 'DECISION', label: 'Decision' },
-      { type: 'ROUTE_FIX', label: 'Route FIX' },
-      { type: 'RETRY', label: 'Retry', description: 'Re-execute a subgraph up to N times; stops on first success.' },
-      { type: 'LOOP', label: 'Loop', description: 'Execute a subgraph exactly N times; all iterations must succeed.' },
-      { type: 'WAIT', label: 'Wait', description: 'Block until timeout; configurable on-timeout action (proceed / fail / jump).' },
-      { type: 'DELAY', label: 'Delay', description: 'Fixed sleep (ms). Always continues on success — no branching.' },
+      { type: 'DECISION' },
+      { type: 'ROUTE_FIX' },
+      { type: 'RETRY', descKey: 'palette.descriptions.RETRY' },
+      { type: 'LOOP', descKey: 'palette.descriptions.LOOP' },
+      { type: 'WAIT', descKey: 'palette.descriptions.WAIT' },
+      { type: 'DELAY', descKey: 'palette.descriptions.DELAY' },
     ],
   },
   {
-    title: 'Integration',
+    titleKey: 'palette.groups.integration',
     items: [
-      { type: 'HTTP_REQUEST', label: 'HTTP Request' },
+      { type: 'HTTP_REQUEST' },
     ],
   },
   {
-    title: 'Terminals',
+    titleKey: 'palette.groups.terminals',
     items: [
-      { type: 'START', label: 'Start' },
-      { type: 'END_PASS', label: 'End Pass' },
-      { type: 'END_FAIL', label: 'End Fail' },
+      { type: 'START' },
+      { type: 'END_PASS' },
+      { type: 'END_FAIL' },
     ],
   },
 ];
 
 export function NodePalette() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
 
   const onDragStart = (evt: React.DragEvent, type: NodeType) => {
@@ -55,16 +56,22 @@ export function NodePalette() {
   const q = search.trim().toLowerCase();
   const filteredGroups = GROUPS.map((g) => ({
     ...g,
-    items: q ? g.items.filter((it) => it.label.toLowerCase().includes(q) || it.type.toLowerCase().includes(q) || (it.description?.toLowerCase().includes(q) ?? false)) : g.items,
+    items: q
+      ? g.items.filter((it) => {
+          const label = t(`palette.nodes.${it.type}`).toLowerCase();
+          const desc = it.descKey ? t(it.descKey).toLowerCase() : '';
+          return label.includes(q) || it.type.toLowerCase().includes(q) || desc.includes(q);
+        })
+      : g.items,
   })).filter((g) => g.items.length > 0);
 
   return (
     <div className="h-full flex flex-col">
       <div className="p-2 pb-0">
-        <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">Palette</div>
+        <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">{t('palette.title')}</div>
         <input
           type="text"
-          placeholder="Search blocks…"
+          placeholder={t('palette.searchPlaceholder')}
           className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 text-xs mb-2 placeholder-gray-600 focus:outline-none focus:border-blue-500"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -72,26 +79,26 @@ export function NodePalette() {
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2">
         {filteredGroups.map((g) => (
-          <div key={g.title} className="mb-3">
-            <div className="text-[10px] uppercase text-gray-400 mb-1">{g.title}</div>
+          <div key={g.titleKey} className="mb-3">
+            <div className="text-[10px] uppercase text-gray-400 mb-1">{t(g.titleKey)}</div>
             <div className="flex flex-col gap-1">
               {g.items.map((it) => (
                 <div
                   key={it.type}
                   draggable
                   onDragStart={(e) => onDragStart(e, it.type)}
-                  title={it.description}
+                  title={it.descKey ? t(it.descKey) : undefined}
                   className="px-2 py-1 rounded cursor-grab bg-[#0f1117] border text-xs hover:bg-[#22252f]"
                   style={{ borderColor: colors.node[it.type as keyof typeof colors.node] }}
                 >
-                  {it.label}
+                  {t(`palette.nodes.${it.type}`)}
                 </div>
               ))}
             </div>
           </div>
         ))}
         {filteredGroups.length === 0 && (
-          <div className="text-xs text-gray-600 italic">No blocks match "{search}"</div>
+          <div className="text-xs text-gray-600 italic">{t('palette.noMatch', { search })}</div>
         )}
       </div>
     </div>
