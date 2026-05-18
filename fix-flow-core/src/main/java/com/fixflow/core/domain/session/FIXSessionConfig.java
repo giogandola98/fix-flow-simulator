@@ -13,7 +13,6 @@ public record FIXSessionConfig(
         String host,
         int port,
         int heartbeatInterval,
-        int reconnectInterval,
         boolean resetOnLogon,
         boolean resetOnLogout
 ) {

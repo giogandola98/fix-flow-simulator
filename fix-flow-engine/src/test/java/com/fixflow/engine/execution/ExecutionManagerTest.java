@@ -34,7 +34,7 @@ class ExecutionManagerTest {
         UUID scenarioId = UUID.randomUUID();
         UUID sessionId = UUID.randomUUID();
         fake.connect(new FIXSessionConfig(sessionId, "s1", FIXMode.INITIATOR, FIXVersion.FIX_44,
-                null, "S", "T", "h", 1, 30, 5, true, false));
+                null, "S", "T", "h", 1, 30, true, false));
 
         Scenario scenario = new Scenario(scenarioId, "demo", "", "1.0", "sess",
                 RuntimePolicy.PARALLEL, List.of(), List.of(),

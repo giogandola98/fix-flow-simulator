@@ -27,14 +27,14 @@ export interface ScenarioUpdateRequest { name?: string; description?: string; se
 export interface FIXSessionConfig {
   id: string; name: string; mode: FIXMode; fixVersion: FIXVersion;
   defaultApplVerID: string; senderCompID: string; targetCompID: string;
-  host: string; port: number; heartbeatInterval: number; reconnectInterval: number;
+  host: string; port: number; heartbeatInterval: number;
   resetOnLogon: boolean; resetOnLogout: boolean; connected: boolean;
 }
 
 export interface FIXSessionCreateRequest {
   name: string; mode: string; fixVersion: string; defaultApplVerID: string;
   senderCompID: string; targetCompID: string; host: string; port: number;
-  heartbeatInterval: number; reconnectInterval: number;
+  heartbeatInterval: number;
   resetOnLogon: boolean; resetOnLogout: boolean;
 }
 

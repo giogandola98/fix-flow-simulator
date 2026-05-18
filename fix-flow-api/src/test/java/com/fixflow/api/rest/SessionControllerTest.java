@@ -44,12 +44,12 @@ class SessionControllerTest {
 
     private FIXSessionConfig minSession(UUID id) {
         return new FIXSessionConfig(id, "s1", FIXMode.ACCEPTOR, FIXVersion.FIX_44,
-            null, "SENDER", "TARGET", "localhost", 9999, 30, 5, true, true);
+            null, "SENDER", "TARGET", "localhost", 9999, 30, true, true);
     }
 
     private FIXSessionRequest minRequest() {
         return new FIXSessionRequest("s1", "ACCEPTOR", "FIX_44", null,
-            "SENDER", "TARGET", "localhost", 9999, 30, 5, true, true);
+            "SENDER", "TARGET", "localhost", 9999, 30, true, true);
     }
 
     @Test
@@ -105,7 +105,7 @@ class SessionControllerTest {
 
         // Different fixVersion -> FIXT_11
         FIXSessionRequest req = new FIXSessionRequest("s1", "ACCEPTOR", "FIXT_11", null,
-            "SENDER", "TARGET", "localhost", 9999, 30, 5, true, true);
+            "SENDER", "TARGET", "localhost", 9999, 30, true, true);
         mvc.perform(put("/api/v1/sessions/" + id)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(req)))

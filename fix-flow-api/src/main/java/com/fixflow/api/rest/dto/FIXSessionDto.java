@@ -6,14 +6,14 @@ import java.util.UUID;
 public record FIXSessionDto(
     UUID id, String name, String mode, String fixVersion, String defaultApplVerID,
     String senderCompID, String targetCompID, String host, int port,
-    int heartbeatInterval, int reconnectInterval, boolean resetOnLogon, boolean resetOnLogout,
+    int heartbeatInterval, boolean resetOnLogon, boolean resetOnLogout,
     boolean connected
 ) {
     public static FIXSessionDto from(FIXSessionConfig c, boolean connected) {
         return new FIXSessionDto(
             c.id(), c.name(), c.mode().name(), c.fixVersion().name(), c.defaultApplVerID(),
             c.senderCompID(), c.targetCompID(), c.host(), c.port(),
-            c.heartbeatInterval(), c.reconnectInterval(), c.resetOnLogon(), c.resetOnLogout(),
+            c.heartbeatInterval(), c.resetOnLogon(), c.resetOnLogout(),
             connected
         );
     }

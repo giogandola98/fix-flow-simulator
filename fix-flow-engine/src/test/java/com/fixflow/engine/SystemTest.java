@@ -49,7 +49,7 @@ class SystemTest {
         UUID sessionId = UUID.randomUUID();
         fake.connect(new FIXSessionConfig(
                 sessionId, "sys-session", FIXMode.INITIATOR, FIXVersion.FIX_44,
-                null, "SYS", "TARGET", "localhost", 9001, 30, 5, true, false));
+                null, "SYS", "TARGET", "localhost", 9001, 30, true, false));
 
         // --- Build 3 scenarios, each correlating on tag 131 (QuoteReqID) ---
         Scenario scenA = buildScenario("REQ-A");
@@ -114,7 +114,7 @@ class SystemTest {
         UUID sessionId = UUID.randomUUID();
         fake.connect(new FIXSessionConfig(
                 sessionId, "s2", FIXMode.INITIATOR, FIXVersion.FIX_44,
-                null, "SYS", "TGT", "localhost", 9002, 30, 5, true, false));
+                null, "SYS", "TGT", "localhost", 9002, 30, true, false));
 
         // Use very short timeouts so the "missing" responses time out fast
         Scenario scenX = buildScenarioWithTimeout("REQ-X", 200);

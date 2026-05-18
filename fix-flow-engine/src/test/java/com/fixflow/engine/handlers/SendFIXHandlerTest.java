@@ -20,7 +20,7 @@ class SendFIXHandlerTest {
         FakeFixAdapter fake = new FakeFixAdapter();
         UUID sessionId = UUID.randomUUID();
         fake.connect(new FIXSessionConfig(sessionId, "s1", FIXMode.INITIATOR, FIXVersion.FIX_44,
-                null, "S", "T", "h", 1, 30, 5, true, false));
+                null, "S", "T", "h", 1, 30, true, false));
 
         SendFIXHandler handler = new SendFIXHandler(fake, new VariableResolver());
 
@@ -48,7 +48,7 @@ class SendFIXHandlerTest {
         FakeFixAdapter fake = new FakeFixAdapter();
         UUID sessionId = UUID.randomUUID();
         fake.connect(new FIXSessionConfig(sessionId, "s1", FIXMode.INITIATOR, FIXVersion.FIX_44,
-                null, "S", "T", "h", 1, 30, 5, true, false));
+                null, "S", "T", "h", 1, 30, true, false));
 
         SendFIXHandler handler = new SendFIXHandler(fake, new VariableResolver());
 
