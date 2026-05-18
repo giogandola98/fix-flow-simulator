@@ -139,12 +139,12 @@ export function SessionPanel() {
         <Field label="Name">
           <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('name', { required: true })} />
         </Field>
-        <Field label="Mode">
+        <Field label="Mode" hint="INITIATOR connects to a counterparty. ACCEPTOR listens for incoming FIX connections.">
           <select className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('mode')}>
             {MODES.map((m) => <option key={m}>{m}</option>)}
           </select>
         </Field>
-        <Field label="FIX Version">
+        <Field label="FIX Version" hint="FIX protocol version. FIX 4.4 most common. FIXT.1.1 (FIX 5.0 SP2) requires DefaultApplVerID.">
           <select
             className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
             disabled={connected}
@@ -161,22 +161,22 @@ export function SessionPanel() {
             <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('defaultApplVerID')} />
           </Field>
         )}
-        <Field label="SenderCompID">
+        <Field label="SenderCompID" hint="Your CompID — identifies this side of the FIX session (tag 49).">
           <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('senderCompID', { required: true })} />
         </Field>
-        <Field label="TargetCompID">
+        <Field label="TargetCompID" hint="Counterparty CompID — identifies the remote side (tag 56).">
           <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('targetCompID', { required: true })} />
         </Field>
-        <Field label="Host">
+        <Field label="Host" hint="IP or hostname of the ACCEPTOR. Only relevant for INITIATOR mode.">
           <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('host')} />
         </Field>
-        <Field label="Port">
+        <Field label="Port" hint="TCP port. ACCEPTOR listens; INITIATOR connects to it.">
           <input type="number" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('port', { valueAsNumber: true })} />
         </Field>
-        <Field label="Heartbeat Interval (sec)">
+        <Field label="Heartbeat Interval (sec)" hint="Seconds between heartbeat messages (FIX tag 108). Standard is 30.">
           <input type="number" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('heartbeatInterval', { valueAsNumber: true })} />
         </Field>
-        <Field label="Reconnect Interval (sec)">
+        <Field label="Reconnect Interval (sec)" hint="Seconds to wait before reconnecting after disconnection (INITIATOR only).">
           <input type="number" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('reconnectInterval', { valueAsNumber: true })} />
         </Field>
         <label className="flex items-center gap-2"><input type="checkbox" {...register('resetOnLogon')} /> Reset on Logon</label>
@@ -211,10 +211,13 @@ export function SessionPanel() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="text-[10px] text-gray-500">{label}</label>
+      <label className="text-[10px] text-gray-500">
+        {label}
+        {hint && <span title={hint} className="ml-1 text-gray-600 cursor-help">?</span>}
+      </label>
       {children}
     </div>
   );

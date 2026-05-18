@@ -29,13 +29,13 @@ export function SendFIXConfig({ node }: Props) {
           value={node.name} onChange={(e) => updateNode(node.id, { name: e.target.value })} />
       </div>
       <div>
-        <label className="text-[10px] text-gray-500">MsgType (tag 35)</label>
+        <label className="text-[10px] text-gray-500">MsgType (tag 35)<span title="FIX tag 35 value. e.g. D = New Order Single, 8 = Execution Report, V = Market Data Request." className="ml-1 text-gray-600 cursor-help">?</span></label>
         <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
           value={cfg.msgType ?? ''} onChange={(e) => patchConfig({ msgType: e.target.value })} />
       </div>
       <div>
         <div className="flex items-center justify-between">
-          <label className="text-[10px] text-gray-500">Fields</label>
+          <label className="text-[10px] text-gray-500">Fields<span title="FIX tag-value pairs. Tag is the integer field number; Value is a string. Use {{var:name}} for runtime substitution." className="ml-1 text-gray-600 cursor-help">?</span></label>
           <button className="text-[10px] px-2 py-0.5 bg-blue-600 hover:bg-blue-500 rounded" onClick={addField}>+ Field</button>
         </div>
         <table className="w-full mt-1">
