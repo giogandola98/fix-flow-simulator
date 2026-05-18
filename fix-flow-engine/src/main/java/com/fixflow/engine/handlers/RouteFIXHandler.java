@@ -32,28 +32,28 @@ public class RouteFIXHandler implements NodeHandler {
         Map<String, Object> cfg = node.config();
         List<Map<String, Object>> rawRules = (List<Map<String, Object>>) cfg.getOrDefault("rules", List.of());
 
-        List<CorrelationEngine.RoutingRule> rules = new ArrayList<>();
-        for (Map<String, Object> r : rawRules) {
-            String ruleId       = Objects.toString(r.get("ruleId"), UUID.randomUUID().toString());
-            String label        = Objects.toString(r.getOrDefault("label", ""), "");
-            String targetNodeId = Objects.toString(r.get("targetNodeId"), "");
-            Map<Integer, String> matchers = new LinkedHashMap<>();
-            Object matchersObj = r.get("matchers");
-            if (matchersObj instanceof Map<?,?> mm) {
-                for (Map.Entry<?,?> e : mm.entrySet()) {
-                    String resolved = resolver.resolveAll(e.getValue().toString(), ctx);
-                    matchers.put(Integer.parseInt(e.getKey().toString()), resolved);
-                }
-            }
-            rules.add(new CorrelationEngine.RoutingRule(ruleId, label, matchers, targetNodeId));
-        }
-
         String execId = ctx.executionId().toString() + ":route:" + node.id();
-        CompletableFuture<CorrelationEngine.RoutedResult> future = correlation.registerMulti(execId, rules);
-
         long timeoutMs = node.timeout() == null ? 30_000L : node.timeout().toMillis();
 
         try {
+            List<CorrelationEngine.RoutingRule> rules = new ArrayList<>();
+            for (Map<String, Object> r : rawRules) {
+                String ruleId       = Objects.toString(r.get("ruleId"), UUID.randomUUID().toString());
+                String label        = Objects.toString(r.getOrDefault("label", ""), "");
+                String targetNodeId = Objects.toString(r.get("targetNodeId"), "");
+                Map<Integer, String> matchers = new LinkedHashMap<>();
+                Object matchersObj = r.get("matchers");
+                if (matchersObj instanceof Map<?,?> mm) {
+                    for (Map.Entry<?,?> e : mm.entrySet()) {
+                        String resolved = resolver.resolveAll(Objects.toString(e.getValue(), ""), ctx);
+                        matchers.put(Integer.parseInt(e.getKey().toString()), resolved);
+                    }
+                }
+                rules.add(new CorrelationEngine.RoutingRule(ruleId, label, matchers, targetNodeId));
+            }
+
+            CompletableFuture<CorrelationEngine.RoutedResult> future = correlation.registerMulti(execId, rules);
+
             CorrelationEngine.RoutedResult result =
                     future.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
             ctx.storeNodeMessage(node.id(), result.fields());
