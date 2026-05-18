@@ -1,3 +1,7 @@
+// Copyright (c) 2026 Giorgio Gandola <giogandola@gmail.com>
+// FIX Flow Simulator — https://github.com/giogandola98/fix-flow-simulator
+// Licensed under the FIX Flow Simulator Source Available License v1.0.
+// Commercial use requires a separate license. See LICENSE for details.
 package com.fixflow.api;
 
 import org.springframework.boot.SpringApplication;
