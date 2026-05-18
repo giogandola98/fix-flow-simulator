@@ -65,8 +65,10 @@ public class QuickFIXAdapter implements FIXSessionPort {
     @Override
     public void disconnect(UUID sessionId) {
         Connector c = connectors.remove(sessionId);
-        if (c != null) c.stop(true);
         SessionID sid = sessions.remove(sessionId);
+        try {
+            if (c != null) c.stop(true);
+        } catch (Exception ignored) {}
         if (sid != null) application.unregisterSession(sid);
     }
 
