@@ -30,7 +30,6 @@ public class FIXSessionEntity {
     private String host;
     private int port;
     private int heartbeatInterval;
-    private int reconnectInterval;
     private boolean resetOnLogon;
     private boolean resetOnLogout;
 
@@ -54,8 +53,6 @@ public class FIXSessionEntity {
     public void setPort(int port) { this.port = port; }
     public int getHeartbeatInterval() { return heartbeatInterval; }
     public void setHeartbeatInterval(int h) { this.heartbeatInterval = h; }
-    public int getReconnectInterval() { return reconnectInterval; }
-    public void setReconnectInterval(int r) { this.reconnectInterval = r; }
     public boolean isResetOnLogon() { return resetOnLogon; }
     public void setResetOnLogon(boolean r) { this.resetOnLogon = r; }
     public boolean isResetOnLogout() { return resetOnLogout; }

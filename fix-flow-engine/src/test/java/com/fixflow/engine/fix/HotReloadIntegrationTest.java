@@ -52,7 +52,7 @@ class HotReloadIntegrationTest {
         UUID sessionId = UUID.randomUUID();
         fake.connect(new FIXSessionConfig(
                 sessionId, "s1", FIXMode.INITIATOR, FIXVersion.FIX_44,
-                null, "A", "B", "localhost", 9001, 30, 5, true, false));
+                null, "A", "B", "localhost", 9001, 30, true, false));
 
         Scenario v1 = buildScenario("REQ-HOT", 5000);
         registry.register(v1);
@@ -118,7 +118,7 @@ class HotReloadIntegrationTest {
         UUID sessionId = UUID.randomUUID();
         fake.connect(new FIXSessionConfig(
                 sessionId, "s2", FIXMode.INITIATOR, FIXVersion.FIX_44,
-                null, "A", "B", "localhost", 9002, 30, 5, true, false));
+                null, "A", "B", "localhost", 9002, 30, true, false));
 
         Scenario v1 = buildScenario("REQ-RELOAD", 5000);
         registry.register(v1);

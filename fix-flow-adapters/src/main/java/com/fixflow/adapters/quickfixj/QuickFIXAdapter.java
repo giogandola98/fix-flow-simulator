@@ -32,6 +32,15 @@ public class QuickFIXAdapter implements FIXSessionPort {
 
     @Override
     public void connect(FIXSessionConfig config) {
+        // Stop and remove any existing connector for this session before creating a new one.
+        // Without this, reconnect orphans the old running connector and creates a duplicate QFJ session.
+        Connector existing = connectors.remove(config.id());
+        SessionID oldSid = sessions.remove(config.id());
+        if (oldSid != null) application.unregisterSession(oldSid);
+        if (existing != null) {
+            try { existing.stop(true); } catch (Exception ignored) {}
+        }
+
         try {
             SessionSettings settings = buildSettings(config);
             MessageStoreFactory storeFactory = new MemoryStoreFactory();
@@ -41,12 +50,13 @@ public class QuickFIXAdapter implements FIXSessionPort {
             Connector connector = (config.mode() == FIXMode.INITIATOR)
                     ? new SocketInitiator(application, storeFactory, settings, logFactory, messageFactory)
                     : new SocketAcceptor(application, storeFactory, settings, logFactory, messageFactory);
+
+            // Register BEFORE start so onLogon callback finds the UUID mapping.
+            SessionID sid = sessionIdFromConfig(config);
+            application.registerSession(sid, config.id());
             connector.start();
             connectors.put(config.id(), connector);
-
-            SessionID sid = sessionIdFromConfig(config);
             sessions.put(config.id(), sid);
-            application.registerSession(sid, config.id());
         } catch (ConfigError e) {
             throw new IllegalStateException("Failed to start FIX session " + config.id(), e);
         }
@@ -55,8 +65,10 @@ public class QuickFIXAdapter implements FIXSessionPort {
     @Override
     public void disconnect(UUID sessionId) {
         Connector c = connectors.remove(sessionId);
-        if (c != null) c.stop(true);
         SessionID sid = sessions.remove(sessionId);
+        try {
+            if (c != null) c.stop(true);
+        } catch (Exception ignored) {}
         if (sid != null) application.unregisterSession(sid);
     }
 
@@ -89,7 +101,7 @@ public class QuickFIXAdapter implements FIXSessionPort {
 
         settings.setString("ConnectionType", cfg.mode() == FIXMode.INITIATOR ? "initiator" : "acceptor");
         settings.setLong("HeartBtInt", cfg.heartbeatInterval());
-        settings.setLong("ReconnectInterval", cfg.reconnectInterval());
+        settings.setLong("ReconnectInterval", 0);
         settings.setString("StartTime", "00:00:00");
         settings.setString("EndTime", "00:00:00");
         settings.setString("ResetOnLogon", cfg.resetOnLogon() ? "Y" : "N");

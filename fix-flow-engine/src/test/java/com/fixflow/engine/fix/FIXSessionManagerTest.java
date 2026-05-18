@@ -19,7 +19,7 @@ class FIXSessionManagerTest {
 
         FIXSessionConfig cfg = new FIXSessionConfig(
                 UUID.randomUUID(), "s1", FIXMode.INITIATOR, FIXVersion.FIX_44,
-                null, "SENDER", "TARGET", "localhost", 9876, 30, 5, true, false);
+                null, "SENDER", "TARGET", "localhost", 9876, 30, true, false);
 
         mgr.connect(cfg);
         assertThat(mgr.isConnected(cfg.id())).isTrue();

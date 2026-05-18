@@ -105,7 +105,7 @@ public class SessionController {
         return new FIXSessionConfig(
             id, req.name(), FIXMode.valueOf(req.mode()), FIXVersion.valueOf(req.fixVersion()),
             req.defaultApplVerID(), req.senderCompID(), req.targetCompID(),
-            req.host(), req.port(), req.heartbeatInterval(), req.reconnectInterval(),
+            req.host(), req.port(), req.heartbeatInterval(),
             req.resetOnLogon(), req.resetOnLogout()
         );
     }

@@ -50,7 +50,7 @@ class SessionFailureTest {
         UUID sessionId = UUID.randomUUID();
         fake.connect(new FIXSessionConfig(
                 sessionId, "fail-session", FIXMode.INITIATOR, FIXVersion.FIX_44,
-                null, "CLI", "SRV", "localhost", 9003, 30, 5, true, false));
+                null, "CLI", "SRV", "localhost", 9003, 30, true, false));
 
         assertThat(fake.isConnected(sessionId)).isTrue();
 
@@ -102,7 +102,7 @@ class SessionFailureTest {
         UUID sessionId = UUID.randomUUID();
         FIXSessionConfig cfg = new FIXSessionConfig(
                 sessionId, "reconnect-session", FIXMode.INITIATOR, FIXVersion.FIX_44,
-                null, "CLI", "SRV", "localhost", 9004, 30, 5, true, false);
+                null, "CLI", "SRV", "localhost", 9004, 30, true, false);
         fake.connect(cfg);
 
         Scenario scenario = buildScenario("RECONNECT-REQ", 5000);
@@ -156,7 +156,7 @@ class SessionFailureTest {
         UUID sessionId = UUID.randomUUID();
         fake.connect(new FIXSessionConfig(
                 sessionId, "partial-session", FIXMode.INITIATOR, FIXVersion.FIX_44,
-                null, "CLI", "SRV", "localhost", 9005, 30, 5, true, false));
+                null, "CLI", "SRV", "localhost", 9005, 30, true, false));
 
         // One short-timeout scenario and one long-timeout scenario
         Scenario scenPassing = buildScenario("PASS-REQ", 5000);

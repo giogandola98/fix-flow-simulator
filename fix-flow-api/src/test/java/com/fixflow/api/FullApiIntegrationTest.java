@@ -53,7 +53,6 @@ class FullApiIntegrationTest {
             Map.entry("host", "localhost"),
             Map.entry("port", 9999),
             Map.entry("heartbeatInterval", 30),
-            Map.entry("reconnectInterval", 5),
             Map.entry("resetOnLogon", false),
             Map.entry("resetOnLogout", false)
         );

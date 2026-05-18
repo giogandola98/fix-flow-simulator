@@ -10,7 +10,6 @@ public record FIXSessionRequest(
     String host,
     int port,
     int heartbeatInterval,
-    int reconnectInterval,
     boolean resetOnLogon,
     boolean resetOnLogout
 ) {}
