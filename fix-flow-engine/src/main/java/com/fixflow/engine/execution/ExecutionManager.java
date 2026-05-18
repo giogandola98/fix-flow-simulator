@@ -101,13 +101,17 @@ public class ExecutionManager {
                 persistNodeResult(ctx.executionId(), current.id(), result, nodeStart, nodeEnd);
                 if (current.type() == NodeType.SEND_FIX) {
                     persistMessage(ctx, current.id(), Direction.OUTBOUND);
-                } else if (current.type() == NodeType.EXPECT_FIX && result.success()) {
+                } else if ((current.type() == NodeType.EXPECT_FIX || current.type() == NodeType.ROUTE_FIX) && result.success()) {
                     persistMessage(ctx, current.id(), Direction.INBOUND);
                 }
 
                 if (result.success()) {
-                    emitAndPersist(ctx.executionId(), ExecutionEventType.NODE_EXITED, current.id(),
-                            "Node " + current.name() + " completed");
+                    String exitDetail = "Node " + current.name() + " completed";
+                    if (current.type() == NodeType.ROUTE_FIX) {
+                        String matchedLabel = ctx.getVariable("node:" + current.id() + ":matchedRuleLabel");
+                        if (matchedLabel != null) exitDetail = "Routed via rule: " + matchedLabel;
+                    }
+                    emitAndPersist(ctx.executionId(), ExecutionEventType.NODE_EXITED, current.id(), exitDetail);
                 } else {
                     emitAndPersist(ctx.executionId(), ExecutionEventType.ERROR, current.id(),
                             result.errorMessage() != null ? result.errorMessage() : "Node failed");
