@@ -10,8 +10,12 @@ export const updateScenario = (id: string, req: ScenarioUpdateRequest) =>
 export async function importScenario(file: File): Promise<Scenario> {
   const form = new FormData();
   form.append('file', file);
-  const r = await apiClient.post<Scenario>('/scenarios/import', form, { headers: { 'Content-Type': 'multipart/form-data' } });
-  return r.data;
+  const r = await fetch('/api/v1/scenarios/import', { method: 'POST', body: form });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw { status: r.status, message: (err as { message?: string }).message ?? r.statusText };
+  }
+  return r.json();
 }
 export async function exportScenario(id: string): Promise<Blob> {
   const r = await apiClient.get(`/scenarios/${id}/export`, { responseType: 'blob' });

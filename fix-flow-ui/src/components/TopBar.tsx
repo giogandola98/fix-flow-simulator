@@ -1,17 +1,18 @@
 import { useRef, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useScenarioStore } from '../store/scenarioStore';
 import { useSessionStore } from '../store/sessionStore';
 import { useExecutionStore } from '../store/executionStore';
-import { executeScenario, updateScenario } from '../api/scenarios';
+import { executeScenario, updateScenario, importScenario } from '../api/scenarios';
 import { stopExecution } from '../api/executions';
 import { serializeToYaml, parseFromYaml } from '../lib/scenarioSerializer';
 
 export default function TopBar() {
+  const queryClient = useQueryClient();
   const activeScenario = useScenarioStore((s) => s.activeScenario);
+  const setActiveScenario = useScenarioStore((s) => s.setActiveScenario);
   const isDirty = useScenarioStore((s) => s.isDirty);
   const markClean = useScenarioStore((s) => s.markClean);
-  const markDirty = useScenarioStore((s) => s.markDirty);
   const nodes = useScenarioStore((s) => s.nodes);
   const edges = useScenarioStore((s) => s.edges);
   const setNodes = useScenarioStore((s) => s.setNodes);
@@ -42,21 +43,29 @@ export default function TopBar() {
     URL.revokeObjectURL(url);
   };
 
+  const importMutation = useMutation({
+    mutationFn: (file: File) => importScenario(file),
+    onSuccess: (saved) => {
+      setActiveScenario(saved);
+      const { nodes: n, edges: ed } = saved.yamlDsl
+        ? parseFromYaml(saved.yamlDsl)
+        : { nodes: [], edges: [] };
+      setNodes(n);
+      setEdges(ed);
+      markClean();
+      queryClient.invalidateQueries({ queryKey: ['scenarios'] });
+      setErrorMsg(null);
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { message?: string })?.message ?? String(err);
+      setErrorMsg(`Import failed: ${msg}`);
+    },
+  });
+
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const { nodes: n, edges: ed } = parseFromYaml(reader.result as string);
-        setNodes(n);
-        setEdges(ed);
-        markDirty();
-      } catch (err) {
-        setErrorMsg(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    };
-    reader.readAsText(file);
+    importMutation.mutate(file);
     e.target.value = '';
   };
 
@@ -140,8 +149,11 @@ export default function TopBar() {
       </button>
       <div className="w-px h-6 bg-[#2a2d3a]" />
       <input ref={importRef} type="file" accept=".yaml,.yml" className="hidden" onChange={handleImportFile} />
-      <button className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-sm"
-        onClick={() => importRef.current?.click()}>Import</button>
+      <button className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-sm"
+        disabled={importMutation.isPending}
+        onClick={() => importRef.current?.click()}>
+        {importMutation.isPending ? 'Importing…' : 'Import'}
+      </button>
       <button className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-sm"
         disabled={!activeScenario} onClick={handleExport}>Export</button>
     </div>
