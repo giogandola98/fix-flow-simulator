@@ -3,6 +3,7 @@ import { ScenarioNode } from '../../../types';
 import { useScenarioStore } from '../../../store/scenarioStore';
 import { TimeoutConfig } from './TimeoutConfig';
 import { parseFIXMessage } from '../../../lib/parseFIXMessage';
+import { VarRefPanel } from './VarRefPanel';
 
 interface FieldRow { tag: number; value: string; }
 interface SendCfg { msgType?: string; fields?: FieldRow[]; }
@@ -130,6 +131,8 @@ export function SendFIXConfig({ node }: Props) {
           </tbody>
         </table>
       </div>
+
+      <VarRefPanel />
 
       <TimeoutConfig value={node.timeout} onChange={(next) => updateNode(node.id, { timeout: next })} currentNodeId={node.id} />
     </div>
