@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useExecutionStore } from '../store/executionStore';
 import { wsClient } from '../app/wsClient';
+import { getExecutionEvents, getExecutionMessages } from '../api/executions';
 import { ExecutionEvent, FIXMessage } from '../types';
 
 export function useExecutionSubscription(executionId: string | null): void {
@@ -36,8 +37,17 @@ export function useExecutionSubscription(executionId: string | null): void {
     wsClient
       .subscribeExecution(executionId, handleEvent, handleMessage)
       .then((d) => {
-        if (cancelled) d();
-        else disposer = d;
+        if (cancelled) { d(); return; }
+        disposer = d;
+        // Backfill events/messages persisted before WS subscription was ready (race condition)
+        Promise.all([
+          getExecutionEvents(executionId),
+          getExecutionMessages(executionId),
+        ]).then(([events, messages]) => {
+          if (cancelled) return;
+          events.forEach(handleEvent);
+          messages.forEach(handleMessage);
+        }).catch(() => { /* best-effort */ });
       })
       .catch((err) => console.error('WS subscribe failed', err));
 

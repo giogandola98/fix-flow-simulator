@@ -100,7 +100,9 @@ public class ExecutionManager {
 
                 persistNodeResult(ctx.executionId(), current.id(), result, nodeStart, nodeEnd);
                 if (current.type() == NodeType.SEND_FIX) {
-                    persistSentMessage(ctx, current.id());
+                    persistMessage(ctx, current.id(), Direction.OUTBOUND);
+                } else if (current.type() == NodeType.EXPECT_FIX && result.success()) {
+                    persistMessage(ctx, current.id(), Direction.INBOUND);
                 }
 
                 if (result.success()) {
@@ -145,7 +147,7 @@ public class ExecutionManager {
         }
     }
 
-    private void persistSentMessage(ExecutionContext ctx, String nodeId) {
+    private void persistMessage(ExecutionContext ctx, String nodeId, Direction direction) {
         Map<Integer, String> fields = ctx.getNodeMessage(nodeId);
         if (fields == null || fields.isEmpty()) return;
         try {
@@ -154,7 +156,7 @@ public class ExecutionManager {
                     .map(e -> e.getKey() + "=" + e.getValue())
                     .collect(java.util.stream.Collectors.joining("|"));
             FIXMessage msg = new FIXMessage(
-                    UUID.randomUUID(), ctx.executionId(), Direction.OUTBOUND, raw,
+                    UUID.randomUUID(), ctx.executionId(), direction, raw,
                     fields, Instant.now());
             if (executionRepo != null) {
                 try { executionRepo.addMessage(ctx.executionId(), msg); } catch (Throwable ignored) {}

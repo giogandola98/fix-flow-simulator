@@ -4,7 +4,6 @@
 
 - **Always use caveman mode**: invoke `/caveman:caveman` at session start. All responses + commit messages — drop articles, filler, pleasantries; keep full technical substance.
 - **Branch discipline**: never commit features or bugfixes directly to `master`. Create dedicated branch (`feat/<name>` or `fix/<name>`), work there, open PR or merge to master when done.
-- **Browser UAT**: use Chromium via chrome-devtools MCP. No Firefox.
 
 ## Environment
 
