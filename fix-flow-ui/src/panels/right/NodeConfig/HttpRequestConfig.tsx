@@ -7,11 +7,14 @@ interface HttpCfg { method?: string; url?: string; headers?: HeaderRow[]; body?:
 interface Props { node: ScenarioNode; }
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+const BODY_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 export function HttpRequestConfig({ node }: Props) {
   const updateNode = useScenarioStore((s) => s.updateNode);
   const cfg = (node.config as HttpCfg) ?? {};
   const headers: HeaderRow[] = cfg.headers ?? [];
+  const method = cfg.method ?? 'GET';
+  const hasBody = BODY_METHODS.has(method);
 
   const patchConfig = (patch: Partial<HttpCfg>) =>
     updateNode(node.id, { config: { ...cfg, ...patch } });
@@ -33,7 +36,7 @@ export function HttpRequestConfig({ node }: Props) {
       <div>
         <label className="text-[10px] text-gray-500">Method</label>
         <select className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
-          value={cfg.method ?? 'GET'} onChange={(e) => patchConfig({ method: e.target.value })}>
+          value={method} onChange={(e) => patchConfig({ method: e.target.value })}>
           {METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
       </div>
@@ -73,12 +76,18 @@ export function HttpRequestConfig({ node }: Props) {
           </tbody>
         </table>
       </div>
-      <div>
-        <label className="text-[10px] text-gray-500">Body</label>
-        <textarea className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 font-mono resize-y"
-          rows={4} placeholder='{"key": "{{var:value}}"}'
-          value={cfg.body ?? ''} onChange={(e) => patchConfig({ body: e.target.value })} />
-      </div>
+      {hasBody ? (
+        <div>
+          <label className="text-[10px] text-gray-500">Body</label>
+          <textarea className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 font-mono resize-y"
+            rows={4} placeholder='{"key": "{{var:value}}"}'
+            value={cfg.body ?? ''} onChange={(e) => patchConfig({ body: e.target.value })} />
+        </div>
+      ) : (
+        <div className="text-[10px] text-gray-500 italic">
+          GET requests have no body — use query params in the URL (e.g. ?key=value)
+        </div>
+      )}
       <TimeoutConfig value={node.timeout} onChange={(next) => updateNode(node.id, { timeout: next })} currentNodeId={node.id} />
     </div>
   );

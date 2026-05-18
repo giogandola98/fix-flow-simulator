@@ -30,6 +30,7 @@ function InnerCanvas() {
   const setEdges = useScenarioStore((s) => s.setEdges);
   const addNode = useScenarioStore((s) => s.addNode);
   const addEdge = useScenarioStore((s) => s.addEdge);
+  const removeNode = useScenarioStore((s) => s.removeNode);
   const setSelectedNode = useScenarioStore((s) => s.setSelectedNode);
   const activeScenarioId = useScenarioStore((s) => s.activeScenario?.id);
   const nodeStatuses = useExecutionStore((s) => s.nodeStatuses);
@@ -138,6 +139,10 @@ function InnerCanvas() {
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       setRfNodes((prev) => applyNodeChanges(changes, prev));
+      // Propagate node deletions to the store (cleans up all stale references).
+      changes
+        .filter((c) => c.type === 'remove')
+        .forEach((c) => removeNode((c as { id: string }).id));
       // Only write final drag positions back to the store.
       type PosChange = { id: string; type: 'position'; position?: { x: number; y: number }; dragging?: boolean };
       const finalPositions = changes.filter(
@@ -152,7 +157,7 @@ function InnerCanvas() {
         );
       }
     },
-    [nodes, setNodes],
+    [nodes, setNodes, removeNode],
   );
 
   const onEdgesChange = useCallback(
