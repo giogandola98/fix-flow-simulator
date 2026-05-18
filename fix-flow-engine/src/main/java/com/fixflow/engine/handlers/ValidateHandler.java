@@ -23,7 +23,10 @@ public class ValidateHandler implements NodeHandler {
 
     @Override
     public NodeHandlerResult handle(ScenarioNode node, ExecutionContext ctx) {
-        Map<Integer, String> fields = ctx.getNodeMessage(node.id());
+        // sourceNodeId points to the EXPECT_FIX node whose stored message we validate
+        String sourceId = node.config().get("sourceNodeId") != null
+                ? String.valueOf(node.config().get("sourceNodeId")) : null;
+        Map<Integer, String> fields = ctx.getNodeMessage(sourceId != null ? sourceId : node.id());
         if (fields == null) fields = Map.of();
 
         ValidationConfig cfg = toConfig(node.config());
@@ -36,7 +39,9 @@ public class ValidateHandler implements NodeHandler {
 
     @SuppressWarnings("unchecked")
     private ValidationConfig toConfig(Map<String, Object> raw) {
-        List<Map<String, Object>> rawRules = (List<Map<String, Object>>) raw.getOrDefault("validations", List.of());
+        // Accept both "rules" (DSL/UI) and legacy "validations"
+        List<Map<String, Object>> rawRules = (List<Map<String, Object>>) raw.getOrDefault("rules",
+                raw.getOrDefault("validations", List.of()));
         List<ValidationRuleConfig> rules = new ArrayList<>();
         for (Map<String, Object> rr : rawRules) {
             int tag = ((Number) rr.get("tag")).intValue();

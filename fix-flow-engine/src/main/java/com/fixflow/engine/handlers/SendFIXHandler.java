@@ -34,9 +34,22 @@ public class SendFIXHandler implements NodeHandler {
 
         Object fields = cfg.get("fields");
         if (fields instanceof Map<?, ?> raw) {
+            // Map format: { 11: "value", 55: "AAPL" }
             for (Map.Entry<?, ?> e : raw.entrySet()) {
                 int tag = Integer.parseInt(String.valueOf(e.getKey()));
                 outFields.put(tag, variableResolver.resolveAll(String.valueOf(e.getValue()), ctx));
+            }
+        } else if (fields instanceof java.util.List<?> list) {
+            // List format: [{ tag: 11, value: "..." }, ...]
+            for (Object item : list) {
+                if (item instanceof Map<?, ?> row) {
+                    Object tagObj = row.get("tag");
+                    Object valObj = row.get("value");
+                    if (tagObj != null && valObj != null) {
+                        int tag = Integer.parseInt(String.valueOf(tagObj));
+                        outFields.put(tag, variableResolver.resolveAll(String.valueOf(valObj), ctx));
+                    }
+                }
             }
         }
 

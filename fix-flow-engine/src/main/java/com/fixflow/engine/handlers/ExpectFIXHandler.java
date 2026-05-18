@@ -22,16 +22,44 @@ public class ExpectFIXHandler implements NodeHandler {
     @Override
     public NodeHandlerResult handle(ScenarioNode node, ExecutionContext ctx) throws InterruptedException {
         Map<String, Object> cfg = node.config();
-        int tag = ((Number) cfg.get("correlationTag")).intValue();
-        String expected = String.valueOf(cfg.get("expectedValue"));
 
-        CorrelationRule rule = ctx.scenario().correlationRules().stream()
-                .filter(r -> r.sourceTag() == tag)
-                .findFirst()
-                .orElse(new CorrelationRule(tag, node.id(), tag, 0));
+        int sourceTag;
+        String expectedValue;
+        CorrelationRule rule;
+
+        Object corrObj = cfg.get("correlation");
+        if (corrObj instanceof Map<?, ?> corr) {
+            // Per-node correlation: { sourceTag, fromNode, targetTag }
+            int srcTag = corr.get("sourceTag") != null
+                    ? ((Number) corr.get("sourceTag")).intValue() : 11;
+            String fromNode = corr.get("fromNode") != null ? String.valueOf(corr.get("fromNode")) : null;
+            int targetTag = corr.get("targetTag") != null
+                    ? ((Number) corr.get("targetTag")).intValue() : srcTag;
+
+            String sentValue = null;
+            if (fromNode != null) {
+                Map<Integer, String> sent = ctx.getNodeMessage(fromNode);
+                if (sent != null) sentValue = sent.get(targetTag);
+            }
+
+            sourceTag = srcTag;
+            expectedValue = sentValue != null ? sentValue : "";
+            rule = new CorrelationRule(sourceTag, fromNode != null ? fromNode : node.id(), targetTag, 0);
+        } else if (cfg.get("correlationTag") != null) {
+            // Legacy flat format
+            sourceTag = ((Number) cfg.get("correlationTag")).intValue();
+            expectedValue = String.valueOf(cfg.get("expectedValue"));
+            rule = new CorrelationRule(sourceTag, node.id(), sourceTag, 0);
+        } else {
+            // No correlation: match any message by msgType (tag 35)
+            String msgType = cfg.get("msgType") != null ? String.valueOf(cfg.get("msgType")) : "";
+            sourceTag = 35;
+            expectedValue = msgType;
+            rule = new CorrelationRule(35, node.id(), 35, 0);
+        }
 
         CompletableFuture<Map<Integer, String>> future =
-                correlation.register(ctx.executionId().toString(), rule, expected);
+                correlation.register(ctx.executionId().toString(), rule, expectedValue);
 
         long timeoutMs = node.timeout() == null ? 5_000L : node.timeout().toMillis();
 
