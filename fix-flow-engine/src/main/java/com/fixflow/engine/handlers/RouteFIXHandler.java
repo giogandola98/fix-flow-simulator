@@ -5,6 +5,7 @@ import com.fixflow.core.domain.scenario.ScenarioNode;
 import com.fixflow.core.domain.scenario.TimeoutAction;
 import com.fixflow.engine.correlation.CorrelationEngine;
 import com.fixflow.engine.execution.ExecutionContext;
+import com.fixflow.engine.variable.VariableResolver;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -15,8 +16,12 @@ import java.util.concurrent.TimeoutException;
 public class RouteFIXHandler implements NodeHandler {
 
     private final CorrelationEngine correlation;
+    private final VariableResolver resolver;
 
-    public RouteFIXHandler(CorrelationEngine correlation) { this.correlation = correlation; }
+    public RouteFIXHandler(CorrelationEngine correlation, VariableResolver resolver) {
+        this.correlation = correlation;
+        this.resolver = resolver;
+    }
 
     @Override
     public NodeType getSupportedType() { return NodeType.ROUTE_FIX; }
@@ -29,14 +34,15 @@ public class RouteFIXHandler implements NodeHandler {
 
         List<CorrelationEngine.RoutingRule> rules = new ArrayList<>();
         for (Map<String, Object> r : rawRules) {
-            String ruleId      = Objects.toString(r.get("ruleId"), UUID.randomUUID().toString());
-            String label       = Objects.toString(r.getOrDefault("label", ""), "");
+            String ruleId       = Objects.toString(r.get("ruleId"), UUID.randomUUID().toString());
+            String label        = Objects.toString(r.getOrDefault("label", ""), "");
             String targetNodeId = Objects.toString(r.get("targetNodeId"), "");
             Map<Integer, String> matchers = new LinkedHashMap<>();
             Object matchersObj = r.get("matchers");
             if (matchersObj instanceof Map<?,?> mm) {
                 for (Map.Entry<?,?> e : mm.entrySet()) {
-                    matchers.put(Integer.parseInt(e.getKey().toString()), e.getValue().toString());
+                    String resolved = resolver.resolveAll(e.getValue().toString(), ctx);
+                    matchers.put(Integer.parseInt(e.getKey().toString()), resolved);
                 }
             }
             rules.add(new CorrelationEngine.RoutingRule(ruleId, label, matchers, targetNodeId));
@@ -52,6 +58,11 @@ public class RouteFIXHandler implements NodeHandler {
                     future.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
             ctx.storeNodeMessage(node.id(), result.fields());
             ctx.setVariable("node:" + node.id() + ":matchedRuleId", result.matchedRuleId());
+            String matchedLabel = rules.stream()
+                    .filter(rl -> rl.ruleId().equals(result.matchedRuleId()))
+                    .map(CorrelationEngine.RoutingRule::label)
+                    .findFirst().orElse(result.matchedRuleId());
+            ctx.setVariable("node:" + node.id() + ":matchedRuleLabel", matchedLabel);
             return NodeHandlerResult.success(result.targetNodeId());
         } catch (TimeoutException timeout) {
             correlation.cancelMulti(execId);
