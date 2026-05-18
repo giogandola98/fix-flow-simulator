@@ -45,14 +45,18 @@ export const useScenarioStore = create<ScenarioState>((set) => ({
         .filter((n) => n.id !== id)
         .map((n) => {
           const cfg = n.config as Record<string, unknown>;
-          const needsCfgClean = cfg?.targetNodeId === id;
-          const needsTimeoutClean = n.timeout?.jumpTo === id;
-          if (!needsCfgClean && !needsTimeoutClean) return n;
-          return {
-            ...n,
-            config: needsCfgClean ? { ...cfg, targetNodeId: undefined } : cfg,
-            timeout: needsTimeoutClean ? { ...n.timeout!, jumpTo: undefined } : n.timeout,
-          };
+          const corr = cfg?.correlation as Record<string, unknown> | undefined;
+          let next = { ...n };
+          if (n.onSuccess === id) next = { ...next, onSuccess: undefined };
+          if (n.onFailure === id) next = { ...next, onFailure: undefined };
+          if (n.onTimeout === id) next = { ...next, onTimeout: undefined };
+          if (n.timeout?.jumpTo === id)
+            next = { ...next, timeout: { ...n.timeout!, jumpTo: undefined } };
+          if (cfg?.targetNodeId === id)
+            next = { ...next, config: { ...cfg, targetNodeId: undefined } };
+          if (corr?.fromNode === id)
+            next = { ...next, config: { ...cfg, correlation: { ...corr, fromNode: undefined } } };
+          return next;
         }),
       edges: s.edges.filter((e) => e.from !== id && e.to !== id),
       isDirty: true,
