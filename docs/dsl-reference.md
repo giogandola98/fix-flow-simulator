@@ -22,7 +22,8 @@ edges: []
 | `SEND_FIX` | Send a FIX message via the session. |
 | `EXPECT_FIX` | Wait for a matching inbound message. |
 | `VALIDATE` | Apply validation rules to a received message. |
-| `DECISION` | Branch based on previous result. |
+| `DECISION` | Evaluate a condition expression; branch on true/false. |
+| `ROUTE_FIX` | Wait for inbound FIX; route to first matching rule. |
 | `BRANCH` | Alias for `DECISION`. |
 | `RETRY` / `LOOP` | Retry a sub-graph N times with delay. |
 | `WAIT` / `DELAY` / `TIMEOUT` | Pause for a duration. |
@@ -108,6 +109,43 @@ config:
 | `NUMERIC_MIN` / `NUMERIC_MAX` | `numericValue` |
 | `FIELD_PRESENT` / `FIELD_ABSENT` | none |
 | `DATE_RULE` | `dateRuleId` |
+
+## DECISION config
+
+```yaml
+config:
+  condition: '{{node:expect-er:tag39}} == "2"'
+  # Operators: == != contains
+  # Left and right sides support {{...}} placeholders.
+  # True  → onSuccess path
+  # False → onFailure path
+```
+
+## ROUTE_FIX config
+
+```yaml
+config:
+  rules:
+    - ruleId: r1
+      label: Quote
+      matchers:
+        35: S
+        131: "{{node:send-rfq:tag131}}"
+      targetNodeId: process-quote
+
+    - ruleId: r2
+      label: Reject
+      matchers:
+        35: AG
+      targetNodeId: handle-reject
+
+    - ruleId: r3
+      label: Default
+      matchers: {}
+      targetNodeId: unexpected-msg
+```
+
+Rules evaluated top-to-bottom; first match wins. Matcher values support `{{node:id:tagN}}` placeholders resolved at execution time. After routing, matched rule label appears in the `NODE_EXITED` event detail.
 
 ## Variable syntax
 
