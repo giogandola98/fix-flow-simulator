@@ -4,6 +4,9 @@ import com.fixflow.engine.execution.ExecutionContext;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +27,8 @@ public class VariableResolver {
     public VariableResolver() {
         this.plugins = List.of(
             new NowPlugin(),
+            new NowOffsetPlugin(),
+            new NowDatePlugin(),
             new UuidPlugin(),
             new SeqPlugin(sequences),
             new EnvPlugin(),
@@ -58,6 +63,32 @@ public class VariableResolver {
     static final class NowPlugin implements VariableResolverPlugin {
         public boolean supports(String e) { return e.equals("now"); }
         public String resolve(String e, ExecutionContext c) { return Instant.now().toString(); }
+    }
+
+    static final class NowOffsetPlugin implements VariableResolverPlugin {
+        private static final Pattern P = Pattern.compile("^now:offset:([+\\-])(\\d+)([smhd])$");
+        public boolean supports(String e) { return P.matcher(e).matches(); }
+        public String resolve(String e, ExecutionContext c) {
+            Matcher m = P.matcher(e);
+            if (!m.matches()) throw new IllegalArgumentException("Bad now:offset expression: " + e);
+            long amount = Long.parseLong(m.group(2));
+            ChronoUnit cu = switch (m.group(3)) {
+                case "s" -> ChronoUnit.SECONDS;
+                case "m" -> ChronoUnit.MINUTES;
+                case "h" -> ChronoUnit.HOURS;
+                case "d" -> ChronoUnit.DAYS;
+                default  -> throw new IllegalArgumentException("Bad unit: " + m.group(3));
+            };
+            Instant now = Instant.now();
+            return (m.group(1).equals("+") ? now.plus(amount, cu) : now.minus(amount, cu)).toString();
+        }
+    }
+
+    static final class NowDatePlugin implements VariableResolverPlugin {
+        public boolean supports(String e) { return e.equals("nowdate"); }
+        public String resolve(String e, ExecutionContext c) {
+            return LocalDate.now(ZoneOffset.UTC).format(DateTimeFormatter.BASIC_ISO_DATE);
+        }
     }
 
     static final class UuidPlugin implements VariableResolverPlugin {

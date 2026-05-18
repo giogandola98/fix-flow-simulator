@@ -7,6 +7,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
@@ -83,6 +86,30 @@ class VariableResolverTest {
         String out = resolver.resolveAll("{{node:n1:tag60:offset:-1h}}", ctx);
         Instant resolved = Instant.parse(out);
         assertThat(resolved).isEqualTo(base.minus(1, ChronoUnit.HOURS));
+    }
+
+    @Test
+    void resolvesNowOffsetPlusOneHour() {
+        Instant before = Instant.now();
+        String out = resolver.resolveAll("{{now:offset:+1h}}", ctx);
+        Instant resolved = Instant.parse(out);
+        assertThat(resolved).isCloseTo(before.plus(1, ChronoUnit.HOURS), within(5, ChronoUnit.SECONDS));
+    }
+
+    @Test
+    void resolvesNowOffsetMinusTenMinutes() {
+        Instant before = Instant.now();
+        String out = resolver.resolveAll("{{now:offset:-10m}}", ctx);
+        Instant resolved = Instant.parse(out);
+        assertThat(resolved).isCloseTo(before.minus(10, ChronoUnit.MINUTES), within(5, ChronoUnit.SECONDS));
+    }
+
+    @Test
+    void resolvesNowdateAsYyyymmdd() {
+        String out = resolver.resolveAll("{{nowdate}}", ctx);
+        String expected = LocalDate.now(ZoneOffset.UTC).format(DateTimeFormatter.BASIC_ISO_DATE);
+        assertThat(out).isEqualTo(expected);
+        assertThat(out).matches("\\d{8}");
     }
 
     @Test

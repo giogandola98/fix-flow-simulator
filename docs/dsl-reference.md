@@ -152,6 +152,8 @@ Rules evaluated top-to-bottom; first match wins. Matcher values support `{{node:
 | placeholder | meaning |
 |---|---|
 | `{{now}}` | current UTC ISO timestamp |
+| `{{now:offset:+1h}}` | current UTC time with offset applied |
+| `{{nowdate}}` | current UTC date as `YYYYMMDD` |
 | `{{uuid}}` | random UUID |
 | `{{seq:name}}` | monotonic sequence keyed by `name` |
 | `{{env:VAR}}` | environment variable |
