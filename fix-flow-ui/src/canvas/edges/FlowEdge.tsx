@@ -1,4 +1,4 @@
-import { BaseEdge, EdgeLabelRenderer, EdgeProps, MarkerType, getBezierPath } from '@xyflow/react';
+import { BaseEdge, EdgeLabelRenderer, EdgeProps, getBezierPath } from '@xyflow/react';
 
 export function FlowEdge(props: EdgeProps) {
   const { sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, label } = props;
@@ -19,13 +19,19 @@ export function FlowEdge(props: EdgeProps) {
         : labelStr === 'timeout'
           ? '#f59e0b'
           : '#6b7280';
+  const markerId = `arrow-${props.id}`;
   return (
     <>
+      <defs>
+        <marker id={markerId} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill={color} />
+        </marker>
+      </defs>
       <BaseEdge
         id={props.id}
         path={path}
         style={{ stroke: color, strokeWidth: 2 }}
-        markerEnd={{ type: MarkerType.ArrowClosed, color: color }}
+        markerEnd={`url(#${markerId})`}
       />
       {props.label && (
         <EdgeLabelRenderer>
