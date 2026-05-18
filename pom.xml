@@ -6,7 +6,7 @@
 
     <groupId>com.fixflow</groupId>
     <artifactId>fix-flow-simulator</artifactId>
-    <version>0.2.0-beta</version>
+    <version>0.2.1-beta</version>
     <packaging>pom</packaging>
     <name>FIX Flow Simulator</name>
 
