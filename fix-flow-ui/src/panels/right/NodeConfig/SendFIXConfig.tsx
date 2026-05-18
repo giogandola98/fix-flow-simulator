@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { ScenarioNode } from '../../../types';
 import { useScenarioStore } from '../../../store/scenarioStore';
 import { TimeoutConfig } from './TimeoutConfig';
+import { parseFIXMessage } from '../../../lib/parseFIXMessage';
 
 interface FieldRow { tag: number; value: string; }
 interface SendCfg { msgType?: string; fields?: FieldRow[]; }
@@ -10,6 +12,9 @@ export function SendFIXConfig({ node }: Props) {
   const updateNode = useScenarioStore((s) => s.updateNode);
   const cfg = (node.config as SendCfg) ?? {};
   const fields = cfg.fields ?? [];
+  const [showPaste, setShowPaste] = useState(false);
+  const [pasteRaw, setPasteRaw] = useState('');
+  const [parseError, setParseError] = useState('');
 
   const patchConfig = (patch: Partial<SendCfg>) =>
     updateNode(node.id, { config: { ...cfg, ...patch } });
@@ -21,6 +26,17 @@ export function SendFIXConfig({ node }: Props) {
   const addField = () => patchConfig({ fields: [...fields, { tag: 0, value: '' }] });
   const removeField = (i: number) => patchConfig({ fields: fields.filter((_, idx) => idx !== i) });
 
+  const handleParse = () => {
+    if (!pasteRaw.trim()) { setParseError('Paste a FIX message first'); return; }
+    const result = parseFIXMessage(pasteRaw);
+    const updates: Partial<SendCfg> = { fields: result.fields };
+    if (result.msgType) updates.msgType = result.msgType;
+    patchConfig(updates);
+    setPasteRaw('');
+    setParseError(result.skipped > 0 ? `Parsed OK — ${result.skipped} segment(s) skipped (engine-managed or malformed)` : '');
+    setShowPaste(false);
+  };
+
   return (
     <div className="text-xs space-y-2">
       <div>
@@ -29,13 +45,66 @@ export function SendFIXConfig({ node }: Props) {
           value={node.name} onChange={(e) => updateNode(node.id, { name: e.target.value })} />
       </div>
       <div>
-        <label className="text-[10px] text-gray-500">MsgType (tag 35)<span title="FIX tag 35 value. e.g. D = New Order Single, 8 = Execution Report, V = Market Data Request." className="ml-1 text-gray-600 cursor-help">?</span></label>
+        <label className="text-[10px] text-gray-500">
+          MsgType (tag 35)
+          <span title="FIX tag 35 value. e.g. D = New Order Single, 8 = Execution Report, V = Market Data Request." className="ml-1 text-gray-600 cursor-help">?</span>
+        </label>
         <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
           value={cfg.msgType ?? ''} onChange={(e) => patchConfig({ msgType: e.target.value })} />
       </div>
+
+      <div className="border border-[#2a2d3a] rounded">
+        <button
+          type="button"
+          className="w-full flex items-center justify-between px-2 py-1 text-[10px] text-gray-400 hover:text-gray-300"
+          onClick={() => setShowPaste(v => !v)}
+        >
+          <span>Paste FIX Message</span>
+          <span>{showPaste ? '▲' : '▼'}</span>
+        </button>
+        {showPaste && (
+          <div className="px-2 pb-2 space-y-1">
+            <div className="text-[10px] text-gray-500 italic">
+              Paste a raw FIX message (SOH or pipe-separated). Tags 8/9/10/49/56 skipped — managed by engine.
+            </div>
+            <textarea
+              className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 font-mono text-[10px] resize-y"
+              rows={3}
+              placeholder="8=FIX.4.4|35=D|49=CLIENT|56=SERVER|11=ORD-001|55=AAPL|54=1|38=100|40=2|"
+              value={pasteRaw}
+              onChange={e => { setPasteRaw(e.target.value); setParseError(''); }}
+            />
+            {parseError && (
+              <div className={`text-[10px] ${parseError.startsWith('Parsed OK') ? 'text-yellow-400' : 'text-red-400'}`}>
+                {parseError}
+              </div>
+            )}
+            <div className="flex gap-1">
+              <button
+                type="button"
+                className="flex-1 px-2 py-0.5 bg-blue-600 hover:bg-blue-500 rounded text-[10px]"
+                onClick={handleParse}
+              >
+                Parse → populate fields
+              </button>
+              <button
+                type="button"
+                className="px-2 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-[10px]"
+                onClick={() => { setPasteRaw(''); setParseError(''); setShowPaste(false); }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div>
         <div className="flex items-center justify-between">
-          <label className="text-[10px] text-gray-500">Fields<span title="FIX tag-value pairs. Tag is the integer field number; Value is a string. Use {{var:name}} for runtime substitution." className="ml-1 text-gray-600 cursor-help">?</span></label>
+          <label className="text-[10px] text-gray-500">
+            Fields
+            <span title="FIX tag-value pairs. Tag is the integer field number; Value is a string. Use {{var:name}} for runtime substitution." className="ml-1 text-gray-600 cursor-help">?</span>
+          </label>
           <button className="text-[10px] px-2 py-0.5 bg-blue-600 hover:bg-blue-500 rounded" onClick={addField}>+ Field</button>
         </div>
         <table className="w-full mt-1">
@@ -61,6 +130,7 @@ export function SendFIXConfig({ node }: Props) {
           </tbody>
         </table>
       </div>
+
       <TimeoutConfig value={node.timeout} onChange={(next) => updateNode(node.id, { timeout: next })} currentNodeId={node.id} />
     </div>
   );
