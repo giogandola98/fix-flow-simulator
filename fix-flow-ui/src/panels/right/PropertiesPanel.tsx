@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useScenarioStore } from '../../store/scenarioStore';
 import { SendFIXConfig } from './NodeConfig/SendFIXConfig';
 import { ExpectFIXConfig } from './NodeConfig/ExpectFIXConfig';
@@ -13,11 +14,12 @@ import { RouteFIXConfig } from './NodeConfig/RouteFIXConfig';
 const NAME_ONLY_TYPES = ['START', 'END_PASS', 'END_FAIL'];
 
 function NameOnlyConfig({ node }: { node: { id: string; name: string } }) {
+  const { t } = useTranslation();
   const updateNode = useScenarioStore((s) => s.updateNode);
   return (
     <div className="text-xs space-y-2">
       <div>
-        <label className="text-[10px] text-gray-500">Node Name</label>
+        <label className="text-[10px] text-gray-500">{t('properties.nodeName')}</label>
         <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
           value={node.name} onChange={(e) => updateNode(node.id, { name: e.target.value })} />
       </div>
@@ -26,6 +28,7 @@ function NameOnlyConfig({ node }: { node: { id: string; name: string } }) {
 }
 
 export function PropertiesPanel() {
+  const { t } = useTranslation();
   const selectedNodeId = useScenarioStore((s) => s.selectedNodeId);
   const node = useScenarioStore((s) =>
     selectedNodeId ? s.nodes.find((n) => n.id === selectedNodeId) ?? null : null,
@@ -33,8 +36,8 @@ export function PropertiesPanel() {
 
   return (
     <div className="p-2 overflow-y-auto border-b border-[#2a2d3a]">
-      <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">Properties</div>
-      {!node && <div className="text-xs text-gray-500 italic">Select a node to configure</div>}
+      <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">{t('properties.title')}</div>
+      {!node && <div className="text-xs text-gray-500 italic">{t('properties.noNode')}</div>}
       {node?.type === 'SEND_FIX' && <SendFIXConfig node={node} />}
       {node?.type === 'EXPECT_FIX' && <ExpectFIXConfig node={node} />}
       {node?.type === 'VALIDATE' && <ValidateConfig node={node} />}

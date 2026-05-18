@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useExecutionStore } from '../../store/executionStore';
 
 const TYPE_COLORS: Record<string, string> = {
@@ -15,6 +16,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export function EventLog() {
+  const { t } = useTranslation();
   const events = useExecutionStore((s) => s.events);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -24,7 +26,7 @@ export function EventLog() {
 
   return (
     <div ref={ref} className="h-full overflow-y-auto px-2 py-1 font-mono text-[11px]">
-      {events.length === 0 && <div className="text-gray-500 italic">No events</div>}
+      {events.length === 0 && <div className="text-gray-500 italic">{t('events.noEvents')}</div>}
       {events.map((e) => (
         <div key={e.id} className="flex gap-2 py-0.5 border-b border-[#2a2d3a]">
           <div className="text-gray-500">{new Date(e.timestamp).toLocaleTimeString()}</div>

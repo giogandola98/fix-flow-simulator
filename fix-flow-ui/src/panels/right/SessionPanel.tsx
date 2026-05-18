@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import {
   getSessions,
   createSession,
@@ -30,6 +31,7 @@ const DEFAULTS: FormValues = {
 const STORAGE_KEY = 'fix-session-panel-collapsed';
 
 export function SessionPanel() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const setSessions = useSessionStore((s) => s.setSessions);
   const activeSession = useSessionStore((s) => s.activeSession);
@@ -128,7 +130,7 @@ export function SessionPanel() {
     ? 'bg-yellow-400 animate-pulse'
     : 'bg-gray-500';
 
-  const statusLabel = connected ? 'CONNECTED' : connecting ? 'CONNECTING…' : 'DISCONNECTED';
+  const statusLabel = connected ? t('session.connected') : connecting ? t('session.connecting') : t('session.disconnected');
 
   return (
     <div className="border-t border-[#2a2d3a]">
@@ -136,11 +138,11 @@ export function SessionPanel() {
       <div
         className="flex items-center gap-2 px-2 py-1.5 cursor-pointer select-none hover:bg-[#1a1d27] transition-colors"
         onClick={toggleCollapsed}
-        title={collapsed ? 'Expand session panel' : 'Collapse session panel'}
+        title={collapsed ? t('session.expandTitle') : t('session.collapseTitle')}
       >
         <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDot}`} />
         <span className="text-xs text-gray-300 truncate flex-1 min-w-0">
-          {activeSession?.name ?? 'No session'}
+          {activeSession?.name ?? t('session.noSession')}
         </span>
         <span className={`text-[10px] font-medium flex-shrink-0 ${
           connected ? 'text-green-400' : connecting ? 'text-yellow-400' : 'text-gray-500'
@@ -159,7 +161,7 @@ export function SessionPanel() {
               connected ? disconnectMutation.mutate() : connectMutation.mutate();
             }}
           >
-            {connected ? 'Disconnect' : 'Connect'}
+            {connected ? t('session.disconnect') : t('session.connect')}
           </button>
         )}
         <svg
@@ -177,7 +179,7 @@ export function SessionPanel() {
       >
         <div className="p-2 overflow-y-auto">
           <div className="mb-2">
-            <label className="text-[10px] text-gray-500">Active session</label>
+            <label className="text-[10px] text-gray-500">{t('session.activeSession')}</label>
             <select
               className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 text-xs"
               value={activeSession?.id ?? ''}
@@ -186,20 +188,20 @@ export function SessionPanel() {
                 setActiveSession(s);
               }}
             >
-              <option value="">-- new session --</option>
+              <option value="">{t('session.newSession')}</option>
               {(sessions ?? []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <form onSubmit={handleSubmit((v) => saveMutation.mutate(v))} className="text-xs space-y-2">
-            <Field label="Name">
+            <Field label={t('session.fields.name')}>
               <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('name', { required: true })} />
             </Field>
-            <Field label="Mode" hint="INITIATOR connects to a counterparty. ACCEPTOR listens for incoming FIX connections.">
+            <Field label={t('session.fields.mode')} hint={t('session.hints.mode')}>
               <select className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('mode')}>
                 {MODES.map((m) => <option key={m}>{m}</option>)}
               </select>
             </Field>
-            <Field label="FIX Version" hint="FIX protocol version. FIX 4.4 most common. FIXT.1.1 (FIX 5.0 SP2) requires DefaultApplVerID.">
+            <Field label={t('session.fields.fixVersion')} hint={t('session.hints.fixVersion')}>
               <select
                 className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
                 disabled={connected}
@@ -209,52 +211,52 @@ export function SessionPanel() {
               >
                 {FIX_VERSIONS.map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
               </select>
-              {connected && <div className="text-[10px] text-amber-400 mt-1">Disconnect before changing FIX version</div>}
+              {connected && <div className="text-[10px] text-amber-400 mt-1">{t('session.disconnectBeforeFIXVersion')}</div>}
             </Field>
             {fixVersion === 'FIXT_11' && (
-              <Field label="DefaultApplVerID">
+              <Field label={t('session.fields.defaultApplVerID')}>
                 <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('defaultApplVerID')} />
               </Field>
             )}
-            <Field label="SenderCompID" hint="Your CompID — identifies this side of the FIX session (tag 49).">
+            <Field label={t('session.fields.senderCompID')} hint={t('session.hints.senderCompID')}>
               <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('senderCompID', { required: true })} />
             </Field>
-            <Field label="TargetCompID" hint="Counterparty CompID — identifies the remote side (tag 56).">
+            <Field label={t('session.fields.targetCompID')} hint={t('session.hints.targetCompID')}>
               <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('targetCompID', { required: true })} />
             </Field>
-            <Field label="Host" hint="IP or hostname of the ACCEPTOR. Only relevant for INITIATOR mode.">
+            <Field label={t('session.fields.host')} hint={t('session.hints.host')}>
               <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('host')} />
             </Field>
-            <Field label="Port" hint="TCP port. ACCEPTOR listens; INITIATOR connects to it.">
+            <Field label={t('session.fields.port')} hint={t('session.hints.port')}>
               <input type="number" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('port', { valueAsNumber: true })} />
             </Field>
-            <Field label="Heartbeat Interval (sec)" hint="Seconds between heartbeat messages (FIX tag 108). Standard is 30.">
+            <Field label={t('session.fields.heartbeat')} hint={t('session.hints.heartbeat')}>
               <input type="number" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('heartbeatInterval', { valueAsNumber: true })} />
             </Field>
-            <label className="flex items-center gap-2"><input type="checkbox" {...register('resetOnLogon')} /> Reset on Logon</label>
-            <label className="flex items-center gap-2"><input type="checkbox" {...register('resetOnLogout')} /> Reset on Logout</label>
+            <label className="flex items-center gap-2"><input type="checkbox" {...register('resetOnLogon')} /> {t('session.fields.resetOnLogon')}</label>
+            <label className="flex items-center gap-2"><input type="checkbox" {...register('resetOnLogout')} /> {t('session.fields.resetOnLogout')}</label>
             <div className="flex gap-1">
-              <button type="submit" className="flex-1 px-2 py-1 rounded bg-gray-700 hover:bg-gray-600">Save</button>
+              <button type="submit" className="flex-1 px-2 py-1 rounded bg-gray-700 hover:bg-gray-600">{t('session.save')}</button>
               {connected ? (
                 <button type="button" className="flex-1 px-2 py-1 rounded bg-red-600 hover:bg-red-500"
-                  onClick={() => disconnectMutation.mutate()}>Disconnect</button>
+                  onClick={() => disconnectMutation.mutate()}>{t('session.disconnect')}</button>
               ) : (
                 <button type="button" className="flex-1 px-2 py-1 rounded bg-green-600 hover:bg-green-500 disabled:opacity-40"
-                  disabled={!activeSession} onClick={() => connectMutation.mutate()}>Connect</button>
+                  disabled={!activeSession} onClick={() => connectMutation.mutate()}>{t('session.connect')}</button>
               )}
               {activeSession && (
                 <button
                   type="button"
                   className="px-2 py-1 rounded bg-red-900 hover:bg-red-800 text-red-300 text-xs disabled:opacity-40"
-                  title="Delete this session"
+                  title={t('scenarios.deleteTitle')}
                   disabled={deleteMutation.isPending}
                   onClick={() => {
-                    if (window.confirm(`Delete session "${activeSession.name}"?`)) {
+                    if (window.confirm(t('session.deleteConfirm', { name: activeSession.name }))) {
                       deleteMutation.mutate();
                     }
                   }}
                 >
-                  Del
+                  {t('session.delete')}
                 </button>
               )}
             </div>
