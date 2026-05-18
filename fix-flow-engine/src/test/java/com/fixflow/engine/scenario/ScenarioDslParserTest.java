@@ -58,6 +58,47 @@ class ScenarioDslParserTest {
     }
 
     @Test
+    void parsesCustomPrivateTagsAbove9999() {
+        String yaml = """
+                id: 22222222-2222-2222-2222-222222222222
+                name: custom-tags
+                description: custom tag test
+                version: '1.0'
+                sessionRef: sess-1
+                runtimePolicy: PARALLEL
+                nodes:
+                  - id: n1
+                    name: Start
+                    type: START
+                    onSuccess: n2
+                  - id: n2
+                    name: Send with custom tag
+                    type: SEND_FIX
+                    config:
+                      msgType: D
+                      fields:
+                        11: CL-001
+                        500006: private-val
+                    onSuccess: n3
+                  - id: n3
+                    name: Done
+                    type: END_PASS
+                edges: []
+                """;
+
+        Scenario s = new ScenarioDslParser().parseYaml(yaml);
+
+        @SuppressWarnings("unchecked")
+        java.util.Map<Object, Object> fields =
+                (java.util.Map<Object, Object>) s.findNode("n2").orElseThrow().config().get("fields");
+        // key may be Integer or String depending on YAML parser; both convert to tag 500006
+        boolean found = fields.entrySet().stream()
+                .anyMatch(e -> Integer.parseInt(e.getKey().toString()) == 500006
+                        && "private-val".equals(e.getValue()));
+        assertThat(found).as("tag 500006 parsed from YAML").isTrue();
+    }
+
+    @Test
     void roundTripYamlSerialization() {
         ScenarioDslParser parser = new ScenarioDslParser();
         Scenario original = parser.parseYaml(MINIMAL_YAML);
