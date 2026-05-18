@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface VarEntry {
   syntax: string;
@@ -16,6 +17,7 @@ const VARS: VarEntry[] = [
 ];
 
 export function VarRefPanel() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -36,13 +38,13 @@ export function VarRefPanel() {
         className="w-full flex items-center justify-between px-2 py-1 text-[10px] text-gray-400 hover:text-gray-300"
         onClick={() => setOpen(v => !v)}
       >
-        <span>Variable Reference</span>
+        <span>{t('nodeConfig.varRef.title')}</span>
         <span>{open ? '▲' : '▼'}</span>
       </button>
       {open && (
         <div className="px-2 pb-2 space-y-1">
           <div className="text-[10px] text-gray-500 italic mb-1">
-            Click to copy a placeholder, then paste into a Value field.
+            {t('nodeConfig.varRef.copyHint')}
           </div>
           {VARS.map((v) => (
             <div key={v.syntax} className="flex items-start gap-2">
@@ -52,7 +54,7 @@ export function VarRefPanel() {
                 title={`Copy: ${v.example}`}
                 onClick={() => copy(v.example)}
               >
-                {copied === v.example ? '✓ copied' : v.syntax}
+                {copied === v.example ? t('nodeConfig.varRef.copied') : v.syntax}
               </button>
               <div className="min-w-0">
                 <div className="text-[10px] text-gray-400 leading-tight">{v.description}</div>

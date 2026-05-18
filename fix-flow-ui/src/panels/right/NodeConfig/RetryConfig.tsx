@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ScenarioNode } from '../../../types';
 import { useScenarioStore } from '../../../store/scenarioStore';
 
@@ -5,6 +6,7 @@ interface RetryCfg { targetNodeId?: string; }
 interface Props { node: ScenarioNode; }
 
 export function RetryConfig({ node }: Props) {
+  const { t } = useTranslation();
   const updateNode = useScenarioStore((s) => s.updateNode);
   const nodes = useScenarioStore((s) => s.nodes);
   const cfg = (node.config as RetryCfg) ?? {};
@@ -21,10 +23,10 @@ export function RetryConfig({ node }: Props) {
   return (
     <div className="text-xs space-y-2">
       <div className="text-[10px] text-gray-500 italic bg-[#1a1d27] rounded px-2 py-1">
-        Re-executes the target node up to N times. Stops as soon as one attempt succeeds. Use for transient failures (e.g. network flaps).
+        {t('nodeConfig.retry.desc')}
       </div>
       <div>
-        <label className="text-[10px] text-gray-500">Node Name</label>
+        <label className="text-[10px] text-gray-500">{t('nodeConfig.nodeName')}</label>
         <input
           type="text"
           className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
@@ -34,7 +36,7 @@ export function RetryConfig({ node }: Props) {
       </div>
       <div>
         <label className="text-[10px] text-gray-500">
-          Target Node
+          {t('nodeConfig.targetNode')}
           <span title="The node this Retry block will re-execute on failure." className="ml-1 text-gray-600 cursor-help">?</span>
         </label>
         <select
@@ -42,13 +44,13 @@ export function RetryConfig({ node }: Props) {
           value={cfg.targetNodeId ?? ''}
           onChange={(e) => patchConfig({ targetNodeId: e.target.value || undefined })}
         >
-          <option value="">-- select node --</option>
+          <option value="">{t('nodeConfig.selectNode')}</option>
           {candidates.map((n) => <option key={n.id} value={n.id}>{n.name}</option>)}
         </select>
       </div>
       <div>
         <label className="text-[10px] text-gray-500">
-          Max Attempts
+          {t('nodeConfig.retry.maxAttempts')}
           <span title="Maximum number of times to try before giving up. Minimum 1." className="ml-1 text-gray-600 cursor-help">?</span>
         </label>
         <input
@@ -61,7 +63,7 @@ export function RetryConfig({ node }: Props) {
       </div>
       <div>
         <label className="text-[10px] text-gray-500">
-          Delay Between Retries (ms)
+          {t('nodeConfig.retry.delayMs')}
           <span title="Milliseconds to wait between attempts. 0 = retry immediately." className="ml-1 text-gray-600 cursor-help">?</span>
         </label>
         <input

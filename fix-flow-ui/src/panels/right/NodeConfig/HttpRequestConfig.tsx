@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ScenarioNode } from '../../../types';
 import { useScenarioStore } from '../../../store/scenarioStore';
 import { TimeoutConfig } from './TimeoutConfig';
@@ -10,6 +11,7 @@ const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 const BODY_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 export function HttpRequestConfig({ node }: Props) {
+  const { t } = useTranslation();
   const updateNode = useScenarioStore((s) => s.updateNode);
   const cfg = (node.config as HttpCfg) ?? {};
   const headers: HeaderRow[] = cfg.headers ?? [];
@@ -29,31 +31,31 @@ export function HttpRequestConfig({ node }: Props) {
   return (
     <div className="text-xs space-y-2">
       <div>
-        <label className="text-[10px] text-gray-500">Node Name</label>
+        <label className="text-[10px] text-gray-500">{t('nodeConfig.nodeName')}</label>
         <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
           value={node.name} onChange={(e) => updateNode(node.id, { name: e.target.value })} />
       </div>
       <div>
-        <label className="text-[10px] text-gray-500">Method<span title="HTTP verb. POST/PUT/PATCH/DELETE show a body editor; GET uses query params in the URL." className="ml-1 text-gray-600 cursor-help">?</span></label>
+        <label className="text-[10px] text-gray-500">{t('nodeConfig.httpRequest.method')}<span title="HTTP verb. POST/PUT/PATCH/DELETE show a body editor; GET uses query params in the URL." className="ml-1 text-gray-600 cursor-help">?</span></label>
         <select className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
           value={method} onChange={(e) => patchConfig({ method: e.target.value })}>
           {METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
       </div>
       <div>
-        <label className="text-[10px] text-gray-500">URL<span title="Full request URL. Append query params: ?key=value. Supports {{var:name}} substitution." className="ml-1 text-gray-600 cursor-help">?</span></label>
+        <label className="text-[10px] text-gray-500">{t('nodeConfig.httpRequest.url')}<span title="Full request URL. Append query params: ?key=value. Supports {{var:name}} substitution." className="ml-1 text-gray-600 cursor-help">?</span></label>
         <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 font-mono"
           placeholder="https://example.com/api"
           value={cfg.url ?? ''} onChange={(e) => patchConfig({ url: e.target.value })} />
       </div>
       <div>
         <div className="flex items-center justify-between">
-          <label className="text-[10px] text-gray-500">Headers<span title="HTTP request headers. Common: Content-Type: application/json, Authorization: Bearer &lt;token&gt;." className="ml-1 text-gray-600 cursor-help">?</span></label>
-          <button className="text-[10px] px-2 py-0.5 bg-blue-600 hover:bg-blue-500 rounded" onClick={addHeader}>+ Header</button>
+          <label className="text-[10px] text-gray-500">{t('nodeConfig.httpRequest.headers')}<span title="HTTP request headers. Common: Content-Type: application/json, Authorization: Bearer &lt;token&gt;." className="ml-1 text-gray-600 cursor-help">?</span></label>
+          <button className="text-[10px] px-2 py-0.5 bg-blue-600 hover:bg-blue-500 rounded" onClick={addHeader}>{t('nodeConfig.httpRequest.addHeader')}</button>
         </div>
         <table className="w-full mt-1">
           <thead className="text-[10px] text-gray-500">
-            <tr><th className="text-left">Key</th><th className="text-left">Value</th><th /></tr>
+            <tr><th className="text-left">{t('nodeConfig.key')}</th><th className="text-left">{t('nodeConfig.value')}</th><th /></tr>
           </thead>
           <tbody>
             {headers.map((h, i) => (
@@ -78,14 +80,14 @@ export function HttpRequestConfig({ node }: Props) {
       </div>
       {hasBody ? (
         <div>
-          <label className="text-[10px] text-gray-500">Body<span title="Request body (JSON, XML, plain text). Supports {{var:name}} substitution." className="ml-1 text-gray-600 cursor-help">?</span></label>
+          <label className="text-[10px] text-gray-500">{t('nodeConfig.httpRequest.body')}<span title="Request body (JSON, XML, plain text). Supports {{var:name}} substitution." className="ml-1 text-gray-600 cursor-help">?</span></label>
           <textarea className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 font-mono resize-y"
             rows={4} placeholder='{"key": "{{var:value}}"}'
             value={cfg.body ?? ''} onChange={(e) => patchConfig({ body: e.target.value })} />
         </div>
       ) : (
         <div className="text-[10px] text-gray-500 italic">
-          GET requests have no body — use query params in the URL (e.g. ?key=value)
+          {t('nodeConfig.httpRequest.noBody')}
         </div>
       )}
       <TimeoutConfig value={node.timeout} onChange={(next) => updateNode(node.id, { timeout: next })} currentNodeId={node.id} />

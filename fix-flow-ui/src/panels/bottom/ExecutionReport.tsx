@@ -1,7 +1,9 @@
+import { useTranslation } from 'react-i18next';
 import { useExecutionStore } from '../../store/executionStore';
 import { getExecutionReport } from '../../api/executions';
 
 export function ExecutionReport() {
+  const { t } = useTranslation();
   const executionId = useExecutionStore((s) => s.activeExecutionId);
 
   const download = async () => {
@@ -24,7 +26,7 @@ export function ExecutionReport() {
       onClick={download}
       disabled={!executionId}
     >
-      Download Report
+      {t('executionReport.download')}
     </button>
   );
 }

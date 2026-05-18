@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScenarioNode } from '../../../types';
 import { useScenarioStore } from '../../../store/scenarioStore';
 import { TimeoutConfig } from './TimeoutConfig';
@@ -10,6 +11,7 @@ interface SendCfg { msgType?: string; fields?: FieldRow[]; }
 interface Props { node: ScenarioNode; }
 
 export function SendFIXConfig({ node }: Props) {
+  const { t } = useTranslation();
   const updateNode = useScenarioStore((s) => s.updateNode);
   const cfg = (node.config as SendCfg) ?? {};
   const fields = cfg.fields ?? [];
@@ -41,13 +43,13 @@ export function SendFIXConfig({ node }: Props) {
   return (
     <div className="text-xs space-y-2">
       <div>
-        <label className="text-[10px] text-gray-500">Node Name</label>
+        <label className="text-[10px] text-gray-500">{t('nodeConfig.nodeName')}</label>
         <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
           value={node.name} onChange={(e) => updateNode(node.id, { name: e.target.value })} />
       </div>
       <div>
         <label className="text-[10px] text-gray-500">
-          MsgType (tag 35)
+          {t('nodeConfig.sendFix.msgType')}
           <span title="FIX tag 35 value. e.g. D = New Order Single, 8 = Execution Report, V = Market Data Request." className="ml-1 text-gray-600 cursor-help">?</span>
         </label>
         <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
@@ -60,13 +62,13 @@ export function SendFIXConfig({ node }: Props) {
           className="w-full flex items-center justify-between px-2 py-1 text-[10px] text-gray-400 hover:text-gray-300"
           onClick={() => setShowPaste(v => !v)}
         >
-          <span>Paste FIX Message</span>
+          <span>{t('nodeConfig.sendFix.pasteBtn')}</span>
           <span>{showPaste ? '▲' : '▼'}</span>
         </button>
         {showPaste && (
           <div className="px-2 pb-2 space-y-1">
             <div className="text-[10px] text-gray-500 italic">
-              Paste a raw FIX message (SOH or pipe-separated). Tags 8/9/10/34/49/56 skipped — managed by engine.
+              {t('nodeConfig.sendFix.pasteDesc')}
             </div>
             <textarea
               className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 font-mono text-[10px] resize-y"
@@ -86,14 +88,14 @@ export function SendFIXConfig({ node }: Props) {
                 className="flex-1 px-2 py-0.5 bg-blue-600 hover:bg-blue-500 rounded text-[10px]"
                 onClick={handleParse}
               >
-                Parse → populate fields
+                {t('nodeConfig.sendFix.parseBtn')}
               </button>
               <button
                 type="button"
                 className="px-2 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-[10px]"
                 onClick={() => { setPasteRaw(''); setParseError(''); setShowPaste(false); }}
               >
-                Cancel
+                {t('nodeConfig.sendFix.cancelBtn')}
               </button>
             </div>
           </div>
@@ -103,14 +105,14 @@ export function SendFIXConfig({ node }: Props) {
       <div>
         <div className="flex items-center justify-between">
           <label className="text-[10px] text-gray-500">
-            Fields
+            {t('nodeConfig.sendFix.fields')}
             <span title="FIX tag-value pairs. Tag is the integer field number. Value supports placeholders: {{now}}, {{uuid}}, {{seq:name}}, {{env:VAR}}, {{node:id:tagN}}. See Variable Reference below." className="ml-1 text-gray-600 cursor-help">?</span>
           </label>
-          <button className="text-[10px] px-2 py-0.5 bg-blue-600 hover:bg-blue-500 rounded" onClick={addField}>+ Field</button>
+          <button className="text-[10px] px-2 py-0.5 bg-blue-600 hover:bg-blue-500 rounded" onClick={addField}>{t('nodeConfig.sendFix.addField')}</button>
         </div>
         <table className="w-full mt-1">
           <thead className="text-[10px] text-gray-500">
-            <tr><th className="text-left">Tag</th><th className="text-left">Value</th><th /></tr>
+            <tr><th className="text-left">{t('nodeConfig.tag')}</th><th className="text-left">{t('nodeConfig.value')}</th><th /></tr>
           </thead>
           <tbody>
             {fields.map((f, i) => (

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ScenarioNode } from '../../../types';
 import { useScenarioStore } from '../../../store/scenarioStore';
 import { TimeoutConfig } from './TimeoutConfig';
@@ -9,6 +10,7 @@ interface RouteCfg { rules?: RoutingRule[]; }
 interface Props { node: ScenarioNode; }
 
 export function RouteFIXConfig({ node }: Props) {
+  const { t } = useTranslation();
   const updateNode = useScenarioStore((s) => s.updateNode);
   const allNodes = useScenarioStore((s) => s.nodes);
   const cfg = (node.config as RouteCfg) ?? {};
@@ -41,12 +43,11 @@ export function RouteFIXConfig({ node }: Props) {
   return (
     <div className="text-xs space-y-2">
       <div className="text-[10px] text-pink-300 bg-pink-900/20 border border-pink-800/40 rounded px-2 py-1.5">
-        Waits for an inbound FIX message and routes to the first rule whose matchers all match.
-        Rules are evaluated top-to-bottom. A rule with no matchers acts as default/fallback.
+        {t('nodeConfig.routeFix.desc')}
       </div>
 
       <div>
-        <label className="text-[10px] text-gray-500">Node Name</label>
+        <label className="text-[10px] text-gray-500">{t('nodeConfig.nodeName')}</label>
         <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
           value={node.name} onChange={(e) => updateNode(node.id, { name: e.target.value })} />
       </div>
@@ -54,10 +55,10 @@ export function RouteFIXConfig({ node }: Props) {
       <div>
         <div className="flex items-center justify-between mb-1">
           <label className="text-[10px] text-gray-500">
-            Routing Rules
+            {t('nodeConfig.routeFix.routingRules')}
             <span title="Each rule is tested in order. The first rule where all matchers match is selected. A rule with zero matchers is a catch-all default. The matched rule's target node becomes the next step." className="ml-1 text-gray-600 cursor-help">?</span>
           </label>
-          <button className="text-[10px] px-2 py-0.5 bg-pink-700 hover:bg-pink-600 rounded" onClick={addRule}>+ Rule</button>
+          <button className="text-[10px] px-2 py-0.5 bg-pink-700 hover:bg-pink-600 rounded" onClick={addRule}>{t('nodeConfig.routeFix.addRule')}</button>
         </div>
         <div className="space-y-2">
           {rules.map((r, i) => (
@@ -71,13 +72,13 @@ export function RouteFIXConfig({ node }: Props) {
               <div>
                 <div className="text-[10px] text-gray-500 flex items-center justify-between">
                   <span>
-                    Matchers
+                    {t('nodeConfig.routeFix.matchers')}
                     <span title="FIX tag-value pairs that must ALL match the incoming message (AND logic). Leave empty to make this rule a default/fallback that catches any message. Value supports {{node:id:tagN}} placeholders." className="ml-1 text-gray-600 cursor-help">?</span>
                     {r.matchers.length === 0 && (
-                      <span className="ml-1 text-pink-400 font-medium">(default)</span>
+                      <span className="ml-1 text-pink-400 font-medium">{t('nodeConfig.routeFix.defaultRule')}</span>
                     )}
                   </span>
-                  <button className="text-[10px] px-1 bg-blue-700 hover:bg-blue-600 rounded" onClick={() => addMatcher(i)}>+ Tag</button>
+                  <button className="text-[10px] px-1 bg-blue-700 hover:bg-blue-600 rounded" onClick={() => addMatcher(i)}>{t('nodeConfig.routeFix.addTag')}</button>
                 </div>
                 {r.matchers.map((m, j) => (
                   <div key={j} className="flex gap-1 mt-0.5">
@@ -93,13 +94,13 @@ export function RouteFIXConfig({ node }: Props) {
               </div>
               <div>
                 <label className="text-[10px] text-gray-500">
-                  Target Node
+                  {t('nodeConfig.routeFix.targetNode')}
                   <span title="The node to execute when this rule matches. Draw an edge from this ROUTE_FIX block to the target node on the canvas to visualise the branch." className="ml-1 text-gray-600 cursor-help">?</span>
                 </label>
                 <select className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-1 py-0.5"
                   value={r.targetNodeId}
                   onChange={(e) => updateRule(i, { targetNodeId: e.target.value })}>
-                  <option value="">— select —</option>
+                  <option value="">{t('nodeConfig.routeFix.selectNode')}</option>
                   {otherNodes.map((n) => (
                     <option key={n.id} value={n.id}>{n.name} ({n.type})</option>
                   ))}
@@ -108,7 +109,7 @@ export function RouteFIXConfig({ node }: Props) {
             </div>
           ))}
           {rules.length === 0 && (
-            <div className="text-[10px] text-gray-600 italic">No rules yet. Add rules to route incoming FIX messages.</div>
+            <div className="text-[10px] text-gray-600 italic">{t('nodeConfig.routeFix.noRules')}</div>
           )}
         </div>
       </div>

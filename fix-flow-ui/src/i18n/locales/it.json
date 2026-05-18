@@ -129,5 +129,99 @@
     "title": "Proprietà",
     "noNode": "Seleziona un nodo da configurare",
     "nodeName": "Nome Nodo"
+  },
+  "nodeConfig": {
+    "nodeName": "Nome Nodo",
+    "tag": "Tag",
+    "value": "Valore",
+    "key": "Chiave",
+    "selectNode": "-- seleziona nodo --",
+    "targetNode": "Nodo Target",
+    "none": "-- nessuno --",
+    "sendFix": {
+      "msgType": "MsgType (tag 35)",
+      "pasteBtn": "Incolla Messaggio FIX",
+      "pasteDesc": "Incolla un messaggio FIX grezzo (separato da SOH o pipe). I tag 8/9/10/34/49/56 vengono saltati — gestiti dal motore.",
+      "parseBtn": "Analizza → popola campi",
+      "cancelBtn": "Annulla",
+      "fields": "Campi",
+      "addField": "+ Campo"
+    },
+    "expectFix": {
+      "desc": "Attende un messaggio FIX in entrata corrispondente ai criteri. Memorizza i campi per i nodi VALIDATE successivi o riferimenti incrociati.",
+      "msgType": "MsgType (tag 35)",
+      "correlation": "Correlazione",
+      "correlationDesc": "Opzionale. Usare per abbinare una risposta a un ordine inviato — es. abbinare ClOrdID (tag 11) nella risposta con il tag 11 del nodo ordine.",
+      "sourceTag": "Tag Sorgente (nel messaggio ricevuto)",
+      "fromNode": "Da Nodo",
+      "targetTag": "Tag Target (nel nodo inviato)"
+    },
+    "decision": {
+      "desc": "Valuta un'espressione condizionale. Vero → percorso successo (onSuccess). Falso → percorso fallimento (onFailure).",
+      "condition": "Condizione",
+      "operators": "Operatori:"
+    },
+    "validate": {
+      "desc": "Valida i campi di un messaggio memorizzato (da un nodo Expect FIX). Le regole vengono eseguite in ordine; tutte devono passare a meno che la modalità Strict non sia disabilitata.",
+      "strictMode": "Modalità Strict",
+      "rules": "Regole",
+      "addRule": "+ Regola",
+      "crossNodeRef": "Rif. incrociato",
+      "selectDateRule": "-- seleziona regola data --"
+    },
+    "routeFix": {
+      "desc": "Attende un messaggio FIX in entrata e instrada alla prima regola con tutti i matcher corrispondenti. Le regole vengono valutate dall'alto verso il basso. Una regola senza matcher agisce come predefinita.",
+      "routingRules": "Regole di Instradamento",
+      "addRule": "+ Regola",
+      "matchers": "Matcher",
+      "defaultRule": "(predefinito)",
+      "addTag": "+ Tag",
+      "targetNode": "Nodo Target",
+      "selectNode": "— seleziona —",
+      "noRules": "Nessuna regola ancora. Aggiungi regole per instradare i messaggi FIX in entrata."
+    },
+    "retry": {
+      "desc": "Riesegue il nodo target fino a N volte. Si ferma non appena un tentativo ha successo. Utile per errori transitori (es. interruzioni di rete).",
+      "maxAttempts": "Tentativi Massimi",
+      "delayMs": "Ritardo tra Tentativi (ms)"
+    },
+    "wait": {
+      "desc": "Blocca l'esecuzione per una durata configurabile. Al timeout: proseguire al nodo successivo, fallire o saltare a un altro nodo."
+    },
+    "loop": {
+      "desc": "Esegue il nodo target esattamente N volte. Tutte le iterazioni devono avere successo — fallisce immediatamente al primo fallimento.",
+      "iterations": "Iterazioni"
+    },
+    "delay": {
+      "desc": "Pausa fissa in millisecondi. Continua sempre sul percorso di successo — nessuna azione di timeout o diramazione.",
+      "delayMs": "Ritardo (ms)"
+    },
+    "httpRequest": {
+      "method": "Metodo",
+      "url": "URL",
+      "headers": "Intestazioni",
+      "addHeader": "+ Intestazione",
+      "body": "Corpo",
+      "noBody": "Le richieste GET non hanno corpo — usare i parametri query nell'URL (es. ?chiave=valore)"
+    },
+    "timeout": {
+      "title": "Timeout",
+      "value": "Valore",
+      "unit": "Unità",
+      "onTimeout": "Al Timeout",
+      "jumpToNode": "Salta al Nodo",
+      "selectNode": "-- seleziona --"
+    },
+    "varRef": {
+      "title": "Riferimento Variabili",
+      "copyHint": "Clicca per copiare un segnaposto, poi incollalo in un campo Valore.",
+      "copied": "✓ copiato"
+    }
+  },
+  "executionReport": {
+    "download": "Scarica Report"
+  },
+  "canvas": {
+    "fit": "Adatta"
   }
 }

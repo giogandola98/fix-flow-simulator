@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ScenarioNode } from '../../../types';
 import { useScenarioStore } from '../../../store/scenarioStore';
 
@@ -5,6 +6,7 @@ interface LoopCfg { targetNodeId?: string; iterations?: number; }
 interface Props { node: ScenarioNode; }
 
 export function LoopConfig({ node }: Props) {
+  const { t } = useTranslation();
   const updateNode = useScenarioStore((s) => s.updateNode);
   const nodes = useScenarioStore((s) => s.nodes);
   const cfg = (node.config as LoopCfg) ?? {};
@@ -17,10 +19,10 @@ export function LoopConfig({ node }: Props) {
   return (
     <div className="text-xs space-y-2">
       <div className="text-[10px] text-gray-500 italic bg-[#1a1d27] rounded px-2 py-1">
-        Executes the target node exactly N times. All iterations must succeed — fails immediately on the first failure.
+        {t('nodeConfig.loop.desc')}
       </div>
       <div>
-        <label className="text-[10px] text-gray-500">Node Name</label>
+        <label className="text-[10px] text-gray-500">{t('nodeConfig.nodeName')}</label>
         <input
           type="text"
           className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
@@ -30,7 +32,7 @@ export function LoopConfig({ node }: Props) {
       </div>
       <div>
         <label className="text-[10px] text-gray-500">
-          Target Node
+          {t('nodeConfig.targetNode')}
           <span title="The node this Loop block will execute repeatedly." className="ml-1 text-gray-600 cursor-help">?</span>
         </label>
         <select
@@ -38,13 +40,13 @@ export function LoopConfig({ node }: Props) {
           value={cfg.targetNodeId ?? ''}
           onChange={(e) => patchConfig({ targetNodeId: e.target.value || undefined })}
         >
-          <option value="">-- select node --</option>
+          <option value="">{t('nodeConfig.selectNode')}</option>
           {candidates.map((n) => <option key={n.id} value={n.id}>{n.name}</option>)}
         </select>
       </div>
       <div>
         <label className="text-[10px] text-gray-500">
-          Iterations
+          {t('nodeConfig.loop.iterations')}
           <span title="Number of times to execute the target node. Minimum 1." className="ml-1 text-gray-600 cursor-help">?</span>
         </label>
         <input

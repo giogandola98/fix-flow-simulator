@@ -129,5 +129,99 @@
     "title": "Propriétés",
     "noNode": "Sélectionner un nœud à configurer",
     "nodeName": "Nom du Nœud"
+  },
+  "nodeConfig": {
+    "nodeName": "Nom du Nœud",
+    "tag": "Tag",
+    "value": "Valeur",
+    "key": "Clé",
+    "selectNode": "-- sélectionner un nœud --",
+    "targetNode": "Nœud Cible",
+    "none": "-- aucun --",
+    "sendFix": {
+      "msgType": "MsgType (tag 35)",
+      "pasteBtn": "Coller un Message FIX",
+      "pasteDesc": "Collez un message FIX brut (séparé par SOH ou pipe). Les tags 8/9/10/34/49/56 sont ignorés — gérés par le moteur.",
+      "parseBtn": "Analyser → remplir les champs",
+      "cancelBtn": "Annuler",
+      "fields": "Champs",
+      "addField": "+ Champ"
+    },
+    "expectFix": {
+      "desc": "Attend un message FIX entrant correspondant aux critères. Stocke les champs pour les nœuds VALIDATE en aval ou les références croisées.",
+      "msgType": "MsgType (tag 35)",
+      "correlation": "Corrélation",
+      "correlationDesc": "Optionnel. Utilisez pour associer une réponse à un ordre envoyé — ex. correspondre le ClOrdID (tag 11) dans la réponse avec le tag 11 du nœud d'ordre.",
+      "sourceTag": "Tag Source (dans le message reçu)",
+      "fromNode": "Du Nœud",
+      "targetTag": "Tag Cible (dans le nœud d'envoi)"
+    },
+    "decision": {
+      "desc": "Évalue une expression conditionnelle. Vrai → chemin succès (onSuccess). Faux → chemin échec (onFailure).",
+      "condition": "Condition",
+      "operators": "Opérateurs :"
+    },
+    "validate": {
+      "desc": "Valide les champs d'un message stocké (d'un nœud Expect FIX). Les règles s'exécutent dans l'ordre ; toutes doivent réussir sauf si le mode Strict est désactivé.",
+      "strictMode": "Mode Strict",
+      "rules": "Règles",
+      "addRule": "+ Règle",
+      "crossNodeRef": "Réf. croisée",
+      "selectDateRule": "-- sélectionner règle de date --"
+    },
+    "routeFix": {
+      "desc": "Attend un message FIX entrant et route vers la première règle dont tous les matchers correspondent. Les règles sont évaluées de haut en bas. Une règle sans matchers agit comme défaut.",
+      "routingRules": "Règles de Routage",
+      "addRule": "+ Règle",
+      "matchers": "Conditions",
+      "defaultRule": "(défaut)",
+      "addTag": "+ Tag",
+      "targetNode": "Nœud Cible",
+      "selectNode": "— sélectionner —",
+      "noRules": "Aucune règle. Ajoutez des règles pour router les messages FIX entrants."
+    },
+    "retry": {
+      "desc": "Réexécute le nœud cible jusqu'à N fois. S'arrête dès qu'une tentative réussit. Utile pour les erreurs transitoires (ex. coupures réseau).",
+      "maxAttempts": "Tentatives Max",
+      "delayMs": "Délai entre Tentatives (ms)"
+    },
+    "wait": {
+      "desc": "Bloque l'exécution pendant une durée configurable. Au timeout : continuer vers le nœud suivant, échouer ou sauter à un autre nœud."
+    },
+    "loop": {
+      "desc": "Exécute le nœud cible exactement N fois. Toutes les itérations doivent réussir — échoue immédiatement au premier échec.",
+      "iterations": "Itérations"
+    },
+    "delay": {
+      "desc": "Pause fixe en millisecondes. Continue toujours sur le chemin de succès — pas d'actions de timeout ni de branchement.",
+      "delayMs": "Délai (ms)"
+    },
+    "httpRequest": {
+      "method": "Méthode",
+      "url": "URL",
+      "headers": "En-têtes",
+      "addHeader": "+ En-tête",
+      "body": "Corps",
+      "noBody": "Les requêtes GET n'ont pas de corps — utilisez des paramètres query dans l'URL (ex. ?clé=valeur)"
+    },
+    "timeout": {
+      "title": "Timeout",
+      "value": "Valeur",
+      "unit": "Unité",
+      "onTimeout": "Au Timeout",
+      "jumpToNode": "Aller au Nœud",
+      "selectNode": "-- sélectionner --"
+    },
+    "varRef": {
+      "title": "Référence Variables",
+      "copyHint": "Cliquez pour copier un espace réservé, puis collez-le dans un champ Valeur.",
+      "copied": "✓ copié"
+    }
+  },
+  "executionReport": {
+    "download": "Télécharger le Rapport"
+  },
+  "canvas": {
+    "fit": "Ajuster"
   }
 }

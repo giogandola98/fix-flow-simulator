@@ -129,5 +129,99 @@
     "title": "Properties",
     "noNode": "Select a node to configure",
     "nodeName": "Node Name"
+  },
+  "nodeConfig": {
+    "nodeName": "Node Name",
+    "tag": "Tag",
+    "value": "Value",
+    "key": "Key",
+    "selectNode": "-- select node --",
+    "targetNode": "Target Node",
+    "none": "-- none --",
+    "sendFix": {
+      "msgType": "MsgType (tag 35)",
+      "pasteBtn": "Paste FIX Message",
+      "pasteDesc": "Paste a raw FIX message (SOH or pipe-separated). Tags 8/9/10/34/49/56 skipped — managed by engine.",
+      "parseBtn": "Parse → populate fields",
+      "cancelBtn": "Cancel",
+      "fields": "Fields",
+      "addField": "+ Field"
+    },
+    "expectFix": {
+      "desc": "Waits for an inbound FIX message matching the criteria. Stores matched fields for downstream VALIDATE nodes or cross-node references.",
+      "msgType": "MsgType (tag 35)",
+      "correlation": "Correlation",
+      "correlationDesc": "Optional. Use to match a reply back to a specific sent order — e.g. match ClOrdID (tag 11) in the reply against tag 11 sent in the order node.",
+      "sourceTag": "Source Tag (in received message)",
+      "fromNode": "From Node",
+      "targetTag": "Target Tag (in send node)"
+    },
+    "decision": {
+      "desc": "Evaluates a condition expression. True → success path (onSuccess). False → failure path (onFailure).",
+      "condition": "Condition",
+      "operators": "Operators:"
+    },
+    "validate": {
+      "desc": "Validates fields of a stored message (from an Expect FIX node). Rules run in order; all must pass unless Strict Mode is disabled.",
+      "strictMode": "Strict Mode",
+      "rules": "Rules",
+      "addRule": "+ Rule",
+      "crossNodeRef": "Cross-node ref",
+      "selectDateRule": "-- select date rule --"
+    },
+    "routeFix": {
+      "desc": "Waits for an inbound FIX message and routes to the first rule whose matchers all match. Rules are evaluated top-to-bottom. A rule with no matchers acts as default/fallback.",
+      "routingRules": "Routing Rules",
+      "addRule": "+ Rule",
+      "matchers": "Matchers",
+      "defaultRule": "(default)",
+      "addTag": "+ Tag",
+      "targetNode": "Target Node",
+      "selectNode": "— select —",
+      "noRules": "No rules yet. Add rules to route incoming FIX messages."
+    },
+    "retry": {
+      "desc": "Re-executes the target node up to N times. Stops as soon as one attempt succeeds. Use for transient failures (e.g. network flaps).",
+      "maxAttempts": "Max Attempts",
+      "delayMs": "Delay Between Retries (ms)"
+    },
+    "wait": {
+      "desc": "Blocks execution for a configurable duration. On timeout: proceed to next node, fail, or jump to another node."
+    },
+    "loop": {
+      "desc": "Executes the target node exactly N times. All iterations must succeed — fails immediately on the first failure.",
+      "iterations": "Iterations"
+    },
+    "delay": {
+      "desc": "Fixed sleep in milliseconds. Always continues on the success path — no timeout actions or branching.",
+      "delayMs": "Delay (ms)"
+    },
+    "httpRequest": {
+      "method": "Method",
+      "url": "URL",
+      "headers": "Headers",
+      "addHeader": "+ Header",
+      "body": "Body",
+      "noBody": "GET requests have no body — use query params in the URL (e.g. ?key=value)"
+    },
+    "timeout": {
+      "title": "Timeout",
+      "value": "Value",
+      "unit": "Unit",
+      "onTimeout": "On Timeout",
+      "jumpToNode": "Jump To Node",
+      "selectNode": "-- select --"
+    },
+    "varRef": {
+      "title": "Variable Reference",
+      "copyHint": "Click to copy a placeholder, then paste into a Value field.",
+      "copied": "✓ copied"
+    }
+  },
+  "executionReport": {
+    "download": "Download Report"
+  },
+  "canvas": {
+    "fit": "Fit"
   }
 }
