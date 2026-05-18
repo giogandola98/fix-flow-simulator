@@ -4,7 +4,8 @@ export interface ParsedFIX {
   skipped: number;
 }
 
-const ENGINE_TAGS = new Set([8, 9, 10, 49, 56]);
+// Tags managed by QuickFIX/J engine — skip on paste
+const ENGINE_TAGS = new Set([8, 9, 10, 34, 49, 56]);
 
 export function parseFIXMessage(raw: string): ParsedFIX {
   const normalized = raw.replace(/\x01/g, '|');

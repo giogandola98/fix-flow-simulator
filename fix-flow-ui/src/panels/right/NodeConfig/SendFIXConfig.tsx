@@ -66,7 +66,7 @@ export function SendFIXConfig({ node }: Props) {
         {showPaste && (
           <div className="px-2 pb-2 space-y-1">
             <div className="text-[10px] text-gray-500 italic">
-              Paste a raw FIX message (SOH or pipe-separated). Tags 8/9/10/49/56 skipped — managed by engine.
+              Paste a raw FIX message (SOH or pipe-separated). Tags 8/9/10/34/49/56 skipped — managed by engine.
             </div>
             <textarea
               className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 font-mono text-[10px] resize-y"
@@ -104,7 +104,7 @@ export function SendFIXConfig({ node }: Props) {
         <div className="flex items-center justify-between">
           <label className="text-[10px] text-gray-500">
             Fields
-            <span title="FIX tag-value pairs. Tag is the integer field number; Value is a string. Use {{var:name}} for runtime substitution." className="ml-1 text-gray-600 cursor-help">?</span>
+            <span title="FIX tag-value pairs. Tag is the integer field number. Value supports placeholders: {{now}}, {{uuid}}, {{seq:name}}, {{env:VAR}}, {{node:id:tagN}}. See Variable Reference below." className="ml-1 text-gray-600 cursor-help">?</span>
           </label>
           <button className="text-[10px] px-2 py-0.5 bg-blue-600 hover:bg-blue-500 rounded" onClick={addField}>+ Field</button>
         </div>
