@@ -129,6 +129,7 @@ export default function TopBar() {
       <button
         className="px-3 py-1 rounded bg-green-600 hover:bg-green-500 disabled:opacity-40 text-sm"
         onClick={() => {
+          if (!activeScenario || !activeSession?.connected) return;
           if (isDirty) {
             saveMutation.mutate(undefined, { onSuccess: () => runMutation.mutate() });
           } else {
