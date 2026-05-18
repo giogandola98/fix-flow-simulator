@@ -1,0 +1,109 @@
+FIX Flow Simulator Source Available License v1.0
+Copyright (c) 2026 Giorgio Gandola <giogandola@gmail.com>
+Repository: https://github.com/giogandola98/fix-flow-simulator
+
+─────────────────────────────────────────────────────────────────────────────
+DEFINITIONS
+─────────────────────────────────────────────────────────────────────────────
+
+"Software" means the FIX Flow Simulator source code, binaries, documentation,
+and any associated files distributed under this License.
+
+"Licensor" means Giorgio Gandola, the copyright holder.
+
+"You" means any individual or legal entity exercising rights under this License.
+
+"Non-Commercial Use" means use that is not primarily intended for or directed
+toward commercial advantage or monetary compensation. Academic research,
+personal projects, and internal evaluation are Non-Commercial Use. Operating
+the Software as part of a service offered to paying customers, embedding it in
+a commercial product, or using it in revenue-generating workflows are NOT
+Non-Commercial Use.
+
+"Commercial License" means a separate written agreement with the Licensor that
+grants rights beyond those provided by this License.
+
+─────────────────────────────────────────────────────────────────────────────
+GRANT OF RIGHTS
+─────────────────────────────────────────────────────────────────────────────
+
+Subject to the terms of this License, the Licensor grants You a worldwide,
+royalty-free, non-exclusive, non-sublicensable license to:
+
+1. Read and study the source code for any purpose.
+2. Modify the source code for Your own internal, Non-Commercial Use.
+3. Redistribute the Software, with or without modifications, provided that:
+   a. Redistribution is for Non-Commercial Use only (see restrictions below).
+   b. You retain this License file, unmodified, in all copies and substantial
+      portions of the Software.
+   c. All copyright notices are preserved.
+   d. You include a prominent notice stating that the Software is a fork of
+      FIX Flow Simulator, identifying the Licensor, and linking to the
+      original repository: https://github.com/giogandola98/fix-flow-simulator
+   e. Modifications are clearly identified as such.
+
+─────────────────────────────────────────────────────────────────────────────
+RESTRICTIONS
+─────────────────────────────────────────────────────────────────────────────
+
+You may NOT, without a Commercial License from the Licensor:
+
+1. Use the Software, in whole or in part, to provide a commercial service or
+   product — including Software-as-a-Service (SaaS), hosted services, or
+   managed offerings — to third parties, whether for direct payment or as part
+   of a commercial bundle.
+2. Sell, license, sublicense, or otherwise transfer rights to the Software or
+   any Derivative Work for commercial gain.
+3. Embed the Software, in whole or in part, in a proprietary or commercial
+   product distributed to third parties.
+4. Use the Software as part of a revenue-generating workflow or business
+   process that serves paying customers.
+5. Remove or alter this License, copyright notices, or attribution notices
+   from any copy or Derivative Work.
+
+─────────────────────────────────────────────────────────────────────────────
+COMMERCIAL LICENSE
+─────────────────────────────────────────────────────────────────────────────
+
+If You wish to use the Software for Commercial Use, You must obtain a
+Commercial License from the Licensor. For inquiries, contact:
+
+  Giorgio Gandola
+  giogandola@gmail.com
+  https://github.com/giogandola98/fix-flow-simulator
+
+─────────────────────────────────────────────────────────────────────────────
+CONTRIBUTIONS
+─────────────────────────────────────────────────────────────────────────────
+
+By submitting a contribution (pull request, patch, or other modification) to
+this repository, You agree that:
+
+1. Your contribution is Your original work and You have the right to submit it.
+2. You grant the Licensor a perpetual, irrevocable, worldwide, royalty-free,
+   sublicensable license to use, reproduce, modify, distribute, and
+   sublicense Your contribution under any license terms the Licensor chooses,
+   including Commercial Licenses.
+3. The Licensor may incorporate Your contribution into the Software and
+   distribute it under any current or future license.
+
+This ensures the Licensor retains the ability to dual-license the Software in
+the future without contacting every contributor.
+
+─────────────────────────────────────────────────────────────────────────────
+DISCLAIMER
+─────────────────────────────────────────────────────────────────────────────
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+─────────────────────────────────────────────────────────────────────────────
+GOVERNING LAW
+─────────────────────────────────────────────────────────────────────────────
+
+This License is governed by the laws of Italy, without regard to conflict of
+law principles.
