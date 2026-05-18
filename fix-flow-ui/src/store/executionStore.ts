@@ -31,8 +31,10 @@ export const useExecutionStore = create<ExecutionState>((set) => ({
   endedAt: null,
   setActiveExecution: (id) => set({ activeExecutionId: id }),
   updateStatus: (status) => set({ executionStatus: status }),
-  addEvent: (event) => set((s) => ({ events: [...s.events, event] })),
-  addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
+  addEvent: (event) => set((s) =>
+    s.events.some((e) => e.id === event.id) ? s : { events: [...s.events, event] }),
+  addMessage: (msg) => set((s) =>
+    s.messages.some((m) => m.id === msg.id) ? s : { messages: [...s.messages, msg] }),
   setNodeStatus: (nodeId, status) =>
     set((s) => ({ nodeStatuses: { ...s.nodeStatuses, [nodeId]: status } })),
   setStartedAt: (iso) => set({ startedAt: iso }),
