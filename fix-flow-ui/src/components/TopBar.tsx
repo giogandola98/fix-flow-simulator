@@ -128,8 +128,15 @@ export default function TopBar() {
       <div className="flex-1" />
       <button
         className="px-3 py-1 rounded bg-green-600 hover:bg-green-500 disabled:opacity-40 text-sm"
-        onClick={() => runMutation.mutate()}
-        disabled={!activeScenario || !activeSession || isRunning}
+        onClick={() => {
+          if (!activeScenario || !activeSession?.connected) return;
+          if (isDirty) {
+            saveMutation.mutate(undefined, { onSuccess: () => runMutation.mutate() });
+          } else {
+            runMutation.mutate();
+          }
+        }}
+        disabled={!activeScenario || !activeSession || !activeSession.connected || isRunning}
       >
         Run
       </button>

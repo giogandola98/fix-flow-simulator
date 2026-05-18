@@ -99,18 +99,23 @@ export function serializeToYaml(
 ): string {
   const doc: YamlDoc = {
     ...meta,
-    nodes: nodes.map((n) => ({
-      id: n.id,
-      name: n.name,
-      type: n.type,
-      config: serializeConfig(n.type, n.config ?? {}),
-      timeout: n.timeout,
-      retryPolicy: n.retryPolicy,
-      onSuccess: n.onSuccess,
-      onFailure: n.onFailure,
-      onTimeout: n.onTimeout,
-      position: n.position,
-    })),
+    nodes: nodes.map((n) => {
+      const successEdge = edges.find((e) => e.from === n.id && e.label === 'success' && !e.sourceHandle);
+      const failureEdge = edges.find((e) => e.from === n.id && e.label === 'failure' && !e.sourceHandle);
+      const timeoutEdge = edges.find((e) => e.from === n.id && e.label === 'timeout' && !e.sourceHandle);
+      return {
+        id: n.id,
+        name: n.name,
+        type: n.type,
+        config: serializeConfig(n.type, n.config ?? {}),
+        timeout: n.timeout,
+        retryPolicy: n.retryPolicy,
+        onSuccess: successEdge?.to ?? n.onSuccess,
+        onFailure: failureEdge?.to ?? n.onFailure,
+        onTimeout: timeoutEdge?.to ?? n.onTimeout,
+        position: n.position,
+      };
+    }),
     edges: edges.map((e) => ({ from: e.from, to: e.to, label: e.label, ...(e.sourceHandle ? { sourceHandle: e.sourceHandle } : {}) })),
   };
   return yaml.dump(doc, { noRefs: true, sortKeys: false, lineWidth: 120 });
