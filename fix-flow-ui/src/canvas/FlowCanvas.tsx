@@ -125,16 +125,25 @@ function InnerCanvas() {
   // Keep rfEdges in sync with store (edges have no measured state issue).
   useEffect(() => {
     setRfEdges(
-      edges.map((e, i) => ({
-        id: `e${i}-${e.from}-${e.to}-${e.label}`,
-        source: e.from,
-        target: e.to,
-        sourceHandle: e.sourceHandle ?? null,
-        label: e.label,
-        type: 'default',
-      })),
+      edges.map((e, i) => {
+        const srcNode = nodes.find((n) => n.id === e.from);
+        const ruleCfg = srcNode?.type === 'ROUTE_FIX'
+          ? (srcNode.config as { rules?: Array<{ ruleId: string; label: string }> }).rules?.find(
+              (r) => r.ruleId === e.sourceHandle,
+            )
+          : undefined;
+        const derivedLabel = ruleCfg?.label ?? e.label;
+        return {
+          id: `e${i}-${e.from}-${e.to}-${e.label}`,
+          source: e.from,
+          target: e.to,
+          sourceHandle: e.sourceHandle ?? null,
+          label: derivedLabel,
+          type: 'default',
+        };
+      }),
     );
-  }, [edges]);
+  }, [edges, nodes]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
