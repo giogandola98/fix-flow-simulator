@@ -23,6 +23,9 @@ export function ValidateConfig({ node }: { node: ScenarioNode }) {
 
   return (
     <div className="text-xs space-y-2">
+      <div className="text-[10px] text-gray-500 italic bg-[#1a1d27] rounded px-2 py-1">
+        Validates fields of a stored message (from an Expect FIX node). Rules run in order; all must pass unless Strict Mode is disabled.
+      </div>
       <div>
         <label className="text-[10px] text-gray-500">Node Name</label>
         <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
@@ -31,9 +34,13 @@ export function ValidateConfig({ node }: { node: ScenarioNode }) {
       <label className="flex items-center gap-2">
         <input type="checkbox" checked={cfg.strictMode ?? false} onChange={(e) => patchConfig({ strictMode: e.target.checked })} />
         Strict Mode
+        <span title="When enabled, any field in the received message not covered by a rule causes validation failure." className="text-[10px] text-gray-600 cursor-help">?</span>
       </label>
       <div className="flex items-center justify-between">
-        <div className="text-[10px] uppercase text-gray-500">Rules</div>
+        <div className="text-[10px] uppercase text-gray-500">
+          Rules
+          <span title="Each rule checks one FIX tag. EQUALS/NOT_EQUALS: exact string match. ENUM: value in list. REGEX: pattern match. NUMERIC_MIN/MAX: numeric bounds. FIELD_PRESENT/ABSENT: existence check. DATE_RULE: timestamp validation." className="ml-1 normal-case text-gray-600 cursor-help">?</span>
+        </div>
         <button className="text-[10px] px-2 py-0.5 bg-blue-600 hover:bg-blue-500 rounded" onClick={addRule}>+ Rule</button>
       </div>
       <div className="space-y-1">
@@ -71,8 +78,14 @@ export function ValidateConfig({ node }: { node: ScenarioNode }) {
                 {dateRules.map((dr) => <option key={dr.ruleId} value={dr.ruleId}>{dr.ruleId}</option>)}
               </select>
             )}
-            <input type="text" className="w-full mt-1 bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
-              value={r.ref ?? ''} onChange={(e) => updateRule(i, { ref: e.target.value })} placeholder="cross-node ref (optional)" />
+            <div className="mt-1">
+              <label className="text-[10px] text-gray-500">
+                Cross-node ref
+                <span title="Compare this tag against a value from another node. Syntax: {{node:nodeId:tagN}}. Leave blank to use the static Value above." className="ml-1 text-gray-600 cursor-help">?</span>
+              </label>
+              <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
+                value={r.ref ?? ''} onChange={(e) => updateRule(i, { ref: e.target.value })} placeholder="{{node:send-order:tag11}}" />
+            </div>
           </div>
         ))}
       </div>
