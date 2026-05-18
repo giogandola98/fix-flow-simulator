@@ -132,7 +132,7 @@ function InnerCanvas() {
               (r) => r.ruleId === e.sourceHandle,
             )
           : undefined;
-        const derivedLabel = ruleCfg?.label || e.label;
+        const derivedLabel = ruleCfg?.label ?? e.label;
         return {
           id: `e${i}-${e.from}-${e.to}-${e.label}`,
           source: e.from,
