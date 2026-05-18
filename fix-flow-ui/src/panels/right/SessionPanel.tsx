@@ -7,6 +7,7 @@ import {
   updateSession,
   connectSession,
   disconnectSession,
+  deleteSession,
   getSession,
 } from '../../api/sessions';
 import { useSessionStore } from '../../store/sessionStore';
@@ -88,6 +89,21 @@ export function SessionPanel() {
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
       setActiveSession(updated);
     },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeSession) return;
+      if (activeSession.connected) {
+        await disconnectSession(activeSession.id);
+      }
+      await deleteSession(activeSession.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      setActiveSession(null);
+    },
+    onError: (err) => console.error('Delete session failed:', err),
   });
 
   const connected = activeSession?.connected ?? false;
@@ -173,6 +189,21 @@ export function SessionPanel() {
           ) : (
             <button type="button" className="flex-1 px-2 py-1 rounded bg-green-600 hover:bg-green-500 disabled:opacity-40"
               disabled={!activeSession} onClick={() => connectMutation.mutate()}>Connect</button>
+          )}
+          {activeSession && (
+            <button
+              type="button"
+              className="px-2 py-1 rounded bg-red-900 hover:bg-red-800 text-red-300 text-xs disabled:opacity-40"
+              title="Delete this session"
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                if (window.confirm(`Delete session "${activeSession.name}"?`)) {
+                  deleteMutation.mutate();
+                }
+              }}
+            >
+              Del
+            </button>
           )}
         </div>
       </form>
