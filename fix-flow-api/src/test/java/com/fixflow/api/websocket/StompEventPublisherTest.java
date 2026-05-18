@@ -38,7 +38,7 @@ class StompEventPublisherTest {
         UUID execId = UUID.randomUUID();
         FIXMessage msg = new FIXMessage(UUID.randomUUID(), execId, Direction.INBOUND, "8=FIX.4.2", Map.of(35, "D"), Instant.now());
 
-        pub.publishFIXMessage(execId, msg);
+        pub.publishMessage(execId, msg);
 
         verify(messaging).convertAndSend("/topic/executions/" + execId + "/messages", msg);
     }

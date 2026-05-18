@@ -26,7 +26,8 @@ public class StompEventPublisher implements EventPublisherPort {
         );
     }
 
-    public void publishFIXMessage(UUID executionId, FIXMessage msg) {
+    @Override
+    public void publishMessage(UUID executionId, FIXMessage msg) {
         messaging.convertAndSend(
             "/topic/executions/" + executionId + "/messages",
             msg
