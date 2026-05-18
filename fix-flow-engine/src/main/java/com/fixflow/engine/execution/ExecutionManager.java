@@ -55,12 +55,14 @@ public class ExecutionManager {
         Scenario scenario = registry.getById(scenarioId)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown scenario: " + scenarioId));
         UUID executionId = UUID.randomUUID();
-        ExecutionContext ctx = new ExecutionContext(executionId, scenario, sessionId);
+        UUID resolvedSession = sessionId != null ? sessionId
+                : (scenario.sessionRef() != null ? UUID.fromString(scenario.sessionRef()) : null);
+        ExecutionContext ctx = new ExecutionContext(executionId, scenario, resolvedSession);
         contexts.put(executionId, ctx);
         if (executionRepo != null) {
             executionRepo.save(new Execution(executionId, scenarioId,
                     scenario.version() == null ? "1" : scenario.version(),
-                    sessionId, ExecutionStatus.RUNNING, Instant.now(), null, null,
+                    resolvedSession, ExecutionStatus.RUNNING, Instant.now(), null, null,
                     Map.of(), List.of(), List.of()));
         }
 
