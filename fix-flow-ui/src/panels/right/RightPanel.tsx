@@ -7,7 +7,8 @@ export default function RightPanel() {
       <div className="flex-1 min-h-0 overflow-y-auto">
         <PropertiesPanel />
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      {/* flex-shrink-0: shrinks to content; max-h-[55%]: prevents swallowing entire column */}
+      <div className="flex-shrink-0 max-h-[55%] overflow-y-auto">
         <SessionPanel />
       </div>
     </div>
