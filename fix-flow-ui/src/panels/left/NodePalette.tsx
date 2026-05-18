@@ -5,6 +5,7 @@ import { colors } from '../../theme/colors';
 interface PaletteItem {
   type: NodeType;
   label: string;
+  description?: string;
 }
 
 const GROUPS: Array<{ title: string; items: PaletteItem[] }> = [
@@ -21,10 +22,10 @@ const GROUPS: Array<{ title: string; items: PaletteItem[] }> = [
     items: [
       { type: 'DECISION', label: 'Decision' },
       { type: 'ROUTE_FIX', label: 'Route FIX' },
-      { type: 'RETRY', label: 'Retry' },
-      { type: 'LOOP', label: 'Loop' },
-      { type: 'WAIT', label: 'Wait' },
-      { type: 'DELAY', label: 'Delay' },
+      { type: 'RETRY', label: 'Retry', description: 'Re-execute a subgraph up to N times; stops on first success.' },
+      { type: 'LOOP', label: 'Loop', description: 'Execute a subgraph exactly N times; all iterations must succeed.' },
+      { type: 'WAIT', label: 'Wait', description: 'Block until timeout; configurable on-timeout action (proceed / fail / jump).' },
+      { type: 'DELAY', label: 'Delay', description: 'Fixed sleep (ms). Always continues on success — no branching.' },
     ],
   },
   {
@@ -79,6 +80,7 @@ export function NodePalette() {
                   key={it.type}
                   draggable
                   onDragStart={(e) => onDragStart(e, it.type)}
+                  title={it.description}
                   className="px-2 py-1 rounded cursor-grab bg-[#0f1117] border text-xs hover:bg-[#22252f]"
                   style={{ borderColor: colors.node[it.type as keyof typeof colors.node] }}
                 >
