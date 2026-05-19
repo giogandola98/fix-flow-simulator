@@ -30,30 +30,37 @@ public class FixFlowApplication {
     private static void relaunchInTerminal() throws Exception { // NOSONAR
         String jarPath = jarPath();
         String javaExe = ProcessHandle.current().info().command().orElse("java");
-        String cmd = "\"" + javaExe + "\" -Dfixflow.no-relaunch=true -jar \"" + jarPath + "\"";
 
         String os = System.getProperty("os.name", "").toLowerCase();
         List<String> exec = new ArrayList<>();
 
         if (os.contains("win")) {
-            exec.addAll(List.of("cmd", "/c", "start", "cmd", "/k", cmd));
+            // Pass each token separately — ProcessBuilder handles quoting of paths with spaces.
+            // cmd /c start "title" cmd /k java -D... -jar app.jar
+            exec.addAll(List.of(
+                "cmd", "/c", "start", "FIX Flow Simulator", "cmd", "/k",
+                javaExe, "-Dfixflow.no-relaunch=true", "-jar", jarPath
+            ));
         } else if (os.contains("mac")) {
-            String script = "tell application \"Terminal\" to do script \"" + cmd + "\"";
+            // osascript: paths may contain spaces — escape single quotes in paths
+            String safeJava = javaExe.replace("'", "'\\''");
+            String safeJar  = jarPath.replace("'", "'\\''");
+            String script = "tell application \"Terminal\" to do script \"'" +
+                            safeJava + "' -Dfixflow.no-relaunch=true -jar '" + safeJar + "'\"";
             exec.addAll(List.of("osascript", "-e", script));
         } else {
-            // Linux — try common terminal emulators in order
+            // Linux — each token separate, no pre-quoted cmd string
             String found = findTerminal("gnome-terminal", "konsole", "xfce4-terminal", "xterm", "x-terminal-emulator");
             if (found == null) {
-                // No terminal found — just run normally without relaunching
                 SpringApplication.run(FixFlowApplication.class, new String[0]);
                 return;
             }
+            String keepOpen = "; echo; read -p 'Press Enter to close...'";
+            String bashCmd  = javaExe + " -Dfixflow.no-relaunch=true -jar " + jarPath + keepOpen;
             if (found.equals("gnome-terminal")) {
-                exec.addAll(List.of(found, "--", "bash", "-c", cmd + "; echo; read -p 'Press Enter to close...'"));
-            } else if (found.equals("konsole")) {
-                exec.addAll(List.of(found, "-e", "bash", "-c", cmd + "; echo; read -p 'Press Enter to close...'"));
+                exec.addAll(List.of(found, "--", "bash", "-c", bashCmd));
             } else {
-                exec.addAll(List.of(found, "-e", "bash", "-c", cmd + "; echo; read -p 'Press Enter to close...'"));
+                exec.addAll(List.of(found, "-e", "bash", "-c", bashCmd));
             }
         }
 
