@@ -15,7 +15,7 @@ class ScenarioRegistryTest {
         return new Scenario(id, "demo", "", version, "sess",
                 RuntimePolicy.PARALLEL, List.of(), List.of(),
                 List.of(new ScenarioNode("n1", "s", NodeType.START, Map.of(), null, null, null, null, null)),
-                List.of(), Map.of());
+                List.of(), Map.of(), null);
     }
 
     @Test

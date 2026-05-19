@@ -36,7 +36,7 @@ public class ScenarioRepositoryAdapter implements ScenarioRepositoryPort {
         e.setId(scenario.id());
         e.setName(scenario.name());
         e.setVersion(scenario.version());
-        e.setYamlDsl(parser.toYaml(scenario));
+        e.setYamlDsl(scenario.rawYaml() != null ? scenario.rawYaml() : parser.toYaml(scenario));
         scenarioRepo.save(e);
         return scenario;
     }

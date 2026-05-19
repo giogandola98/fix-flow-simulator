@@ -88,6 +88,6 @@ class MultiScenarioIntegrationTest {
                                 Map.of(), null, null, null, null, null)
                 ),
                 List.of(),  // edges
-                Map.of());  // variables
+                Map.of(), null);  // variables
     }
 }

@@ -85,6 +85,6 @@ class TimeoutRetryTest {
                         new ScenarioNode("nf", "fail", NodeType.END_FAIL,
                                 Map.of(), null, null, null, null, null)
                 ),
-                List.of(), Map.of());
+                List.of(), Map.of(), null);
     }
 }

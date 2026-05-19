@@ -44,7 +44,7 @@ class ScenarioControllerTest {
     @MockBean ScenarioRegistry registry;
 
     private Scenario minScenario(UUID id, String name) {
-        return new Scenario(id, name, null, "1", null, null, null, null, null, null, null);
+        return new Scenario(id, name, null, "1", null, null, null, null, null, null, null, null);
     }
 
     @Test

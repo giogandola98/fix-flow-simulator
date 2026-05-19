@@ -106,6 +106,6 @@ class ScenarioDslParserTest {
         String yamlOut = parser.toYaml(original);
         Scenario reparsed = parser.parseYaml(yamlOut);
 
-        assertThat(reparsed).isEqualTo(original);
+        assertThat(reparsed).usingRecursiveComparison().ignoringFields("rawYaml").isEqualTo(original);
     }
 }

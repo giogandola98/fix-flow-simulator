@@ -35,7 +35,7 @@ public class ScenarioController {
         Scenario parsed = req.yamlDsl() != null && !req.yamlDsl().isBlank()
             ? parser.parseYaml(req.yamlDsl())
             : new Scenario(UUID.randomUUID(), req.name(), req.description(), "1",
-                           req.sessionRef(), null, null, null, null, null, null);
+                           req.sessionRef(), null, null, null, null, null, null, null);
         Scenario saved = repo.save(parsed);
         registry.register(saved);
         return ResponseEntity.status(201).body(ScenarioDto.from(saved));
@@ -50,7 +50,8 @@ public class ScenarioController {
     public ScenarioDto get(@PathVariable UUID id) {
         Scenario s = repo.findById(id)
             .orElseThrow(() -> new NoSuchElementException("scenario not found: " + id));
-        return ScenarioDto.withYaml(s, parser.toYaml(s));
+        String yaml = s.rawYaml() != null ? s.rawYaml() : parser.toYaml(s);
+        return ScenarioDto.withYaml(s, yaml);
     }
 
     @PutMapping("/{id}")
@@ -65,10 +66,11 @@ public class ScenarioController {
                            existing.version(), existing.sessionRef(),
                            existing.runtimePolicy(), existing.routingRules(),
                            existing.correlationRules(), existing.nodes(),
-                           existing.edges(), existing.variables());
+                           existing.edges(), existing.variables(), null);
         Scenario saved = repo.save(updated);
         registry.register(saved);
-        return ScenarioDto.withYaml(saved, parser.toYaml(saved));
+        String responseYaml = saved.rawYaml() != null ? saved.rawYaml() : parser.toYaml(saved);
+        return ScenarioDto.withYaml(saved, responseYaml);
     }
 
     @DeleteMapping("/{id}")

@@ -31,7 +31,7 @@ class ExpectFIXHandlerTest {
         Scenario s = new Scenario(UUID.randomUUID(), "demo", "", "1.0", "sess",
                 RuntimePolicy.PARALLEL, List.of(),
                 List.of(new CorrelationRule(131, "n3", 131, 2000)),
-                List.of(node), List.of(), Map.of());
+                List.of(node), List.of(), Map.of(), null);
         ExecutionContext ctx = new ExecutionContext(UUID.randomUUID(), s, UUID.randomUUID());
 
         CompletableFuture.runAsync(() -> {
@@ -61,7 +61,7 @@ class ExpectFIXHandlerTest {
         Scenario s = new Scenario(UUID.randomUUID(), "demo", "", "1.0", "sess",
                 RuntimePolicy.PARALLEL, List.of(),
                 List.of(new CorrelationRule(131, "n3", 131, 100)),
-                List.of(node), List.of(), Map.of());
+                List.of(node), List.of(), Map.of(), null);
         ExecutionContext ctx = new ExecutionContext(UUID.randomUUID(), s, UUID.randomUUID());
 
         NodeHandlerResult result = handler.handle(node, ctx);
