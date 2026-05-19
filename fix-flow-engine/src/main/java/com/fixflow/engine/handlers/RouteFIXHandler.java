@@ -5,6 +5,7 @@ import com.fixflow.core.domain.scenario.ScenarioNode;
 import com.fixflow.core.domain.scenario.TimeoutAction;
 import com.fixflow.engine.correlation.CorrelationEngine;
 import com.fixflow.engine.execution.ExecutionContext;
+import com.fixflow.engine.fix.MessageRouter;
 import com.fixflow.engine.variable.VariableResolver;
 import org.springframework.stereotype.Component;
 
@@ -17,10 +18,12 @@ public class RouteFIXHandler implements NodeHandler {
 
     private final CorrelationEngine correlation;
     private final VariableResolver resolver;
+    private final MessageRouter router;
 
-    public RouteFIXHandler(CorrelationEngine correlation, VariableResolver resolver) {
+    public RouteFIXHandler(CorrelationEngine correlation, VariableResolver resolver, MessageRouter router) {
         this.correlation = correlation;
         this.resolver = resolver;
+        this.router = router;
     }
 
     @Override
@@ -53,6 +56,7 @@ public class RouteFIXHandler implements NodeHandler {
             }
 
             CompletableFuture<CorrelationEngine.RoutedResult> future = correlation.registerMulti(execId, rules);
+            if (ctx.sessionId() != null) router.drain(ctx.sessionId().toString());
 
             CorrelationEngine.RoutedResult result =
                     future.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);

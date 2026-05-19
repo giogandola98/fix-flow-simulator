@@ -44,7 +44,7 @@ class HotReloadIntegrationTest {
         NodeDispatcher dispatcher = new NodeDispatcher(List.of(
                 new StartHandler(),
                 new SendFIXHandler(fake, new VariableResolver()),
-                new ExpectFIXHandler(correlation),
+                new ExpectFIXHandler(correlation, router),
                 new EndHandler(),
                 new EndFailHandler()
         ));
@@ -110,7 +110,7 @@ class HotReloadIntegrationTest {
         NodeDispatcher dispatcher = new NodeDispatcher(List.of(
                 new StartHandler(),
                 new SendFIXHandler(fake, new VariableResolver()),
-                new ExpectFIXHandler(correlation),
+                new ExpectFIXHandler(correlation, router),
                 new EndHandler(),
                 new EndFailHandler()
         ));

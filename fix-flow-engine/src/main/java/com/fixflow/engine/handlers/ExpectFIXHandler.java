@@ -3,6 +3,7 @@ package com.fixflow.engine.handlers;
 import com.fixflow.core.domain.scenario.*;
 import com.fixflow.engine.correlation.CorrelationEngine;
 import com.fixflow.engine.execution.ExecutionContext;
+import com.fixflow.engine.fix.MessageRouter;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -13,8 +14,12 @@ import java.util.concurrent.TimeoutException;
 public class ExpectFIXHandler implements NodeHandler {
 
     private final CorrelationEngine correlation;
+    private final MessageRouter router;
 
-    public ExpectFIXHandler(CorrelationEngine correlation) { this.correlation = correlation; }
+    public ExpectFIXHandler(CorrelationEngine correlation, MessageRouter router) {
+        this.correlation = correlation;
+        this.router = router;
+    }
 
     @Override
     public NodeType getSupportedType() { return NodeType.EXPECT_FIX; }
@@ -60,6 +65,7 @@ public class ExpectFIXHandler implements NodeHandler {
 
         CompletableFuture<Map<Integer, String>> future =
                 correlation.register(ctx.executionId().toString(), rule, expectedValue);
+        if (ctx.sessionId() != null) router.drain(ctx.sessionId().toString());
 
         long timeoutMs = node.timeout() == null ? 5_000L : node.timeout().toMillis();
 

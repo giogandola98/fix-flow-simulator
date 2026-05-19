@@ -3,6 +3,8 @@ package com.fixflow.engine.handlers;
 import com.fixflow.core.domain.scenario.*;
 import com.fixflow.engine.correlation.CorrelationEngine;
 import com.fixflow.engine.execution.ExecutionContext;
+import com.fixflow.engine.fix.MessageBuffer;
+import com.fixflow.engine.fix.MessageRouter;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -17,7 +19,8 @@ class ExpectFIXHandlerTest {
     @Test
     void returnsSuccessWhenMatchingMessageArrives() throws Exception {
         CorrelationEngine engine = new CorrelationEngine();
-        ExpectFIXHandler handler = new ExpectFIXHandler(engine);
+        MessageRouter router = new MessageRouter(engine, new MessageBuffer());
+        ExpectFIXHandler handler = new ExpectFIXHandler(engine, router);
 
         ScenarioNode node = new ScenarioNode(
                 "n3", "expect", NodeType.EXPECT_FIX,
@@ -46,7 +49,8 @@ class ExpectFIXHandlerTest {
     @Test
     void returnsFailureOnTimeoutWithFailAction() throws Exception {
         CorrelationEngine engine = new CorrelationEngine();
-        ExpectFIXHandler handler = new ExpectFIXHandler(engine);
+        MessageRouter router = new MessageRouter(engine, new MessageBuffer());
+        ExpectFIXHandler handler = new ExpectFIXHandler(engine, router);
 
         ScenarioNode node = new ScenarioNode(
                 "n3", "expect", NodeType.EXPECT_FIX,

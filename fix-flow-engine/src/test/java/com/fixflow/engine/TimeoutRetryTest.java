@@ -30,7 +30,7 @@ class TimeoutRetryTest {
         MessageRouter router = new MessageRouter(correlation, buffer);
         fake.setInboundListener(router);
         NodeDispatcher dispatcher = new NodeDispatcher(List.of(
-                new StartHandler(), new ExpectFIXHandler(correlation),
+                new StartHandler(), new ExpectFIXHandler(correlation, router),
                 new EndHandler(), new EndFailHandler()));
 
         UUID sessionId = UUID.randomUUID();
@@ -53,7 +53,7 @@ class TimeoutRetryTest {
         MessageRouter router = new MessageRouter(correlation, buffer);
         fake.setInboundListener(router);
         NodeDispatcher dispatcher = new NodeDispatcher(List.of(
-                new StartHandler(), new ExpectFIXHandler(correlation),
+                new StartHandler(), new ExpectFIXHandler(correlation, router),
                 new EndHandler(), new EndFailHandler()));
 
         ScenarioRegistry reg = new ScenarioRegistry();
