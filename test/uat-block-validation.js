@@ -133,22 +133,24 @@ nodes:
     process.exit(1);
   }
 
-  console.log('  Using Chromium:', CHROMIUM);
+  const headed = process.argv.includes('--headed');
+  console.log('  Using Chromium:', CHROMIUM, headed ? '(headed)' : '(headless)');
   const browser = await puppeteer.launch({
     executablePath: CHROMIUM,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--disable-features=VizDisplayCompositor',
+      ...(headed ? [] : ['--disable-gpu', '--disable-features=VizDisplayCompositor']),
     ],
-    headless: true,
+    headless: !headed,
+    slowMo: headed ? 400 : 0,
+    defaultViewport: null,
   });
 
   try {
     const page = await browser.newPage();
-    await page.setViewport({ width: 1400, height: 900 });
+    if (!headed) await page.setViewport({ width: 1400, height: 900 });
 
     // ── 2. Load UI ──
     await page.goto(BASE, { waitUntil: 'networkidle0' });
