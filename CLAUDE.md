@@ -24,14 +24,18 @@
 # Build fat JAR (bundles React UI)
 ~/maven/bin/mvn clean package -DskipTests
 
-# Run
-java -jar fix-flow-api/target/fix-flow-api-0.2.2-beta.jar
+# Run (current version)
+java -jar fix-flow-api/target/fix-flow-api-0.2.5-beta.jar
+
+# Run without browser auto-open (testing/CI)
+java -Dfixflow.browser.auto-open=false -Dfixflow.no-relaunch=true \
+  -jar fix-flow-api/target/fix-flow-api-0.2.5-beta.jar
 
 # Dev mode (UI hot-reload on :5173, proxies /api + /ws to :8080)
 ~/maven/bin/mvn -pl fix-flow-api spring-boot:run   # backend
 cd fix-flow-ui && npm run dev                       # frontend
 
-# Tests (91 tests)
+# Tests (all modules)
 ~/maven/bin/mvn test
 
 # UI build only
@@ -39,6 +43,10 @@ cd fix-flow-ui && npm run build   # outputs to fix-flow-ui/target/dist
 
 # Kill app on port 8080
 fuser -k 8080/tcp
+
+# Browser automation (puppeteer-core in root node_modules)
+node -e "require('./node_modules/puppeteer-core')" && echo ok
+# Uses: executablePath: '/usr/bin/chromium-browser', args: ['--no-sandbox','--disable-setuid-sandbox']
 ```
 
 ## Architecture
@@ -61,13 +69,21 @@ fix-flow-ui        — React 18 + Vite + @xyflow/react v12 + Zustand + TanStack 
 | File | Purpose |
 |---|---|
 | `fix-flow-api/src/main/java/.../config/ScenarioRegistryInitializer.java` | Populates engine registry from DB on startup |
+| `fix-flow-api/src/main/java/.../config/BrowserOpenService.java` | Opens browser on ApplicationReadyEvent; disable with `-Dfixflow.browser.auto-open=false` |
 | `fix-flow-engine/src/main/java/.../execution/ExecutionManager.java` | Runs scenarios node-by-node; emits events + persists node results/messages |
 | `fix-flow-engine/src/main/java/.../scenario/ScenarioRegistry.java` | In-memory scenario store for engine |
+| `fix-flow-engine/src/main/java/.../correlation/CorrelationEngine.java` | register()/onMessage()/cancel() — correlation waiters keyed by executionId |
+| `fix-flow-engine/src/main/java/.../fix/MessageRouter.java` | Routes inbound FIX to CorrelationEngine; parks unmatched in MessageBuffer; drain() replays buffer |
+| `fix-flow-engine/src/main/java/.../fix/MessageBuffer.java` | park()/poll()/pause()/resume() — buffers unmatched FIX during hot-reload or pre-registration races |
+| `fix-flow-engine/src/main/java/.../handlers/ExpectFIXHandler.java` | Registers waiter, calls router.drain(sessionId) after register to consume pre-buffered msgs |
+| `fix-flow-engine/src/main/java/.../handlers/RouteFIXHandler.java` | Same drain-after-register pattern for multi-rule routing |
 | `fix-flow-adapters/src/main/java/.../quickfixj/QuickFIXAdapter.java` | QuickFIX/J connector lifecycle |
 | `fix-flow-adapters/src/main/java/.../persistence/ExecutionRepositoryAdapter.java` | Persists executions, events, messages, node results |
 | `fix-flow-ui/src/canvas/FlowCanvas.tsx` | ReactFlow canvas (local state pattern — see Gotchas) |
-| `fix-flow-ui/src/lib/scenarioSerializer.ts` | Nodes/edges ↔ YAML DSL |
+| `fix-flow-ui/src/lib/scenarioSerializer.ts` | Nodes/edges ↔ YAML DSL; synthesizes timeout edges from `timeout.jumpTo` on parse |
+| `fix-flow-ui/src/lib/parseFIXMessage.ts` | Exports `ENGINE_TAGS = Set([8,9,10,34,49,52,56])` — session-level tags filtered before send |
 | `fix-flow-ui/src/store/scenarioStore.ts` | Zustand: scenarios, nodes, edges, dirty flag |
+| `fix-flow-ui/src/panels/right/NodeConfig/TimeoutConfig.tsx` | Timeout config UI; auto-manages timeout edge in store when JUMP action selected |
 | `fix-flow-ui/src/hooks/useSessionSubscription.ts` | WS subscription for real-time session status |
 | `docs/dsl-reference.md` | YAML DSL reference |
 | `docs/api-reference.md` | REST + WebSocket API |
@@ -83,7 +99,7 @@ fix-flow-ui        — React 18 + Vite + @xyflow/react v12 + Zustand + TanStack 
 
 ## Gotchas
 
-**QuickFIX/J BooleanConverter** — only accepts `"Y"`/`"N"`, not `"true"`/`"false"`. Use:
+**QuickFIX/J BooleanConverter** — accepts only `"Y"`/`"N"`, not `"true"`/`"false"`. Use:
 ```java
 settings.setString("ResetOnLogon", cfg.resetOnLogon() ? "Y" : "N");
 ```
@@ -96,15 +112,27 @@ settings.setString("ResetOnLogon", cfg.resetOnLogon() ? "Y" : "N");
 
 **YAML DSL** — `id` must be valid UUID (or omitted). `fields` in SEND_FIX `config` must be `Map<Integer, String>`. Nodes need explicit `onSuccess`/`onFailure` — edges array visual only, not used for traversal.
 
-**UAT requires clean environment** — before any UAT run, wipe all saved data; prior sessions/scenarios pollute results:
+**Timeout jump edges** — `timeout.jumpTo` in node config is canonical source. `parseFromYaml` synthesizes timeout edge if missing from `edges` array. `TimeoutConfig.tsx` auto-upserts/removes edge in Zustand store on every change. Both must stay in sync.
+
+**EXPECT_FIX / ROUTE_FIX race** — FIX message can arrive before `correlation.register()` called; gets parked in `MessageBuffer`. Always call `router.drain(ctx.sessionId().toString())` immediately after registering waiter. Both `ExpectFIXHandler` and `RouteFIXHandler` do this. Any new handler using `correlation.register*()` must do same.
+
+**ENGINE_TAGS** — tags `8,9,10,34,49,52,56` session-level, managed by QuickFIX/J. `SendFIXHandler` filters before send. UI marks with yellow border via `ENGINE_TAGS` from `parseFIXMessage.ts`. Never include in test scenario field configs.
+
+**Execution reset on rerun** — use atomic `useExecutionStore.setState({...})` to reset all fields at once. Splitting into `reset()` + `setActiveExecution()` creates null intermediate state; `useExecutionSubscription` briefly unsubscribes and misses first WS events.
+
+**JAR double-click relaunch** — `FixFlowApplication.main()` checks `System.console() == null` (no TTY = double-clicked). Spawns terminal emulator and exits. Set `-Dfixflow.no-relaunch=true` to skip (already set on relaunched process to prevent loop). Without flag, running under `setsid` or any no-TTY context also triggers relaunch.
+
+**UAT requires clean environment** — before UAT run, wipe all saved data; prior sessions/scenarios pollute results:
 ```bash
-# Stop app, delete H2 DB, restart
 fuser -k 8080/tcp
 rm -rf ./data/fixflow.*
-java -jar fix-flow-api/target/fix-flow-api-0.2.2-beta.jar
+java -Dfixflow.browser.auto-open=false -Dfixflow.no-relaunch=true \
+  -jar fix-flow-api/target/fix-flow-api-0.2.5-beta.jar
 ```
 Recreate sessions + scenarios from scratch. Never UAT against DB with leftover state.
 
 **Session connect on restart** — QuickFIX/J connectors not persisted. After restart, call `PUT /api/v1/sessions/{id}/connect` for each session. ACCEPTOR must connect before INITIATOR.
 
 **Loopback FIX testing** — ACCEPTOR (SERVER/CLIENT, port 9001) + INITIATOR (CLIENT/SERVER, port 9001) both in same app instance. Acceptor shows `connected=false` waiting for logon — expected. Initiator shows `connected=true` once logon completes.
+
+**Browser test pattern** — puppeteer-core in root `node_modules` (not fix-flow-ui). Run tests from repo root. Color check: browser renders hex as `rgb()` — test for `rgb(245, 158, 11)` not `#f59e0b`. Click scenario by button text containing scenario name. Wait 2–3s after click for React to re-render edges.
