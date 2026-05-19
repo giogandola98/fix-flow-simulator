@@ -35,7 +35,7 @@ export function PropertiesPanel() {
   );
 
   return (
-    <div className="p-2 overflow-y-auto border-b border-[#2a2d3a]">
+    <div className="p-2 border-b border-[#2a2d3a]">
       <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">{t('properties.title')}</div>
       {!node && <div className="text-xs text-gray-500 italic">{t('properties.noNode')}</div>}
       {node?.type === 'SEND_FIX' && <SendFIXConfig node={node} />}
