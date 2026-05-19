@@ -166,5 +166,15 @@ export function parseFromYaml(yamlStr: string): {
     label: e.label,
     ...(e.sourceHandle ? { sourceHandle: e.sourceHandle } : {}),
   }));
+
+  // Synthesize timeout edges from node.timeout.jumpTo / node.onTimeout when missing
+  for (const n of doc.nodes ?? []) {
+    const jumpTarget = n.timeout?.jumpTo ?? (n.onTimeout as string | undefined);
+    if (jumpTarget && n.timeout?.onTimeout === 'JUMP') {
+      const already = edges.some((e) => e.from === n.id && e.label === 'timeout');
+      if (!already) edges.push({ from: n.id, to: jumpTarget, label: 'timeout' });
+    }
+  }
+
   return { nodes, edges, meta };
 }

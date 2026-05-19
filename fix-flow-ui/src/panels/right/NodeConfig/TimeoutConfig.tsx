@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ScenarioNode, TimeUnit, TimeoutAction, TimeoutConfig as Cfg } from '../../../types';
+import { ScenarioEdge, ScenarioNode, TimeUnit, TimeoutAction, TimeoutConfig as Cfg } from '../../../types';
 import { useScenarioStore } from '../../../store/scenarioStore';
 
 const UNITS: TimeUnit[] = ['MILLISECONDS', 'SECONDS', 'MINUTES', 'HOURS'];
@@ -11,11 +11,31 @@ interface Props {
   currentNodeId?: string;
 }
 
+function syncTimeoutEdge(
+  nodeId: string,
+  next: Cfg,
+  edges: ScenarioEdge[],
+  setEdges: (e: ScenarioEdge[]) => void,
+) {
+  const without = edges.filter((e) => !(e.from === nodeId && e.label === 'timeout'));
+  if (next.onTimeout === 'JUMP' && next.jumpTo) {
+    setEdges([...without, { from: nodeId, to: next.jumpTo, label: 'timeout' }]);
+  } else {
+    setEdges(without);
+  }
+}
+
 export function TimeoutConfig({ value, onChange, currentNodeId }: Props) {
   const { t } = useTranslation();
   const allNodes = useScenarioStore((s) => s.nodes);
+  const edges = useScenarioStore((s) => s.edges);
+  const setEdges = useScenarioStore((s) => s.setEdges);
   const cfg: Cfg = value ?? { value: 30, unit: 'SECONDS', onTimeout: 'FAIL' };
-  const update = (patch: Partial<Cfg>) => onChange({ ...cfg, ...patch });
+  const update = (patch: Partial<Cfg>) => {
+    const next = { ...cfg, ...patch };
+    onChange(next);
+    if (currentNodeId) syncTimeoutEdge(currentNodeId, next, edges, setEdges);
+  };
   const jumpTargets = allNodes.filter((n: ScenarioNode) => n.id !== currentNodeId);
 
   return (
