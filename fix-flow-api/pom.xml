@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.fixflow</groupId>
         <artifactId>fix-flow-simulator</artifactId>
-        <version>0.2.7-beta</version>
+        <version>0.2.8-beta</version>
     </parent>
     <artifactId>fix-flow-api</artifactId>
     <name>FIX Flow API (Spring Boot App)</name>
