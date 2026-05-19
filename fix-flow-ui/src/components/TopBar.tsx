@@ -28,7 +28,6 @@ export default function TopBar() {
   const activeSession = useSessionStore((s) => s.activeSession);
   const activeExecutionId = useExecutionStore((s) => s.activeExecutionId);
   const executionStatus = useExecutionStore((s) => s.executionStatus);
-  const setActiveExecution = useExecutionStore((s) => s.setActiveExecution);
   const updateStatus = useExecutionStore((s) => s.updateStatus);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
@@ -84,9 +83,17 @@ export default function TopBar() {
     },
     onSuccess: (exec) => {
       setErrorMsg(null);
-      useExecutionStore.getState().reset();
-      setActiveExecution(exec.executionId);
-      updateStatus('RUNNING');
+      // Atomic reset + new ID in one update — prevents null intermediate state
+      // that would cause useExecutionSubscription to briefly unsubscribe
+      useExecutionStore.setState({
+        activeExecutionId: exec.executionId,
+        executionStatus: 'RUNNING',
+        events: [],
+        messages: [],
+        nodeStatuses: {},
+        startedAt: null,
+        endedAt: null,
+      });
     },
     onError: (err: unknown) => {
       setErrorMsg(err instanceof Error ? err.message : String(err));
