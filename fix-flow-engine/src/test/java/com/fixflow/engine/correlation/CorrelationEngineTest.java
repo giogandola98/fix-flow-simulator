@@ -17,7 +17,7 @@ class CorrelationEngineTest {
     void deliversMatchingMessageToWaiter() throws Exception {
         CorrelationEngine engine = new CorrelationEngine();
         CorrelationRule rule = new CorrelationRule(131, "n1", 131, 1000);
-        CompletableFuture<Map<Integer, String>> f = engine.register("exec-1", rule, "REQ-1");
+        CompletableFuture<Map<Integer, String>> f = engine.register("exec-1", "sess", rule, "REQ-1");
 
         engine.onMessage("sess", Map.of(131, "REQ-1", 35, "8"));
 
@@ -29,7 +29,7 @@ class CorrelationEngineTest {
     void nonMatchingMessageLeavesWaiterPending() {
         CorrelationEngine engine = new CorrelationEngine();
         CorrelationRule rule = new CorrelationRule(131, "n1", 131, 1000);
-        CompletableFuture<Map<Integer, String>> f = engine.register("exec-1", rule, "REQ-1");
+        CompletableFuture<Map<Integer, String>> f = engine.register("exec-1", "sess", rule, "REQ-1");
 
         engine.onMessage("sess", Map.of(131, "REQ-OTHER"));
 
@@ -41,7 +41,7 @@ class CorrelationEngineTest {
     void cancelCompletesFutureExceptionally() {
         CorrelationEngine engine = new CorrelationEngine();
         CorrelationRule rule = new CorrelationRule(131, "n1", 131, 1000);
-        CompletableFuture<Map<Integer, String>> f = engine.register("exec-1", rule, "REQ-1");
+        CompletableFuture<Map<Integer, String>> f = engine.register("exec-1", "sess", rule, "REQ-1");
 
         engine.cancel("exec-1");
         assertThat(f).isCancelled();
@@ -54,7 +54,7 @@ class CorrelationEngineTest {
         CorrelationEngine.RoutingRule rejectRule = new CorrelationEngine.RoutingRule("r2", "Reject", Map.of(35, "AG"), "reject-node");
 
         CompletableFuture<CorrelationEngine.RoutedResult> f =
-                engine.registerMulti("exec-1", List.of(quoteRule, rejectRule));
+                engine.registerMulti("exec-1", "sess", List.of(quoteRule, rejectRule));
 
         engine.onMessage("sess", Map.of(35, "S", 131, "RFQ-001"));
 
@@ -71,7 +71,7 @@ class CorrelationEngineTest {
         CorrelationEngine.RoutingRule defaultRule = new CorrelationEngine.RoutingRule("r2", "Default", Map.of(), "default-node");
 
         CompletableFuture<CorrelationEngine.RoutedResult> f =
-                engine.registerMulti("exec-1", List.of(quoteRule, defaultRule));
+                engine.registerMulti("exec-1", "sess", List.of(quoteRule, defaultRule));
 
         engine.onMessage("sess", Map.of(35, "8", 39, "2"));
 
@@ -87,7 +87,7 @@ class CorrelationEngineTest {
                 "r1", "Rejected", Map.of(35, "8", 39, "8"), "rejected-node");
 
         CompletableFuture<CorrelationEngine.RoutedResult> f =
-                engine.registerMulti("exec-1", List.of(rejectedRule));
+                engine.registerMulti("exec-1", "sess", List.of(rejectedRule));
 
         // Partial match — tag 35 matches but tag 39 does not
         boolean matched = engine.onMessage("sess", Map.of(35, "8", 39, "2"));

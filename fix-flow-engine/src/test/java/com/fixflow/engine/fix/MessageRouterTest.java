@@ -19,7 +19,7 @@ class MessageRouterTest {
         MessageRouter router = new MessageRouter(engine, buffer);
 
         CompletableFuture<Map<Integer, String>> f =
-                engine.register("exec-1", new CorrelationRule(131, "n", 131, 1000), "REQ-1");
+                engine.register("exec-1", "sess", new CorrelationRule(131, "n", 131, 1000), "REQ-1");
 
         router.onMessage("sess", Map.of(131, "REQ-1"));
 
@@ -46,7 +46,7 @@ class MessageRouterTest {
 
         router.onMessage("sess", Map.of(131, "REQ-LATE"));
         CompletableFuture<Map<Integer, String>> f =
-                engine.register("exec-2", new CorrelationRule(131, "n", 131, 1000), "REQ-LATE");
+                engine.register("exec-2", "sess", new CorrelationRule(131, "n", 131, 1000), "REQ-LATE");
 
         router.drain("sess");
 
