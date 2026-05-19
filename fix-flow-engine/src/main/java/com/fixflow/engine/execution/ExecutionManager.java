@@ -91,6 +91,8 @@ public class ExecutionManager {
     }
 
     private void runScenario(ExecutionContext ctx) {
+        ctx.setNodeEventEmitter((type, nodeId) -> emitAndPersist(ctx.executionId(), type, nodeId,
+                type + " " + nodeId));
         emitAndPersist(ctx.executionId(), ExecutionEventType.EXECUTION_STARTED, null,
                 "Execution started for scenario " + ctx.scenario().id());
         try {

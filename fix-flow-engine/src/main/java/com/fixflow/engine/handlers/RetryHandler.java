@@ -1,5 +1,6 @@
 package com.fixflow.engine.handlers;
 
+import com.fixflow.core.domain.execution.ExecutionEventType;
 import com.fixflow.core.domain.scenario.NodeType;
 import com.fixflow.core.domain.scenario.RetryPolicy;
 import com.fixflow.core.domain.scenario.ScenarioNode;
@@ -31,7 +32,9 @@ public class RetryHandler implements NodeHandler {
         NodeHandlerResult last = NodeHandlerResult.failure(node.onFailure(), "no attempts");
 
         for (int attempt = 1; attempt <= max; attempt++) {
+            ctx.emitNodeEvent(ExecutionEventType.NODE_ENTERED, target.id());
             last = dispatcher.dispatch(target, ctx);
+            ctx.emitNodeEvent(last.success() ? ExecutionEventType.NODE_EXITED : ExecutionEventType.ERROR, target.id());
             if (last.success()) {
                 return NodeHandlerResult.success(node.onSuccess());
             }
