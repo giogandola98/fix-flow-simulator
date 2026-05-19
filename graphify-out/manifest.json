@@ -1,0 +1,1347 @@
+{
+  "/home/giorgio/Documenti/fix-flow-simulator/launch.sh": {
+    "mtime": 1779175104.109997,
+    "ast_hash": "16bab795f256ff97dbbd78f7f9f540be",
+    "semantic_hash": "16bab795f256ff97dbbd78f7f9f540be"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/package.json": {
+    "mtime": 1779102672.3095055,
+    "ast_hash": "5ca3b3b458c5e0c3c3747876072a1e33",
+    "semantic_hash": "5ca3b3b458c5e0c3c3747876072a1e33"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/start_claude.sh": {
+    "mtime": 1779042622.515569,
+    "ast_hash": "80da279f7b82ee3651242bf1885b3abb",
+    "semantic_hash": "80da279f7b82ee3651242bf1885b3abb"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/.mcp.json": {
+    "mtime": 1779065815.6723301,
+    "ast_hash": "39fcaa6fd7f6d4d670500978ca977562",
+    "semantic_hash": "39fcaa6fd7f6d4d670500978ca977562"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/test/java/com/fixflow/core/domain/ScenarioDomainTest.java": {
+    "mtime": 1779183408.867996,
+    "ast_hash": "b0274c19e9ce21add2b4e3cdde2922be",
+    "semantic_hash": "b0274c19e9ce21add2b4e3cdde2922be"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/execution/ExecutionEvent.java": {
+    "mtime": 1779042368.1468422,
+    "ast_hash": "e589b8dc628f5ac5c681dcf35d79f52f",
+    "semantic_hash": "e589b8dc628f5ac5c681dcf35d79f52f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/execution/Direction.java": {
+    "mtime": 1779042368.1468053,
+    "ast_hash": "d37b307946f9b744a6e152e7d7019ce8",
+    "semantic_hash": "d37b307946f9b744a6e152e7d7019ce8"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/execution/FIXMessage.java": {
+    "mtime": 1779042368.1468422,
+    "ast_hash": "af014ff41576ba6070cfebb09d9826f8",
+    "semantic_hash": "af014ff41576ba6070cfebb09d9826f8"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/execution/ExecutionStatus.java": {
+    "mtime": 1779042368.1468422,
+    "ast_hash": "5dcd2b1b8886e628a06635db83148660",
+    "semantic_hash": "5dcd2b1b8886e628a06635db83148660"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/execution/ExecutionEventType.java": {
+    "mtime": 1779042368.1468422,
+    "ast_hash": "01a38552974ef371d7cbfbbf38a0a0e3",
+    "semantic_hash": "01a38552974ef371d7cbfbbf38a0a0e3"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/execution/NodeResult.java": {
+    "mtime": 1779042368.1468422,
+    "ast_hash": "74666e3b9b9fe5994b91904c5d00a6e3",
+    "semantic_hash": "74666e3b9b9fe5994b91904c5d00a6e3"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/execution/Execution.java": {
+    "mtime": 1779042368.1468422,
+    "ast_hash": "0dc0246a6b1243457ccb0fcb0259bbb4",
+    "semantic_hash": "0dc0246a6b1243457ccb0fcb0259bbb4"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/scenario/RetryPolicy.java": {
+    "mtime": 1779042368.1469383,
+    "ast_hash": "302dbe8aa0ff6c8582d961c9c73ee441",
+    "semantic_hash": "302dbe8aa0ff6c8582d961c9c73ee441"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/scenario/VariableDef.java": {
+    "mtime": 1779042368.1469383,
+    "ast_hash": "ae82a3fc5ef5b86c758f3ea0e1033dba",
+    "semantic_hash": "ae82a3fc5ef5b86c758f3ea0e1033dba"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/scenario/TimeoutAction.java": {
+    "mtime": 1779042368.1469383,
+    "ast_hash": "3d6a9be4fc92eeccbb94804df6955d51",
+    "semantic_hash": "3d6a9be4fc92eeccbb94804df6955d51"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/scenario/ScenarioNode.java": {
+    "mtime": 1779042368.1469383,
+    "ast_hash": "58464ec7e0ab6202ba40baeebdf6b125",
+    "semantic_hash": "58464ec7e0ab6202ba40baeebdf6b125"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/scenario/TimeUnit.java": {
+    "mtime": 1779042368.1469383,
+    "ast_hash": "ac93d79680dbe504cdadd2b2443662b2",
+    "semantic_hash": "ac93d79680dbe504cdadd2b2443662b2"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/scenario/Scenario.java": {
+    "mtime": 1779183408.867996,
+    "ast_hash": "84961d64e0eb5482e4b478c5f0fd669f",
+    "semantic_hash": "84961d64e0eb5482e4b478c5f0fd669f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/scenario/NodeType.java": {
+    "mtime": 1779226318.936322,
+    "ast_hash": "0a2194117ce6dfc4367b66ad779cc50d",
+    "semantic_hash": "0a2194117ce6dfc4367b66ad779cc50d"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/scenario/RoutingRule.java": {
+    "mtime": 1779042368.1469383,
+    "ast_hash": "c0fdaa91a007c411486fb9591ce3dd09",
+    "semantic_hash": "c0fdaa91a007c411486fb9591ce3dd09"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/scenario/ScenarioEdge.java": {
+    "mtime": 1779042368.1469383,
+    "ast_hash": "c3ea81410c4ec7bcd3b736c749cca831",
+    "semantic_hash": "c3ea81410c4ec7bcd3b736c749cca831"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/scenario/CorrelationRule.java": {
+    "mtime": 1779042368.1468422,
+    "ast_hash": "09a9c9f9715e534912a00474d7545006",
+    "semantic_hash": "09a9c9f9715e534912a00474d7545006"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/scenario/RuntimePolicy.java": {
+    "mtime": 1779042368.1469383,
+    "ast_hash": "0227e390d17ea22abc53dcdb2ae55a2b",
+    "semantic_hash": "0227e390d17ea22abc53dcdb2ae55a2b"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/scenario/TimeoutConfig.java": {
+    "mtime": 1779042368.1469383,
+    "ast_hash": "8ffac14f9d1460b7d6435b9a5829fa21",
+    "semantic_hash": "8ffac14f9d1460b7d6435b9a5829fa21"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/session/FIXMode.java": {
+    "mtime": 1779042368.1469383,
+    "ast_hash": "a1f71a5483509ea6939109acc190e5be",
+    "semantic_hash": "a1f71a5483509ea6939109acc190e5be"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/session/FIXVersion.java": {
+    "mtime": 1779042368.1471078,
+    "ast_hash": "7b80634f24177688584bd5b630469142",
+    "semantic_hash": "7b80634f24177688584bd5b630469142"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/domain/session/FIXSessionConfig.java": {
+    "mtime": 1779104129.417282,
+    "ast_hash": "e4751b2f4ff87f0bb82d7d74fc7fe999",
+    "semantic_hash": "e4751b2f4ff87f0bb82d7d74fc7fe999"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/ports/outbound/EventPublisherPort.java": {
+    "mtime": 1779065815.67333,
+    "ast_hash": "48b7dd3a7748fb6e5bb52d523f8664f4",
+    "semantic_hash": "48b7dd3a7748fb6e5bb52d523f8664f4"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/ports/outbound/ScenarioRepositoryPort.java": {
+    "mtime": 1779042368.147268,
+    "ast_hash": "3d2deb96eb917d65ec1d73c4fff2adc9",
+    "semantic_hash": "3d2deb96eb917d65ec1d73c4fff2adc9"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/ports/outbound/ExecutionRepositoryPort.java": {
+    "mtime": 1779061153.9491084,
+    "ast_hash": "15e67a9d258fce10754d0ab625a716bf",
+    "semantic_hash": "15e67a9d258fce10754d0ab625a716bf"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/ports/outbound/InboundMessageListener.java": {
+    "mtime": 1779042368.147268,
+    "ast_hash": "9de598fac722f305145d37487360e8b6",
+    "semantic_hash": "9de598fac722f305145d37487360e8b6"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/ports/outbound/FIXSessionPort.java": {
+    "mtime": 1779042368.147268,
+    "ast_hash": "e213fc9dc5a21bdced181e87535a13ac",
+    "semantic_hash": "e213fc9dc5a21bdced181e87535a13ac"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/ports/inbound/ScenarioUseCase.java": {
+    "mtime": 1779042368.1472178,
+    "ast_hash": "0d09a83a5a208b96e5d79f66ad513a19",
+    "semantic_hash": "0d09a83a5a208b96e5d79f66ad513a19"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/ports/inbound/SessionUseCase.java": {
+    "mtime": 1779042368.1472178,
+    "ast_hash": "c60025e9a2bcb703f4f75a55659627f8",
+    "semantic_hash": "c60025e9a2bcb703f4f75a55659627f8"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-core/src/main/java/com/fixflow/core/ports/inbound/ExecutionUseCase.java": {
+    "mtime": 1779042368.147195,
+    "ast_hash": "c2ab8d2ab7e3953ebdd94843b4213a5d",
+    "semantic_hash": "c2ab8d2ab7e3953ebdd94843b4213a5d"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/tsconfig.node.json": {
+    "mtime": 1779042368.1516585,
+    "ast_hash": "df562a73dce2f53f022bc93ee20099c2",
+    "semantic_hash": "df562a73dce2f53f022bc93ee20099c2"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/postcss.config.js": {
+    "mtime": 1779042368.1502128,
+    "ast_hash": "222a79a9879c7cd4d9980533b7639465",
+    "semantic_hash": "222a79a9879c7cd4d9980533b7639465"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/tsconfig.json": {
+    "mtime": 1779042368.1516585,
+    "ast_hash": "f7a1341d2a3d86cbf212b87282d6890e",
+    "semantic_hash": "f7a1341d2a3d86cbf212b87282d6890e"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/vite.config.ts": {
+    "mtime": 1779048283.117673,
+    "ast_hash": "57dc13ddf7928af8c66e94b2fafce29d",
+    "semantic_hash": "57dc13ddf7928af8c66e94b2fafce29d"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/package.json": {
+    "mtime": 1779180192.858156,
+    "ast_hash": "9efe6034206e815dcc7e4105876b70a6",
+    "semantic_hash": "9efe6034206e815dcc7e4105876b70a6"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/tailwind.config.ts": {
+    "mtime": 1779042368.1516585,
+    "ast_hash": "410b6100508125e9796aa2e81f69b159",
+    "semantic_hash": "410b6100508125e9796aa2e81f69b159"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/node/npx": {
+    "mtime": 1779044867.972261,
+    "ast_hash": "a9ecab0db8ea8456d7c28fe69ea1b593",
+    "semantic_hash": "a9ecab0db8ea8456d7c28fe69ea1b593"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/node/npm": {
+    "mtime": 1779044867.971719,
+    "ast_hash": "fb2ef0a3ca4696176e070ee8a658db6f",
+    "semantic_hash": "fb2ef0a3ca4696176e070ee8a658db6f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/main.tsx": {
+    "mtime": 1779135999.6089845,
+    "ast_hash": "73362ac76d7fb364b4929b404bf66455",
+    "semantic_hash": "73362ac76d7fb364b4929b404bf66455"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/App.tsx": {
+    "mtime": 1779042368.1502128,
+    "ast_hash": "38865de3d80cf0e354be505cb284181c",
+    "semantic_hash": "38865de3d80cf0e354be505cb284181c"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/i18n/index.ts": {
+    "mtime": 1779111619.2497647,
+    "ast_hash": "b4d0cc1d9857b34a2550b2a9e5152fd6",
+    "semantic_hash": "b4d0cc1d9857b34a2550b2a9e5152fd6"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/i18n/locales/it.json": {
+    "mtime": 1779226318.937322,
+    "ast_hash": "ff6d476948b54f476abf317bcf065fc6",
+    "semantic_hash": "ff6d476948b54f476abf317bcf065fc6"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/i18n/locales/fr.json": {
+    "mtime": 1779226318.937322,
+    "ast_hash": "8b95660123b400aa26586583b2203a3f",
+    "semantic_hash": "8b95660123b400aa26586583b2203a3f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/i18n/locales/en.json": {
+    "mtime": 1779226318.937322,
+    "ast_hash": "b2594b1a48c9a331a7081f2d22bc5b90",
+    "semantic_hash": "b2594b1a48c9a331a7081f2d22bc5b90"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/lib/scenarioSerializer.ts": {
+    "mtime": 1779179212.6794865,
+    "ast_hash": "41f490b1d21fe51b6fb99b3110a8cfb2",
+    "semantic_hash": "41f490b1d21fe51b6fb99b3110a8cfb2"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/lib/parseFIXMessage.ts": {
+    "mtime": 1779170042.585507,
+    "ast_hash": "8bf2dc54e73b0db4fd4c93deb5f8f90f",
+    "semantic_hash": "8bf2dc54e73b0db4fd4c93deb5f8f90f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/bottom/EventLog.tsx": {
+    "mtime": 1779111619.2500234,
+    "ast_hash": "6cae05c8de50ac1cf590ee63da33301e",
+    "semantic_hash": "6cae05c8de50ac1cf590ee63da33301e"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/bottom/FIXMessageLog.tsx": {
+    "mtime": 1779174312.0773633,
+    "ast_hash": "c0edf5b7803abe03b03dfd53af84cf10",
+    "semantic_hash": "c0edf5b7803abe03b03dfd53af84cf10"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/bottom/ValidationErrors.tsx": {
+    "mtime": 1779111619.2500234,
+    "ast_hash": "0bc81362da5d2fde3d75a40d2d2ff024",
+    "semantic_hash": "0bc81362da5d2fde3d75a40d2d2ff024"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/bottom/ExecutionReport.tsx": {
+    "mtime": 1779128762.4118803,
+    "ast_hash": "ea25ecc9b4f3a65f6c9adc099fa8054a",
+    "semantic_hash": "ea25ecc9b4f3a65f6c9adc099fa8054a"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/bottom/ExecutionStats.tsx": {
+    "mtime": 1779111619.2500234,
+    "ast_hash": "88acfb63fd4057973a16fe8584e6ef19",
+    "semantic_hash": "88acfb63fd4057973a16fe8584e6ef19"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/bottom/BottomPanel.tsx": {
+    "mtime": 1779111619.2500234,
+    "ast_hash": "d9888831175018a1a21d0b9b9c8bb045",
+    "semantic_hash": "d9888831175018a1a21d0b9b9c8bb045"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/left/NodePalette.tsx": {
+    "mtime": 1779226318.9393218,
+    "ast_hash": "3020d204688280066a6b1bf0350a8bc6",
+    "semantic_hash": "3020d204688280066a6b1bf0350a8bc6"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/left/ScenarioList.tsx": {
+    "mtime": 1779111619.2500234,
+    "ast_hash": "93c815acddc69ec465899a4a7382349f",
+    "semantic_hash": "93c815acddc69ec465899a4a7382349f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/left/LeftPanel.tsx": {
+    "mtime": 1779042368.1510549,
+    "ast_hash": "04b6f24e42886cc450fbf83f37503017",
+    "semantic_hash": "04b6f24e42886cc450fbf83f37503017"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/right/SessionPanel.tsx": {
+    "mtime": 1779111619.2500234,
+    "ast_hash": "3367b934387796432e6afcb777fa7804",
+    "semantic_hash": "3367b934387796432e6afcb777fa7804"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/right/PropertiesPanel.tsx": {
+    "mtime": 1779226318.9393218,
+    "ast_hash": "c3078f670c30c3a9a008d89962169085",
+    "semantic_hash": "c3078f670c30c3a9a008d89962169085"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/right/RightPanel.tsx": {
+    "mtime": 1779170042.585507,
+    "ast_hash": "02e4e1ee065e6939449a00c224e0dabd",
+    "semantic_hash": "02e4e1ee065e6939449a00c224e0dabd"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/right/NodeConfig/VarRefPanel.tsx": {
+    "mtime": 1779174312.0773633,
+    "ast_hash": "a640164d22e573b06ff5c46287a98317",
+    "semantic_hash": "a640164d22e573b06ff5c46287a98317"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/right/NodeConfig/HttpRequestConfig.tsx": {
+    "mtime": 1779128762.4118803,
+    "ast_hash": "51d288d8dc2b1b140f693ec4f63ea1fb",
+    "semantic_hash": "51d288d8dc2b1b140f693ec4f63ea1fb"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/right/NodeConfig/WaitConfig.tsx": {
+    "mtime": 1779128762.4118803,
+    "ast_hash": "cde9c1cf7541c56b2f20a2a2c2631a15",
+    "semantic_hash": "cde9c1cf7541c56b2f20a2a2c2631a15"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/right/NodeConfig/LoopConfig.tsx": {
+    "mtime": 1779128762.4118803,
+    "ast_hash": "55c260d1da14d0698ac0a58afa7c4652",
+    "semantic_hash": "55c260d1da14d0698ac0a58afa7c4652"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/right/NodeConfig/SendFIXConfig.tsx": {
+    "mtime": 1779170042.585507,
+    "ast_hash": "c412f648b66cd84c21fd0df2ab67db96",
+    "semantic_hash": "c412f648b66cd84c21fd0df2ab67db96"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/right/NodeConfig/ValidateConfig.tsx": {
+    "mtime": 1779128762.4118803,
+    "ast_hash": "6126ee4362caf4878ac1fa29bafa3d1b",
+    "semantic_hash": "6126ee4362caf4878ac1fa29bafa3d1b"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/right/NodeConfig/TimeoutConfig.tsx": {
+    "mtime": 1779179212.6794865,
+    "ast_hash": "f28255fc95d60b3107bb2e344bb0a983",
+    "semantic_hash": "f28255fc95d60b3107bb2e344bb0a983"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/right/NodeConfig/RetryConfig.tsx": {
+    "mtime": 1779128762.4118803,
+    "ast_hash": "4dbc66eebc195cc934d47badd20c70fd",
+    "semantic_hash": "4dbc66eebc195cc934d47badd20c70fd"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/right/NodeConfig/ExpectFIXConfig.tsx": {
+    "mtime": 1779128762.4118803,
+    "ast_hash": "f3979befe7ec5815572cd8ca370b3b20",
+    "semantic_hash": "f3979befe7ec5815572cd8ca370b3b20"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/right/NodeConfig/DecisionConfig.tsx": {
+    "mtime": 1779128762.4118803,
+    "ast_hash": "5275c2a3d2de848d208ede766bfb4c8a",
+    "semantic_hash": "5275c2a3d2de848d208ede766bfb4c8a"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/right/NodeConfig/DelayConfig.tsx": {
+    "mtime": 1779128762.4118803,
+    "ast_hash": "14141b266c13f8061046ee8322d29c1e",
+    "semantic_hash": "14141b266c13f8061046ee8322d29c1e"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/right/NodeConfig/DateRulesEditor.tsx": {
+    "mtime": 1779042368.151427,
+    "ast_hash": "3a69896149a5cb4c6e8cad50594a64c1",
+    "semantic_hash": "3a69896149a5cb4c6e8cad50594a64c1"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/right/NodeConfig/RouteFIXConfig.tsx": {
+    "mtime": 1779128762.4118803,
+    "ast_hash": "a82cbea1dfff36712d802bdb73433e6f",
+    "semantic_hash": "a82cbea1dfff36712d802bdb73433e6f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/types/index.ts": {
+    "mtime": 1779226318.940322,
+    "ast_hash": "f3180c8f61e15a5d621e5f918578b24c",
+    "semantic_hash": "f3180c8f61e15a5d621e5f918578b24c"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/components/TopBar.tsx": {
+    "mtime": 1779174312.0773633,
+    "ast_hash": "1de908ba66915ccbd3e2b84257c10f06",
+    "semantic_hash": "1de908ba66915ccbd3e2b84257c10f06"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/hooks/useSessionSubscription.ts": {
+    "mtime": 1779046976.0709105,
+    "ast_hash": "9fc19363f39eb1dbe9000e398bdc5165",
+    "semantic_hash": "9fc19363f39eb1dbe9000e398bdc5165"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/hooks/useExecutionSubscription.ts": {
+    "mtime": 1779065815.67333,
+    "ast_hash": "e19d54fbbff7f1d0d65f4d96c0cdd462",
+    "semantic_hash": "e19d54fbbff7f1d0d65f4d96c0cdd462"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/api/scenarios.ts": {
+    "mtime": 1779066879.8696513,
+    "ast_hash": "19e2d6d0448577a90c5ec7c0bbb56a60",
+    "semantic_hash": "19e2d6d0448577a90c5ec7c0bbb56a60"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/api/sessions.ts": {
+    "mtime": 1779042368.1505933,
+    "ast_hash": "4dd9b828497a8ca2ca42bd9ae7de2a03",
+    "semantic_hash": "4dd9b828497a8ca2ca42bd9ae7de2a03"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/api/executions.ts": {
+    "mtime": 1779065815.67333,
+    "ast_hash": "56987f1a921f45de9c2651abfc3caacd",
+    "semantic_hash": "56987f1a921f45de9c2651abfc3caacd"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/api/client.ts": {
+    "mtime": 1779042368.150559,
+    "ast_hash": "0c654df968bf6941c89dd4edfa351fbb",
+    "semantic_hash": "0c654df968bf6941c89dd4edfa351fbb"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/store/executionStore.ts": {
+    "mtime": 1779065815.67333,
+    "ast_hash": "0fb1c6ea663184008d6bf1a16a73fe15",
+    "semantic_hash": "0fb1c6ea663184008d6bf1a16a73fe15"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/store/scenarioStore.ts": {
+    "mtime": 1779084711.2483213,
+    "ast_hash": "ddfeeb657ea3fb6c6144a43a921a03c8",
+    "semantic_hash": "ddfeeb657ea3fb6c6144a43a921a03c8"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/store/sessionStore.ts": {
+    "mtime": 1779042368.1516585,
+    "ast_hash": "aded6c189c044bcca7e7046134c4f82f",
+    "semantic_hash": "aded6c189c044bcca7e7046134c4f82f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/app/wsClient.ts": {
+    "mtime": 1779042368.1505933,
+    "ast_hash": "af2d29aa5d0d2fbba2f189ffaa014433",
+    "semantic_hash": "af2d29aa5d0d2fbba2f189ffaa014433"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/theme/colors.ts": {
+    "mtime": 1779226318.940322,
+    "ast_hash": "dfca4e5c9f10065eee7484c0bb251bc2",
+    "semantic_hash": "dfca4e5c9f10065eee7484c0bb251bc2"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/canvas/CanvasToolbar.tsx": {
+    "mtime": 1779128762.4108133,
+    "ast_hash": "c77636d5d09a51ac2e69f3ec9cf5003e",
+    "semantic_hash": "c77636d5d09a51ac2e69f3ec9cf5003e"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/canvas/FlowCanvas.tsx": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "f3827e8273462cb3225a357a1b0dae3b",
+    "semantic_hash": "f3827e8273462cb3225a357a1b0dae3b"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/canvas/nodes/SendFIXNode.tsx": {
+    "mtime": 1779042368.1507695,
+    "ast_hash": "ff54d73a1aa045600fe26eef8b4f2be8",
+    "semantic_hash": "ff54d73a1aa045600fe26eef8b4f2be8"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/canvas/nodes/RetryNode.tsx": {
+    "mtime": 1779042368.1507695,
+    "ast_hash": "966a06a400ffb59cf29e572651b67e24",
+    "semantic_hash": "966a06a400ffb59cf29e572651b67e24"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/canvas/nodes/StartNode.tsx": {
+    "mtime": 1779042368.1507695,
+    "ast_hash": "b8c364909909f391a6f19d4c8a15df3d",
+    "semantic_hash": "b8c364909909f391a6f19d4c8a15df3d"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/canvas/nodes/RouteFIXNode.tsx": {
+    "mtime": 1779110218.1635437,
+    "ast_hash": "616e69b4d03e5f0c34b2e56ae150f756",
+    "semantic_hash": "616e69b4d03e5f0c34b2e56ae150f756"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/canvas/nodes/ValidateNode.tsx": {
+    "mtime": 1779042368.1507695,
+    "ast_hash": "7430d1f6887e222eaddde915d783ca62",
+    "semantic_hash": "7430d1f6887e222eaddde915d783ca62"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/canvas/nodes/WaitNode.tsx": {
+    "mtime": 1779042368.1507695,
+    "ast_hash": "8e1fb8d3615967525063dce1c714d5af",
+    "semantic_hash": "8e1fb8d3615967525063dce1c714d5af"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/canvas/nodes/BaseNode.tsx": {
+    "mtime": 1779042368.1506786,
+    "ast_hash": "c181a578b1c2b150cda364e77e5be079",
+    "semantic_hash": "c181a578b1c2b150cda364e77e5be079"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/canvas/nodes/DecisionNode.tsx": {
+    "mtime": 1779127626.3157284,
+    "ast_hash": "bcf6cbae9e8667bad1a62e1e48e17d9a",
+    "semantic_hash": "bcf6cbae9e8667bad1a62e1e48e17d9a"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/canvas/nodes/EndPassNode.tsx": {
+    "mtime": 1779042368.1507695,
+    "ast_hash": "46dac7c61423a74ab4ade0ae2f9b7d9d",
+    "semantic_hash": "46dac7c61423a74ab4ade0ae2f9b7d9d"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/canvas/nodes/nodeTypes.ts": {
+    "mtime": 1779226318.937322,
+    "ast_hash": "3d91ea1dc63565b3759a151d2696631f",
+    "semantic_hash": "3d91ea1dc63565b3759a151d2696631f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/canvas/nodes/ExpectFIXNode.tsx": {
+    "mtime": 1779042368.1507695,
+    "ast_hash": "eaf3eaf42e7863de2e19ece3ede0dd80",
+    "semantic_hash": "eaf3eaf42e7863de2e19ece3ede0dd80"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/canvas/nodes/HttpRequestNode.tsx": {
+    "mtime": 1779052398.59128,
+    "ast_hash": "f55af0650b79ec688e192f42b9b025ee",
+    "semantic_hash": "f55af0650b79ec688e192f42b9b025ee"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/canvas/nodes/EndFailNode.tsx": {
+    "mtime": 1779042368.1507695,
+    "ast_hash": "04fe4a03b0faf50da18bb41b3dd64679",
+    "semantic_hash": "04fe4a03b0faf50da18bb41b3dd64679"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/canvas/edges/FlowEdge.tsx": {
+    "mtime": 1779103021.0010984,
+    "ast_hash": "d9151468967cf08ba16c68c3ef114339",
+    "semantic_hash": "d9151468967cf08ba16c68c3ef114339"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/.claude/settings.local.json": {
+    "mtime": 1779043097.3893347,
+    "ast_hash": "9cad2068c8cde0193cf9d8a71873794c",
+    "semantic_hash": "9cad2068c8cde0193cf9d8a71873794c"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/test/java/com/fixflow/adapters/persistence/ScenarioPersistenceTest.java": {
+    "mtime": 1779183107.1876903,
+    "ast_hash": "0bdb08a1045d0a2e5f5bd6bd31e0931b",
+    "semantic_hash": "0bdb08a1045d0a2e5f5bd6bd31e0931b"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/test/java/com/fixflow/adapters/persistence/ScenarioRepositoryAdapterTest.java": {
+    "mtime": 1779183408.867996,
+    "ast_hash": "c4352f9a9b66220e7a1b0fd20f874794",
+    "semantic_hash": "c4352f9a9b66220e7a1b0fd20f874794"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/test/java/com/fixflow/adapters/quickfixj/QuickFIXApplicationAdapterTest.java": {
+    "mtime": 1779183107.1878839,
+    "ast_hash": "bab9f9cea053eb2a7b7bbaa982d5a052",
+    "semantic_hash": "bab9f9cea053eb2a7b7bbaa982d5a052"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/ScenarioRepositoryAdapter.java": {
+    "mtime": 1779183408.867996,
+    "ast_hash": "83b89978d0e615226c578cf95aa69bc5",
+    "semantic_hash": "83b89978d0e615226c578cf95aa69bc5"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/FIXSessionRepositoryAdapter.java": {
+    "mtime": 1779104129.416282,
+    "ast_hash": "f02646ea38c70c29eb2ceff01e89d624",
+    "semantic_hash": "f02646ea38c70c29eb2ceff01e89d624"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/ExecutionRepositoryAdapter.java": {
+    "mtime": 1779061153.9491084,
+    "ast_hash": "40e4760b42814d5c19dae17eebfb6279",
+    "semantic_hash": "40e4760b42814d5c19dae17eebfb6279"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/entity/ExecutionEventEntity.java": {
+    "mtime": 1779042368.145096,
+    "ast_hash": "809bbb449fc4a4e7176aca460226949f",
+    "semantic_hash": "809bbb449fc4a4e7176aca460226949f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/entity/ScenarioEntity.java": {
+    "mtime": 1779042368.145096,
+    "ast_hash": "649eea234afc36f38986037fb1b0e470",
+    "semantic_hash": "649eea234afc36f38986037fb1b0e470"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/entity/FIXSessionEntity.java": {
+    "mtime": 1779104129.416282,
+    "ast_hash": "82383d054a074ed8112e77b42cc13e2a",
+    "semantic_hash": "82383d054a074ed8112e77b42cc13e2a"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/entity/FIXMessageEntity.java": {
+    "mtime": 1779042368.145096,
+    "ast_hash": "92c14cdfdd89726196af357b11bba36a",
+    "semantic_hash": "92c14cdfdd89726196af357b11bba36a"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/entity/NodeResultEntity.java": {
+    "mtime": 1779042368.145096,
+    "ast_hash": "de57c07a67c22f05322ee636634e50ff",
+    "semantic_hash": "de57c07a67c22f05322ee636634e50ff"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/entity/ValidationErrorEntity.java": {
+    "mtime": 1779042368.145096,
+    "ast_hash": "f987519b18511f120ff919f4fac8c35a",
+    "semantic_hash": "f987519b18511f120ff919f4fac8c35a"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/entity/ScenarioVersionEntity.java": {
+    "mtime": 1779042368.145096,
+    "ast_hash": "43f6d9ddc34f4f2ea83179618d6bf643",
+    "semantic_hash": "43f6d9ddc34f4f2ea83179618d6bf643"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/entity/ExecutionEntity.java": {
+    "mtime": 1779042368.1450274,
+    "ast_hash": "5bda9c7354ccbe637766a0e72f1465a1",
+    "semantic_hash": "5bda9c7354ccbe637766a0e72f1465a1"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/jpa/JpaScenarioVersionRepository.java": {
+    "mtime": 1779042368.1453695,
+    "ast_hash": "e08ac88b3c7d47154a8d5585986dab31",
+    "semantic_hash": "e08ac88b3c7d47154a8d5585986dab31"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/jpa/JpaExecutionRepository.java": {
+    "mtime": 1779042368.1453695,
+    "ast_hash": "4b394dfed0f15093d282fbe6031840f8",
+    "semantic_hash": "4b394dfed0f15093d282fbe6031840f8"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/jpa/JpaNodeResultRepository.java": {
+    "mtime": 1779042368.1453695,
+    "ast_hash": "9ab253bd032dd1b977bb6374fe951c1f",
+    "semantic_hash": "9ab253bd032dd1b977bb6374fe951c1f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/jpa/JpaScenarioRepository.java": {
+    "mtime": 1779042368.1453695,
+    "ast_hash": "b832eaa3212b4b75beaded2fbf84efc9",
+    "semantic_hash": "b832eaa3212b4b75beaded2fbf84efc9"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/jpa/JpaFIXMessageRepository.java": {
+    "mtime": 1779042368.1453695,
+    "ast_hash": "537022e0e3c083c0a166ba4f5f28f518",
+    "semantic_hash": "537022e0e3c083c0a166ba4f5f28f518"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/jpa/JpaFIXSessionRepository.java": {
+    "mtime": 1779042368.1453695,
+    "ast_hash": "523b12af0e6fa0b4ec767986525e63d3",
+    "semantic_hash": "523b12af0e6fa0b4ec767986525e63d3"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/persistence/jpa/JpaExecutionEventRepository.java": {
+    "mtime": 1779042368.145096,
+    "ast_hash": "31d9a7312c05ce64714865515e2499f2",
+    "semantic_hash": "31d9a7312c05ce64714865515e2499f2"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/quickfixj/QuickFIXApplicationAdapter.java": {
+    "mtime": 1779046907.7647471,
+    "ast_hash": "a1f4b25eca38f3f0d6b78586790dfeb7",
+    "semantic_hash": "a1f4b25eca38f3f0d6b78586790dfeb7"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-adapters/src/main/java/com/fixflow/adapters/quickfixj/QuickFIXAdapter.java": {
+    "mtime": 1779104129.416282,
+    "ast_hash": "81599a926f7bae5d1b1e219a07eaa715",
+    "semantic_hash": "81599a926f7bae5d1b1e219a07eaa715"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/TimeoutRetryTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "3ada2736db0a788c97ed50fef5ffa678",
+    "semantic_hash": "3ada2736db0a788c97ed50fef5ffa678"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/SystemTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "295587ff1857d1310e7e4c35853cdb94",
+    "semantic_hash": "295587ff1857d1310e7e4c35853cdb94"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/SessionFailureTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "ee696ad084654a7decb98f3622ff4b1e",
+    "semantic_hash": "ee696ad084654a7decb98f3622ff4b1e"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/MultiScenarioIntegrationTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "ac78e14f8c3ca490d0c8233e79cd943d",
+    "semantic_hash": "ac78e14f8c3ca490d0c8233e79cd943d"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/handlers/SendFIXHandlerTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "106eae6ac2c7c3a8dc3263146866f96b",
+    "semantic_hash": "106eae6ac2c7c3a8dc3263146866f96b"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/handlers/ValidateHandlerTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "4eee77719d441af85d5e48d79af8ea15",
+    "semantic_hash": "4eee77719d441af85d5e48d79af8ea15"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/handlers/DecisionHandlerTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "74785f10668c449c5ee1838873c953cb",
+    "semantic_hash": "74785f10668c449c5ee1838873c953cb"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/handlers/RetryHandlerTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "7626b9ff48cd374fc1a09d3d0cc3230c",
+    "semantic_hash": "7626b9ff48cd374fc1a09d3d0cc3230c"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/handlers/RouteFIXHandlerTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "f9fe74d7cedd3a1e3135d02552672478",
+    "semantic_hash": "f9fe74d7cedd3a1e3135d02552672478"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/handlers/ExpectFIXHandlerTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "354845ad715447bf3fa1e977b445031d",
+    "semantic_hash": "354845ad715447bf3fa1e977b445031d"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/execution/ExecutionManagerTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "7cd87ddb555f6d08dfccbc560bc35e5f",
+    "semantic_hash": "7cd87ddb555f6d08dfccbc560bc35e5f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/correlation/CorrelationEngineTest.java": {
+    "mtime": 1779183107.1895766,
+    "ast_hash": "043c5993051233b368e4f9f431b0530a",
+    "semantic_hash": "043c5993051233b368e4f9f431b0530a"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/variable/VariableResolverTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "79d3df8069e278c7183da4642593ca4d",
+    "semantic_hash": "79d3df8069e278c7183da4642593ca4d"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/fix/HotReloadIntegrationTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "6fc1f7f4f55232ef9a7d1b17f983e6f9",
+    "semantic_hash": "6fc1f7f4f55232ef9a7d1b17f983e6f9"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/fix/FIXSessionManagerTest.java": {
+    "mtime": 1779183107.1899319,
+    "ast_hash": "d280e804a780c455d610caf34d07d736",
+    "semantic_hash": "d280e804a780c455d610caf34d07d736"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/fix/MessageRouterTest.java": {
+    "mtime": 1779183107.1899638,
+    "ast_hash": "c2157d33a2faf3d3f5c2ef15872da15b",
+    "semantic_hash": "c2157d33a2faf3d3f5c2ef15872da15b"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/fix/FakeFixAdapterTest.java": {
+    "mtime": 1779183107.1900027,
+    "ast_hash": "f295bfb2d86102a4b5ed64e976650c2f",
+    "semantic_hash": "f295bfb2d86102a4b5ed64e976650c2f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/fix/MessageBufferTest.java": {
+    "mtime": 1779183107.1901088,
+    "ast_hash": "5b8a60d20f03c26ababe49c49cdce2be",
+    "semantic_hash": "5b8a60d20f03c26ababe49c49cdce2be"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/fix/HotReloadServiceTest.java": {
+    "mtime": 1779183107.1901464,
+    "ast_hash": "c847c01b43960799db6ebd024bbbde99",
+    "semantic_hash": "c847c01b43960799db6ebd024bbbde99"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/fix/FakeFixAdapter.java": {
+    "mtime": 1779183107.1903243,
+    "ast_hash": "c41996f351b620863dbf7a6170f9709d",
+    "semantic_hash": "c41996f351b620863dbf7a6170f9709d"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/scenario/ScenarioRegistryTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "420e3e76d705e21793cf350bf2cd66c7",
+    "semantic_hash": "420e3e76d705e21793cf350bf2cd66c7"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/scenario/ScenarioDslParserTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "20cfc77e2d795b197210ffb0150cd319",
+    "semantic_hash": "20cfc77e2d795b197210ffb0150cd319"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/scenario/ScenarioValidatorTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "4ca97cae7e29e220581d056b6175663e",
+    "semantic_hash": "4ca97cae7e29e220581d056b6175663e"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/validation/ValidationEngineTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "a614b4c1b28ac272bc9ce545583ec2f0",
+    "semantic_hash": "a614b4c1b28ac272bc9ce545583ec2f0"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/validation/StrictModeValidationTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "c36d269b8b3779f51050a81671a6e4f9",
+    "semantic_hash": "c36d269b8b3779f51050a81671a6e4f9"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/validation/ValidationRulesTest.java": {
+    "mtime": 1779183107.1909628,
+    "ast_hash": "ef71f6015c31ed34a9a578b752c0163c",
+    "semantic_hash": "ef71f6015c31ed34a9a578b752c0163c"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/validation/DateRuleEngineTest.java": {
+    "mtime": 1779183408.8690794,
+    "ast_hash": "37c459551d5910df658297459050d13f",
+    "semantic_hash": "37c459551d5910df658297459050d13f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/handlers/LoopHandler.java": {
+    "mtime": 1779042368.1488507,
+    "ast_hash": "f1274f539eaf8e30e4e77798a5c5f32c",
+    "semantic_hash": "f1274f539eaf8e30e4e77798a5c5f32c"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/handlers/NodeHandlerResult.java": {
+    "mtime": 1779042368.1488507,
+    "ast_hash": "dd3954c3d8b875222c343fc693c9cf33",
+    "semantic_hash": "dd3954c3d8b875222c343fc693c9cf33"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/handlers/EndFailHandler.java": {
+    "mtime": 1779042368.1488507,
+    "ast_hash": "1f1308bd8f236bdba37b4888d2493ab9",
+    "semantic_hash": "1f1308bd8f236bdba37b4888d2493ab9"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/handlers/EndHandler.java": {
+    "mtime": 1779042368.1488507,
+    "ast_hash": "ec72493164ff50616fc2d2641509b2eb",
+    "semantic_hash": "ec72493164ff50616fc2d2641509b2eb"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/handlers/DelayHandler.java": {
+    "mtime": 1779042368.1488507,
+    "ast_hash": "5aac300ca5cd0540c1548ffbb9c5c185",
+    "semantic_hash": "5aac300ca5cd0540c1548ffbb9c5c185"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/handlers/StartHandler.java": {
+    "mtime": 1779042368.1488507,
+    "ast_hash": "409f25caed6c8aeccdba50cac059a1fd",
+    "semantic_hash": "409f25caed6c8aeccdba50cac059a1fd"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/handlers/NodeDispatcher.java": {
+    "mtime": 1779137664.24972,
+    "ast_hash": "84dbc0791f82304114575c76904410f6",
+    "semantic_hash": "84dbc0791f82304114575c76904410f6"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/handlers/WaitHandler.java": {
+    "mtime": 1779042368.1488507,
+    "ast_hash": "27a4f56a6696c0c620c256b29774d02d",
+    "semantic_hash": "27a4f56a6696c0c620c256b29774d02d"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/handlers/ValidateHandler.java": {
+    "mtime": 1779137664.24972,
+    "ast_hash": "79373f0411dad16d1c45f39f798d1002",
+    "semantic_hash": "79373f0411dad16d1c45f39f798d1002"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/handlers/RouteFIXHandler.java": {
+    "mtime": 1779174949.272704,
+    "ast_hash": "60c6ae0a62cf6daab3f09156e02fa925",
+    "semantic_hash": "60c6ae0a62cf6daab3f09156e02fa925"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/handlers/HttpRequestHandler.java": {
+    "mtime": 1779052299.929861,
+    "ast_hash": "2d16648fd5fd23ff4e44e33f89c681ce",
+    "semantic_hash": "2d16648fd5fd23ff4e44e33f89c681ce"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/handlers/DecisionHandler.java": {
+    "mtime": 1779042368.14877,
+    "ast_hash": "a3625b914459bcd46aadb8cf5954b400",
+    "semantic_hash": "a3625b914459bcd46aadb8cf5954b400"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/handlers/ExpectFIXHandler.java": {
+    "mtime": 1779174949.272704,
+    "ast_hash": "c55e99cdc1250d155621cabc8a2b2ed4",
+    "semantic_hash": "c55e99cdc1250d155621cabc8a2b2ed4"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/handlers/RetryHandler.java": {
+    "mtime": 1779042368.1488507,
+    "ast_hash": "6ee9ec22b6a24fc97e73eecd9ff1a986",
+    "semantic_hash": "6ee9ec22b6a24fc97e73eecd9ff1a986"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/handlers/NodeHandler.java": {
+    "mtime": 1779042368.1488507,
+    "ast_hash": "92f11183496ebfa81785089539a69130",
+    "semantic_hash": "92f11183496ebfa81785089539a69130"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/handlers/SendFIXHandler.java": {
+    "mtime": 1779170042.585507,
+    "ast_hash": "942df5c9aceb049334cfd24fa5ee4d45",
+    "semantic_hash": "942df5c9aceb049334cfd24fa5ee4d45"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/execution/ExecutionManager.java": {
+    "mtime": 1779137664.24972,
+    "ast_hash": "25f4796861a90701a79556f8a2fe17d4",
+    "semantic_hash": "25f4796861a90701a79556f8a2fe17d4"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/execution/ExecutionContext.java": {
+    "mtime": 1779042368.1486495,
+    "ast_hash": "da465676d8f6461403c6b553a3e75e1a",
+    "semantic_hash": "da465676d8f6461403c6b553a3e75e1a"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/correlation/CorrelationEngine.java": {
+    "mtime": 1779052164.7306573,
+    "ast_hash": "9ed3dff677e1f35ba331d691faec180a",
+    "semantic_hash": "9ed3dff677e1f35ba331d691faec180a"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/variable/VariableResolverPlugin.java": {
+    "mtime": 1779042368.149513,
+    "ast_hash": "3d11c3b24ecce189a0999c2246aaea0d",
+    "semantic_hash": "3d11c3b24ecce189a0999c2246aaea0d"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/variable/VariableResolver.java": {
+    "mtime": 1779174312.0773633,
+    "ast_hash": "5ac117375a321190f2fd6b6177c3e812",
+    "semantic_hash": "5ac117375a321190f2fd6b6177c3e812"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/fix/FIXSessionManager.java": {
+    "mtime": 1779042368.148711,
+    "ast_hash": "aa146945ffdb16acae3d184651db5fb1",
+    "semantic_hash": "aa146945ffdb16acae3d184651db5fb1"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/fix/HotReloadService.java": {
+    "mtime": 1779042368.14877,
+    "ast_hash": "8f1da2797f1056179c4c3ab1fd1840c5",
+    "semantic_hash": "8f1da2797f1056179c4c3ab1fd1840c5"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/fix/MessageBuffer.java": {
+    "mtime": 1779042368.14877,
+    "ast_hash": "108297526ad8b8d15f62b3c8f769bc0b",
+    "semantic_hash": "108297526ad8b8d15f62b3c8f769bc0b"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/fix/MessageRouter.java": {
+    "mtime": 1779042368.14877,
+    "ast_hash": "b42610a4ef6affc2712e9c895a3ba08e",
+    "semantic_hash": "b42610a4ef6affc2712e9c895a3ba08e"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/scenario/ScenarioRegistry.java": {
+    "mtime": 1779042368.1490972,
+    "ast_hash": "5befe19ed0f3342572f86fa84a93d83a",
+    "semantic_hash": "5befe19ed0f3342572f86fa84a93d83a"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/scenario/ScenarioDslParser.java": {
+    "mtime": 1779183408.867996,
+    "ast_hash": "9f7907f3f77cfea71a3699c2b28fd207",
+    "semantic_hash": "9f7907f3f77cfea71a3699c2b28fd207"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/scenario/ScenarioValidator.java": {
+    "mtime": 1779042368.1490972,
+    "ast_hash": "2f885548476b2fc2c8160b4362655a7d",
+    "semantic_hash": "2f885548476b2fc2c8160b4362655a7d"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/DateRuleEngine.java": {
+    "mtime": 1779042368.149195,
+    "ast_hash": "182458cb7eca80aee016d13a8c312eec",
+    "semantic_hash": "182458cb7eca80aee016d13a8c312eec"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/ValidationRule.java": {
+    "mtime": 1779042368.149195,
+    "ast_hash": "d62fed01ca81b2e23b46e582510fe024",
+    "semantic_hash": "d62fed01ca81b2e23b46e582510fe024"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/ValidationSummary.java": {
+    "mtime": 1779042368.149195,
+    "ast_hash": "f3f8fce2252ee906f21772baadb8f66f",
+    "semantic_hash": "f3f8fce2252ee906f21772baadb8f66f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/DateRule.java": {
+    "mtime": 1779042368.1490972,
+    "ast_hash": "5b4c4f8c71a8425d11ed3f7d36918e64",
+    "semantic_hash": "5b4c4f8c71a8425d11ed3f7d36918e64"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/ValidationConfig.java": {
+    "mtime": 1779042368.149195,
+    "ast_hash": "3a67d0cd533cf9e082c8e97a9b14cd14",
+    "semantic_hash": "3a67d0cd533cf9e082c8e97a9b14cd14"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/ValidationEngine.java": {
+    "mtime": 1779042368.149195,
+    "ast_hash": "41174e623ced528d0eadeb9ab1286b9b",
+    "semantic_hash": "41174e623ced528d0eadeb9ab1286b9b"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/DateRuleType.java": {
+    "mtime": 1779042368.149195,
+    "ast_hash": "666ad473df92c8b2b33d900183c0311f",
+    "semantic_hash": "666ad473df92c8b2b33d900183c0311f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/ValidationRuleConfig.java": {
+    "mtime": 1779042368.149195,
+    "ast_hash": "c88b65bd972be946cb6b48a3da0268e5",
+    "semantic_hash": "c88b65bd972be946cb6b48a3da0268e5"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/ValidationResult.java": {
+    "mtime": 1779042368.149195,
+    "ast_hash": "971300077f5e130c472ca6f107da7a01",
+    "semantic_hash": "971300077f5e130c472ca6f107da7a01"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/rules/EqualsRule.java": {
+    "mtime": 1779042368.149357,
+    "ast_hash": "734d397265a2f304fc4be4d8dc98548c",
+    "semantic_hash": "734d397265a2f304fc4be4d8dc98548c"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/rules/NumericMinRule.java": {
+    "mtime": 1779042368.149357,
+    "ast_hash": "3f103d33322444302668f9f2467aaaf8",
+    "semantic_hash": "3f103d33322444302668f9f2467aaaf8"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/rules/DateRuleValidator.java": {
+    "mtime": 1779042368.149195,
+    "ast_hash": "b57eb81b503ae5fa60c821b56951543f",
+    "semantic_hash": "b57eb81b503ae5fa60c821b56951543f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/rules/EnumRule.java": {
+    "mtime": 1779042368.149357,
+    "ast_hash": "1afe83d62f97ffe1589c193a93a77c05",
+    "semantic_hash": "1afe83d62f97ffe1589c193a93a77c05"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/rules/NumericMaxRule.java": {
+    "mtime": 1779042368.149357,
+    "ast_hash": "5db6bbc31432fce8218005031afdd28b",
+    "semantic_hash": "5db6bbc31432fce8218005031afdd28b"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/rules/NotEqualsRule.java": {
+    "mtime": 1779042368.149357,
+    "ast_hash": "d0e2aa5086e4d6f3efe6ff7c7ad324b2",
+    "semantic_hash": "d0e2aa5086e4d6f3efe6ff7c7ad324b2"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/rules/FieldPresentRule.java": {
+    "mtime": 1779042368.149357,
+    "ast_hash": "7e21bcef24a5bac917a46b233ac52818",
+    "semantic_hash": "7e21bcef24a5bac917a46b233ac52818"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/rules/FieldAbsentRule.java": {
+    "mtime": 1779042368.149357,
+    "ast_hash": "ace1b44533e932be205abe1385d49fc9",
+    "semantic_hash": "ace1b44533e932be205abe1385d49fc9"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/validation/rules/RegexRule.java": {
+    "mtime": 1779042368.149357,
+    "ast_hash": "0799cc415dabe406a779213f8c0c1482",
+    "semantic_hash": "0799cc415dabe406a779213f8c0c1482"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/test/java/com/fixflow/api/FullApiIntegrationTest.java": {
+    "mtime": 1779183107.1870787,
+    "ast_hash": "55c50d84695a31f9c0d88ca80866457e",
+    "semantic_hash": "55c50d84695a31f9c0d88ca80866457e"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/test/java/com/fixflow/api/FixFlowApplicationTest.java": {
+    "mtime": 1779183107.1871881,
+    "ast_hash": "22a3d32239c5c266dd642a29bfa6cc68",
+    "semantic_hash": "22a3d32239c5c266dd642a29bfa6cc68"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/test/java/com/fixflow/api/websocket/StompEventPublisherTest.java": {
+    "mtime": 1779183107.1881814,
+    "ast_hash": "72961d5ebc035a4f44bff90b56a2b443",
+    "semantic_hash": "72961d5ebc035a4f44bff90b56a2b443"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/test/java/com/fixflow/api/rest/TestWebConfig.java": {
+    "mtime": 1779183107.1883771,
+    "ast_hash": "9a36ea870c849d7d72f40cc74a81352f",
+    "semantic_hash": "9a36ea870c849d7d72f40cc74a81352f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/test/java/com/fixflow/api/rest/ExecutionControllerTest.java": {
+    "mtime": 1779183156.433194,
+    "ast_hash": "d0bae3e99cc0fd2ba7d7be09c4c8d2cd",
+    "semantic_hash": "d0bae3e99cc0fd2ba7d7be09c4c8d2cd"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/test/java/com/fixflow/api/rest/SessionControllerTest.java": {
+    "mtime": 1779183107.1885936,
+    "ast_hash": "d976247c0f2a44b0d6c3cc8ff2a64e8d",
+    "semantic_hash": "d976247c0f2a44b0d6c3cc8ff2a64e8d"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/test/java/com/fixflow/api/rest/ScenarioControllerTest.java": {
+    "mtime": 1779183408.867996,
+    "ast_hash": "6c482eda5c40c971ed0af1b8f0d77775",
+    "semantic_hash": "6c482eda5c40c971ed0af1b8f0d77775"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/test/java/com/fixflow/api/config/GlobalExceptionHandlerTest.java": {
+    "mtime": 1779183107.1887383,
+    "ast_hash": "9c5f4e15ac84a4c83cdfe258c5cbe984",
+    "semantic_hash": "9c5f4e15ac84a4c83cdfe258c5cbe984"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/test/java/com/fixflow/api/support/FakeFixAdapter.java": {
+    "mtime": 1779183107.1887696,
+    "ast_hash": "415e615bb24fb8c1b41776e0c521bc65",
+    "semantic_hash": "415e615bb24fb8c1b41776e0c521bc65"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/FixFlowApplication.java": {
+    "mtime": 1779180187.8132927,
+    "ast_hash": "f8454c02422a86fa4a79d4038bc710f0",
+    "semantic_hash": "f8454c02422a86fa4a79d4038bc710f0"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/websocket/StompEventPublisher.java": {
+    "mtime": 1779065815.6723301,
+    "ast_hash": "95dd063e0c29ff77b678b90127fbe9e2",
+    "semantic_hash": "95dd063e0c29ff77b678b90127fbe9e2"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/rest/ScenarioController.java": {
+    "mtime": 1779183408.867996,
+    "ast_hash": "f0dcb3e66eaa5161c75fa29d0a2fadf2",
+    "semantic_hash": "f0dcb3e66eaa5161c75fa29d0a2fadf2"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/rest/SessionController.java": {
+    "mtime": 1779104129.416282,
+    "ast_hash": "3a0e01b4c6b66da8790cff416f9610fe",
+    "semantic_hash": "3a0e01b4c6b66da8790cff416f9610fe"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/rest/ExecutionController.java": {
+    "mtime": 1779061153.9491084,
+    "ast_hash": "d457b878afcdede3a3fad4f42d5a32f3",
+    "semantic_hash": "d457b878afcdede3a3fad4f42d5a32f3"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/rest/dto/ScenarioRequest.java": {
+    "mtime": 1779042368.1460812,
+    "ast_hash": "f736991fe13984c5776393e8dc3ab440",
+    "semantic_hash": "f736991fe13984c5776393e8dc3ab440"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/rest/dto/FIXSessionRequest.java": {
+    "mtime": 1779104129.416282,
+    "ast_hash": "e91515a99aef202543500fda56bc3741",
+    "semantic_hash": "e91515a99aef202543500fda56bc3741"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/rest/dto/ErrorResponse.java": {
+    "mtime": 1779042368.1459932,
+    "ast_hash": "e9b7963f98cd87ab47bc717e0e646993",
+    "semantic_hash": "e9b7963f98cd87ab47bc717e0e646993"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/rest/dto/FIXSessionDto.java": {
+    "mtime": 1779104129.416282,
+    "ast_hash": "4dd05c428db3ae773b7af9f0558254f7",
+    "semantic_hash": "4dd05c428db3ae773b7af9f0558254f7"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/rest/dto/ValidationErrorDto.java": {
+    "mtime": 1779042368.1460812,
+    "ast_hash": "afc38034c46c596175c559247306a599",
+    "semantic_hash": "afc38034c46c596175c559247306a599"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/rest/dto/ExecutionDto.java": {
+    "mtime": 1779042368.1460812,
+    "ast_hash": "fda5f5a72c539f111f1bfe4b9c3c4126",
+    "semantic_hash": "fda5f5a72c539f111f1bfe4b9c3c4126"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/rest/dto/ScenarioDto.java": {
+    "mtime": 1779042368.1460812,
+    "ast_hash": "cade50011b8a195f423885961f646f85",
+    "semantic_hash": "cade50011b8a195f423885961f646f85"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/rest/dto/ExecutionReportDto.java": {
+    "mtime": 1779042368.1460812,
+    "ast_hash": "422cf55aa9d977e9eb64e8e18f1671a8",
+    "semantic_hash": "422cf55aa9d977e9eb64e8e18f1671a8"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/rest/dto/StartExecutionRequest.java": {
+    "mtime": 1779042368.1460812,
+    "ast_hash": "30ced92e2e49ca8d8c29b6330b2b22e1",
+    "semantic_hash": "30ced92e2e49ca8d8c29b6330b2b22e1"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/service/ReportService.java": {
+    "mtime": 1779042368.1460812,
+    "ast_hash": "09e59932bfe71405d77800367048dfdf",
+    "semantic_hash": "09e59932bfe71405d77800367048dfdf"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/config/ScenarioRegistryInitializer.java": {
+    "mtime": 1779042368.1458623,
+    "ast_hash": "015743ef6c141cbd829b87a05d460be0",
+    "semantic_hash": "015743ef6c141cbd829b87a05d460be0"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/config/CorsConfig.java": {
+    "mtime": 1779042368.145837,
+    "ast_hash": "5a9a0f792dd353c7af39cc8d114a8782",
+    "semantic_hash": "5a9a0f792dd353c7af39cc8d114a8782"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/config/GlobalExceptionHandler.java": {
+    "mtime": 1779042368.1458623,
+    "ast_hash": "fae824113ce353bc8b423f872c6c07db",
+    "semantic_hash": "fae824113ce353bc8b423f872c6c07db"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/config/BrowserOpenService.java": {
+    "mtime": 1779175104.109997,
+    "ast_hash": "0c9dd97c1eacb00f1d500d8b7b1ad94e",
+    "semantic_hash": "0c9dd97c1eacb00f1d500d8b7b1ad94e"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/config/WebSocketConfig.java": {
+    "mtime": 1779042368.1458623,
+    "ast_hash": "5c313ff3aeea430a848cecbf4b96f532",
+    "semantic_hash": "5c313ff3aeea430a848cecbf4b96f532"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/config/InboundWiring.java": {
+    "mtime": 1779042368.1458623,
+    "ast_hash": "8eff92f6f70860230ded5f66afb3b027",
+    "semantic_hash": "8eff92f6f70860230ded5f66afb3b027"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/java/com/fixflow/api/dto/ReportDto.java": {
+    "mtime": 1779042368.1458623,
+    "ast_hash": "60f3f8d8446c93b66fd95f4f6df79cd5",
+    "semantic_hash": "60f3f8d8446c93b66fd95f4f6df79cd5"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/CONTRIBUTING.md": {
+    "mtime": 1779135999.6080809,
+    "ast_hash": "844f5d87f96100674f1852c6dbbe7870",
+    "semantic_hash": "844f5d87f96100674f1852c6dbbe7870"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/README.md": {
+    "mtime": 1779135999.6089845,
+    "ast_hash": "40c8810dbf767c7f26a2d3fa4f6d7f5e",
+    "semantic_hash": "40c8810dbf767c7f26a2d3fa4f6d7f5e"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/CLAUDE.md": {
+    "mtime": 1779226318.935322,
+    "ast_hash": "4002036a05480da56555959b18555dc4",
+    "semantic_hash": "4002036a05480da56555959b18555dc4"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/index.html": {
+    "mtime": 1779042368.1502128,
+    "ast_hash": "68b05ef7c67e8b05e7d1f301292981f7",
+    "semantic_hash": "68b05ef7c67e8b05e7d1f301292981f7"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/docs/api-reference.md": {
+    "mtime": 1779042368.1415932,
+    "ast_hash": "6ef5f8065336420834b089eddd1ec2fc",
+    "semantic_hash": "6ef5f8065336420834b089eddd1ec2fc"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/docs/dsl-reference.md": {
+    "mtime": 1779226919.5170224,
+    "ast_hash": "a35f29ca8f6b271237523f75431ec902",
+    "semantic_hash": "a35f29ca8f6b271237523f75431ec902"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/docs/user-guide.md": {
+    "mtime": 1779226934.2508247,
+    "ast_hash": "d2f1259e53ddcd00f5a915aa56a0db3e",
+    "semantic_hash": "d2f1259e53ddcd00f5a915aa56a0db3e"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/docs/developer-guide.md": {
+    "mtime": 1779130067.645305,
+    "ast_hash": "75dcddbe1f8e26c149b3b0be1db07439",
+    "semantic_hash": "75dcddbe1f8e26c149b3b0be1db07439"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/docs/setup.md": {
+    "mtime": 1779042368.1424503,
+    "ast_hash": "037f8c035c0e7008729ec73e960793f9",
+    "semantic_hash": "037f8c035c0e7008729ec73e960793f9"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/docs/superpowers/specs/2026-05-19-call-scenario-design.md": {
+    "mtime": 1779194318.911382,
+    "ast_hash": "89ebb9bfc5efc5f61a56e728cc91652c",
+    "semantic_hash": "89ebb9bfc5efc5f61a56e728cc91652c"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/docs/superpowers/specs/2026-05-15-fix-flow-simulator-design.md": {
+    "mtime": 1779042368.143593,
+    "ast_hash": "bfaa48122c7c6ea01c06d0c19d5edd71",
+    "semantic_hash": "bfaa48122c7c6ea01c06d0c19d5edd71"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/docs/superpowers/plans/fix-flow-part3.md": {
+    "mtime": 1779042368.143593,
+    "ast_hash": "51364f6b020c4984e4db1cdf8fba5d85",
+    "semantic_hash": "51364f6b020c4984e4db1cdf8fba5d85"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/docs/superpowers/plans/fix-flow-part2.md": {
+    "mtime": 1779042368.143593,
+    "ast_hash": "d4a3ee9fc305191586daf17f863085f4",
+    "semantic_hash": "d4a3ee9fc305191586daf17f863085f4"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/docs/superpowers/plans/2026-05-18-enhancements-wave2.md": {
+    "mtime": 1779090372.0819988,
+    "ast_hash": "d8877a433298791d7ecacc21fefc2c42",
+    "semantic_hash": "d8877a433298791d7ecacc21fefc2c42"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/docs/superpowers/plans/2026-05-16-fix-flow-simulator.md": {
+    "mtime": 1779042368.1425931,
+    "ast_hash": "c6339ad4d0fd8fe2e47a3c602369240a",
+    "semantic_hash": "c6339ad4d0fd8fe2e47a3c602369240a"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/docs/superpowers/plans/2026-05-18-enhancements-wave1.md": {
+    "mtime": 1779089546.027962,
+    "ast_hash": "1a67603a98188758c14ae4e93b1ad62f",
+    "semantic_hash": "1a67603a98188758c14ae4e93b1ad62f"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/docs/superpowers/plans/2026-05-19-call-scenario.md": {
+    "mtime": 1779195482.8148437,
+    "ast_hash": "3bb93e765dffb1a1e87ca12c1f66acbe",
+    "semantic_hash": "3bb93e765dffb1a1e87ca12c1f66acbe"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/docs/superpowers/plans/2026-05-18-conditional-routing.md": {
+    "mtime": 1779093865.9777572,
+    "ast_hash": "98a3a166cb76638700ed032898043ce4",
+    "semantic_hash": "98a3a166cb76638700ed032898043ce4"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/docs/superpowers/plans/fix-flow-part1.md": {
+    "mtime": 1779042368.1425931,
+    "ast_hash": "917f06acd3108e60c6abce4be59d239b",
+    "semantic_hash": "917f06acd3108e60c6abce4be59d239b"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/test/resources/application.yml": {
+    "mtime": 1779104129.417282,
+    "ast_hash": "f3e37fb0e403862da2480c767b8b232e",
+    "semantic_hash": "f3e37fb0e403862da2480c767b8b232e"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-api/src/main/resources/application.yml": {
+    "mtime": 1779042368.1460812,
+    "ast_hash": "6951b2ccce4ab79530059d77b30b593b",
+    "semantic_hash": "6951b2ccce4ab79530059d77b30b593b"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/public/favicon.svg": {
+    "mtime": 1779042368.1502128,
+    "ast_hash": "a2fac1965a112bcb7bc595d39f91c555",
+    "semantic_hash": "a2fac1965a112bcb7bc595d39f91c555"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/visual mock/mock.png": {
+    "mtime": 1779042368.1595914,
+    "ast_hash": "bd5a3650ca71fdf154a9522fd90b4ea3",
+    "semantic_hash": "bd5a3650ca71fdf154a9522fd90b4ea3"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/panels/right/NodeConfig/CallScenarioConfig.tsx": {
+    "mtime": 1779226318.9393218,
+    "ast_hash": "efada46168789ab419a1bcb42132024c",
+    "semantic_hash": "efada46168789ab419a1bcb42132024c"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-ui/src/canvas/nodes/CallScenarioNode.tsx": {
+    "mtime": 1779226318.937322,
+    "ast_hash": "8267ba6065a2b2fbd030a7c77ba4848e",
+    "semantic_hash": "8267ba6065a2b2fbd030a7c77ba4848e"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/handlers/CallScenarioHandlerTest.java": {
+    "mtime": 1779226318.936322,
+    "ast_hash": "cdea1576a6e6739b6c19500dd59c5fc3",
+    "semantic_hash": "cdea1576a6e6739b6c19500dd59c5fc3"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/execution/ScenarioExecutorTest.java": {
+    "mtime": 1779226318.936322,
+    "ast_hash": "6f13dba34c9bf1a08582db63a034be0c",
+    "semantic_hash": "6f13dba34c9bf1a08582db63a034be0c"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/test/java/com/fixflow/engine/execution/CallScenarioIntegrationTest.java": {
+    "mtime": 1779226318.936322,
+    "ast_hash": "a4ae12b8b7563596b481ba841c21487e",
+    "semantic_hash": "a4ae12b8b7563596b481ba841c21487e"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/handlers/CallScenarioHandler.java": {
+    "mtime": 1779226318.936322,
+    "ast_hash": "6b63180686f39366f30d2ae1ff341989",
+    "semantic_hash": "6b63180686f39366f30d2ae1ff341989"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/execution/ScenarioExecutorPort.java": {
+    "mtime": 1779226318.936322,
+    "ast_hash": "26c0f86333e88ebd5eaecb2ee3a497a4",
+    "semantic_hash": "26c0f86333e88ebd5eaecb2ee3a497a4"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/fix-flow-engine/src/main/java/com/fixflow/engine/execution/ScenarioExecutor.java": {
+    "mtime": 1779226318.936322,
+    "ast_hash": "41898a4f771e9a244c106aa27090db5c",
+    "semantic_hash": "41898a4f771e9a244c106aa27090db5c"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/test/uat-gui.js": {
+    "mtime": 1779123433.6656506,
+    "ast_hash": "5d036f334c4921297bb75c7e8c866fad",
+    "semantic_hash": "5d036f334c4921297bb75c7e8c866fad"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/test/test-decision.js": {
+    "mtime": 1779128689.8248718,
+    "ast_hash": "30a271b4e872fdedb1388fd52a764595",
+    "semantic_hash": "30a271b4e872fdedb1388fd52a764595"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/test/uat-all-blocks.js": {
+    "mtime": 1779137142.1540775,
+    "ast_hash": "fcae71e411d6d5f74934ebd460f3913e",
+    "semantic_hash": "fcae71e411d6d5f74934ebd460f3913e"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/test/uat-full-gui.js": {
+    "mtime": 1779226789.1143365,
+    "ast_hash": "6f07a3a50a2d052e828212463811bb2c",
+    "semantic_hash": "6f07a3a50a2d052e828212463811bb2c"
+  },
+  "/home/giorgio/Documenti/fix-flow-simulator/test/test-call-scenario.js": {
+    "mtime": 1779226238.0778527,
+    "ast_hash": "727cc629f3649c97c067c81f83ebe2ce",
+    "semantic_hash": "727cc629f3649c97c067c81f83ebe2ce"
+  }
+}
