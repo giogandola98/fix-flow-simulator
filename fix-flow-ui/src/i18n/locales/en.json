@@ -65,6 +65,7 @@
       "messages": "Messages",
       "flowControl": "Flow Control",
       "integration": "Integration",
+      "composition": "Composition",
       "terminals": "Terminals"
     },
     "nodes": {
@@ -79,6 +80,7 @@
       "WAIT": "Wait",
       "DELAY": "Delay",
       "HTTP_REQUEST": "HTTP Request",
+      "CALL_SCENARIO": "Call Scenario",
       "END_PASS": "End Pass",
       "END_FAIL": "End Fail",
       "TIMEOUT": "Timeout",
@@ -88,7 +90,8 @@
       "RETRY": "Re-execute a subgraph up to N times; stops on first success.",
       "LOOP": "Execute a subgraph exactly N times; all iterations must succeed.",
       "WAIT": "Block until timeout; configurable on-timeout action (proceed / fail / jump).",
-      "DELAY": "Fixed sleep (ms). Always continues on success — no branching."
+      "DELAY": "Fixed sleep (ms). Always continues on success — no branching.",
+      "CALL_SCENARIO": "Execute another scenario as a reusable synchronous sub-flow."
     }
   },
   "bottomPanel": {
@@ -216,6 +219,15 @@
       "title": "Variable Reference",
       "copyHint": "Click to copy a placeholder, then paste into a Value field.",
       "copied": "✓ copied"
+    },
+    "callScenario": {
+      "targetScenario": "Target Scenario",
+      "inputVars": "Input Variables",
+      "outputVars": "Output Variables",
+      "addVar": "+ Var",
+      "from": "From",
+      "to": "To",
+      "noScenarios": "-- select scenario --"
     }
   },
   "executionReport": {

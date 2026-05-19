@@ -65,6 +65,7 @@
       "messages": "Messaggi",
       "flowControl": "Controllo Flusso",
       "integration": "Integrazione",
+      "composition": "Composizione",
       "terminals": "Terminali"
     },
     "nodes": {
@@ -79,6 +80,7 @@
       "WAIT": "Attendi",
       "DELAY": "Ritardo",
       "HTTP_REQUEST": "Richiesta HTTP",
+      "CALL_SCENARIO": "Chiama Scenario",
       "END_PASS": "Fine OK",
       "END_FAIL": "Fine Errore",
       "TIMEOUT": "Timeout",
@@ -88,7 +90,8 @@
       "RETRY": "Riesegue un sottografo fino a N volte; si ferma al primo successo.",
       "LOOP": "Esegue un sottografo esattamente N volte; tutte le iterazioni devono riuscire.",
       "WAIT": "Blocca fino al timeout; azione configurabile (continua / fallisce / salta).",
-      "DELAY": "Pausa fissa (ms). Continua sempre al successo — nessuna diramazione."
+      "DELAY": "Pausa fissa (ms). Continua sempre al successo — nessuna diramazione.",
+      "CALL_SCENARIO": "Esegue un altro scenario come sotto-flusso sincrono riutilizzabile."
     }
   },
   "bottomPanel": {
@@ -216,6 +219,15 @@
       "title": "Riferimento Variabili",
       "copyHint": "Clicca per copiare un segnaposto, poi incollalo in un campo Valore.",
       "copied": "✓ copiato"
+    },
+    "callScenario": {
+      "targetScenario": "Scenario Target",
+      "inputVars": "Variabili di Input",
+      "outputVars": "Variabili di Output",
+      "addVar": "+ Var",
+      "from": "Da",
+      "to": "A",
+      "noScenarios": "-- seleziona scenario --"
     }
   },
   "executionReport": {

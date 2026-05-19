@@ -65,6 +65,7 @@
       "messages": "Messages",
       "flowControl": "Contrôle de Flux",
       "integration": "Intégration",
+      "composition": "Composition",
       "terminals": "Terminaux"
     },
     "nodes": {
@@ -79,6 +80,7 @@
       "WAIT": "Attendre",
       "DELAY": "Délai",
       "HTTP_REQUEST": "Requête HTTP",
+      "CALL_SCENARIO": "Appel Scénario",
       "END_PASS": "Fin OK",
       "END_FAIL": "Fin Erreur",
       "TIMEOUT": "Timeout",
@@ -88,7 +90,8 @@
       "RETRY": "Réexécute un sous-graphe jusqu'à N fois ; s'arrête au premier succès.",
       "LOOP": "Exécute un sous-graphe exactement N fois ; toutes les itérations doivent réussir.",
       "WAIT": "Bloque jusqu'au timeout ; action configurable (continuer / échouer / sauter).",
-      "DELAY": "Pause fixe (ms). Continue toujours au succès — pas de branchement."
+      "DELAY": "Pause fixe (ms). Continue toujours au succès — pas de branchement.",
+      "CALL_SCENARIO": "Exécute un autre scénario comme sous-flux synchrone réutilisable."
     }
   },
   "bottomPanel": {
@@ -216,6 +219,15 @@
       "title": "Référence Variables",
       "copyHint": "Cliquez pour copier un espace réservé, puis collez-le dans un champ Valeur.",
       "copied": "✓ copié"
+    },
+    "callScenario": {
+      "targetScenario": "Scénario cible",
+      "inputVars": "Variables d'entrée",
+      "outputVars": "Variables de sortie",
+      "addVar": "+ Var",
+      "from": "De",
+      "to": "Vers",
+      "noScenarios": "-- sélectionner scénario --"
     }
   },
   "executionReport": {

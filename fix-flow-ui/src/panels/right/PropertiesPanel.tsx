@@ -11,6 +11,7 @@ import { DecisionConfig } from './NodeConfig/DecisionConfig';
 import { WaitConfig } from './NodeConfig/WaitConfig';
 import { HttpRequestConfig } from './NodeConfig/HttpRequestConfig';
 import { RouteFIXConfig } from './NodeConfig/RouteFIXConfig';
+import { CallScenarioConfig } from './NodeConfig/CallScenarioConfig';
 
 const NAME_ONLY_TYPES = ['START', 'END_PASS', 'END_FAIL'];
 
@@ -82,6 +83,7 @@ export function PropertiesPanel() {
       {(node?.type === 'DECISION' || node?.type === 'BRANCH') && <DecisionConfig node={node} />}
       {node?.type === 'HTTP_REQUEST' && <HttpRequestConfig node={node} />}
       {node?.type === 'ROUTE_FIX' && <RouteFIXConfig node={node} />}
+      {node?.type === 'CALL_SCENARIO' && <CallScenarioConfig node={node} />}
       {node && NAME_ONLY_TYPES.includes(node.type) && <NameOnlyConfig node={node} />}
     </div>
   );

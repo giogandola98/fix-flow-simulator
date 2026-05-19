@@ -10,6 +10,7 @@ import { RetryNode } from './RetryNode';
 import { WaitNode } from './WaitNode';
 import { HttpRequestNode } from './HttpRequestNode';
 import { RouteFIXNode } from './RouteFIXNode';
+import { CallScenarioNode } from './CallScenarioNode';
 
 export const nodeTypes: NodeTypes = {
   START: StartNode,
@@ -27,4 +28,5 @@ export const nodeTypes: NodeTypes = {
   TIMEOUT: WaitNode,
   HTTP_REQUEST: HttpRequestNode,
   ROUTE_FIX: RouteFIXNode,
+  CALL_SCENARIO: CallScenarioNode,
 };
