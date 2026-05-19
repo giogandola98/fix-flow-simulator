@@ -1,20 +1,34 @@
 import { useTranslation } from 'react-i18next';
-import { ScenarioNode } from '../../../types';
+import { ScenarioEdge, ScenarioNode } from '../../../types';
 import { useScenarioStore } from '../../../store/scenarioStore';
 
 interface LoopCfg { targetNodeId?: string; iterations?: number; }
 interface Props { node: ScenarioNode; }
 
+function syncTargetEdge(nodeId: string, targetNodeId: string | undefined, edges: ScenarioEdge[], setEdges: (e: ScenarioEdge[]) => void) {
+  const without = edges.filter((e) => !(e.from === nodeId && e.label === 'target'));
+  if (targetNodeId) {
+    setEdges([...without, { from: nodeId, to: targetNodeId, label: 'target' }]);
+  } else {
+    setEdges(without);
+  }
+}
+
 export function LoopConfig({ node }: Props) {
   const { t } = useTranslation();
   const updateNode = useScenarioStore((s) => s.updateNode);
   const nodes = useScenarioStore((s) => s.nodes);
+  const edges = useScenarioStore((s) => s.edges);
+  const setEdges = useScenarioStore((s) => s.setEdges);
   const cfg = (node.config as LoopCfg) ?? {};
 
   const candidates = nodes.filter((n) => n.id !== node.id);
 
-  const patchConfig = (patch: Partial<LoopCfg>) =>
-    updateNode(node.id, { config: { ...cfg, ...patch } });
+  const patchConfig = (patch: Partial<LoopCfg>) => {
+    const next = { ...cfg, ...patch };
+    updateNode(node.id, { config: next });
+    syncTargetEdge(node.id, next.targetNodeId, edges, setEdges);
+  };
 
   return (
     <div className="text-xs space-y-2">

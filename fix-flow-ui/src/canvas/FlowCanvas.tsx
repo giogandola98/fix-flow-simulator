@@ -31,6 +31,7 @@ function InnerCanvas() {
   const addNode = useScenarioStore((s) => s.addNode);
   const addEdge = useScenarioStore((s) => s.addEdge);
   const removeNode = useScenarioStore((s) => s.removeNode);
+  const updateNode = useScenarioStore((s) => s.updateNode);
   const setSelectedNode = useScenarioStore((s) => s.setSelectedNode);
   const markDirty = useScenarioStore((s) => s.markDirty);
   const activeScenarioId = useScenarioStore((s) => s.activeScenario?.id);
@@ -172,6 +173,18 @@ function InnerCanvas() {
       const removals = changes.filter((c) => c.type === 'remove') as { id: string }[];
       if (removals.length > 0) {
         const removedIds = new Set(removals.map((c) => c.id));
+        // Clear targetNodeId in ROUTE_FIX config when the rule's edge is deleted
+        for (const re of rfEdges.filter((e) => removedIds.has(e.id))) {
+          const srcNode = nodes.find((n) => n.id === re.source);
+          if (srcNode?.type === 'ROUTE_FIX' && re.sourceHandle) {
+            const cfg = srcNode.config as { rules?: Array<{ ruleId: string; targetNodeId?: string }> };
+            if (cfg.rules) {
+              updateNode(srcNode.id, {
+                config: { ...cfg, rules: cfg.rules.map((r) => r.ruleId === re.sourceHandle ? { ...r, targetNodeId: '' } : r) },
+              });
+            }
+          }
+        }
         setEdges(
           rfEdges
             .filter((e) => !removedIds.has(e.id))
@@ -184,7 +197,7 @@ function InnerCanvas() {
         );
       }
     },
-    [rfEdges, setEdges],
+    [rfEdges, setEdges, nodes, updateNode],
   );
 
   const onConnect = useCallback(
@@ -195,9 +208,18 @@ function InnerCanvas() {
           const sourceRfNode = rfNodes.find((n) => n.id === conn.source);
           if (sourceRfNode?.type === 'DECISION') {
             label = conn.sourceHandle === 'failure' ? 'failure' : 'success';
+          } else if (sourceRfNode?.type === 'ROUTE_FIX') {
+            const cfg = sourceRfNode.data?.config as { rules?: Array<{ ruleId: string; label: string; targetNodeId?: string }> } | undefined;
+            const rule = cfg?.rules?.find((r) => r.ruleId === conn.sourceHandle);
+            if (rule?.label) label = rule.label;
+            // Write back targetNodeId to config so the properties panel reflects the drawn edge
+            if (cfg?.rules) {
+              updateNode(conn.source, {
+                config: { ...cfg, rules: cfg.rules.map((r) => r.ruleId === conn.sourceHandle ? { ...r, targetNodeId: conn.target } : r) },
+              });
+            }
           } else {
-            const cfg = sourceRfNode?.data?.config as
-              { rules?: Array<{ ruleId: string; label: string }> } | undefined;
+            const cfg = sourceRfNode?.data?.config as { rules?: Array<{ ruleId: string; label: string }> } | undefined;
             const rule = cfg?.rules?.find((r) => r.ruleId === conn.sourceHandle);
             if (rule?.label) label = rule.label;
           }
@@ -206,7 +228,7 @@ function InnerCanvas() {
         addEdge(conn.sourceHandle ? { ...edge, sourceHandle: conn.sourceHandle } : edge);
       }
     },
-    [addEdge, rfNodes],
+    [addEdge, rfNodes, updateNode],
   );
 
   const onDragOver = useCallback((evt: React.DragEvent) => {
