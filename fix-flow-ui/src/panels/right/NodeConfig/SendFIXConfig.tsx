@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ScenarioNode } from '../../../types';
 import { useScenarioStore } from '../../../store/scenarioStore';
 import { TimeoutConfig } from './TimeoutConfig';
-import { parseFIXMessage } from '../../../lib/parseFIXMessage';
+import { parseFIXMessage, ENGINE_TAGS } from '../../../lib/parseFIXMessage';
 import { VarRefPanel } from './VarRefPanel';
 
 interface FieldRow { tag: number; value: string; }
@@ -115,21 +115,32 @@ export function SendFIXConfig({ node }: Props) {
             <tr><th className="text-left">{t('nodeConfig.tag')}</th><th className="text-left">{t('nodeConfig.value')}</th><th /></tr>
           </thead>
           <tbody>
-            {fields.map((f, i) => (
-              <tr key={i}>
-                <td className="pr-1">
-                  <input type="number" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-1 py-0.5"
-                    value={f.tag} onChange={(e) => updateField(i, { tag: Number(e.target.value) })} />
-                </td>
-                <td className="pr-1">
-                  <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-1 py-0.5"
-                    value={f.value} onChange={(e) => updateField(i, { value: e.target.value })} />
-                </td>
-                <td>
-                  <button className="text-red-400 hover:text-red-300 text-xs" onClick={() => removeField(i)}>x</button>
-                </td>
-              </tr>
-            ))}
+            {fields.map((f, i) => {
+              const isRestricted = ENGINE_TAGS.has(f.tag);
+              return (
+                <tr key={i}>
+                  <td className="pr-1">
+                    <input
+                      type="number"
+                      className={`w-full bg-[#0f1117] border rounded px-1 py-0.5 ${isRestricted ? 'border-yellow-500' : 'border-[#2a2d3a]'}`}
+                      value={f.tag}
+                      onChange={(e) => updateField(i, { tag: Number(e.target.value) })}
+                      title={isRestricted ? `Tag ${f.tag} is session-managed by QuickFIX/J and will be ignored` : undefined}
+                    />
+                    {isRestricted && (
+                      <div className="text-yellow-400 text-[9px] leading-tight mt-0.5">engine-managed</div>
+                    )}
+                  </td>
+                  <td className="pr-1">
+                    <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-1 py-0.5"
+                      value={f.value} onChange={(e) => updateField(i, { value: e.target.value })} />
+                  </td>
+                  <td className="pl-1">
+                    <button className="text-red-400 hover:text-red-300 text-xs" onClick={() => removeField(i)}>x</button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
