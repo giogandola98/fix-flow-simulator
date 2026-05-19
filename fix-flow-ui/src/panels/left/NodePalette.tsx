@@ -35,6 +35,12 @@ const GROUPS: Array<{ titleKey: string; items: PaletteItem[] }> = [
     ],
   },
   {
+    titleKey: 'palette.groups.composition',
+    items: [
+      { type: 'CALL_SCENARIO', descKey: 'palette.descriptions.CALL_SCENARIO' },
+    ],
+  },
+  {
     titleKey: 'palette.groups.terminals',
     items: [
       { type: 'START' },
