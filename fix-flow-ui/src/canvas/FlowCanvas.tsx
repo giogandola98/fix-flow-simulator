@@ -173,7 +173,6 @@ function InnerCanvas() {
       const removals = changes.filter((c) => c.type === 'remove') as { id: string }[];
       if (removals.length > 0) {
         const removedIds = new Set(removals.map((c) => c.id));
-        // Clear targetNodeId in ROUTE_FIX config when the rule's edge is deleted
         for (const re of rfEdges.filter((e) => removedIds.has(e.id))) {
           const srcNode = nodes.find((n) => n.id === re.source);
           if (srcNode?.type === 'ROUTE_FIX' && re.sourceHandle) {
@@ -212,7 +211,6 @@ function InnerCanvas() {
             const cfg = sourceRfNode.data?.config as { rules?: Array<{ ruleId: string; label: string; targetNodeId?: string }> } | undefined;
             const rule = cfg?.rules?.find((r) => r.ruleId === conn.sourceHandle);
             if (rule?.label) label = rule.label;
-            // Write back targetNodeId to config so the properties panel reflects the drawn edge
             if (cfg?.rules) {
               updateNode(conn.source, {
                 config: { ...cfg, rules: cfg.rules.map((r) => r.ruleId === conn.sourceHandle ? { ...r, targetNodeId: conn.target } : r) },

@@ -1,18 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { ScenarioEdge, ScenarioNode } from '../../../types';
+import { ScenarioNode } from '../../../types';
 import { useScenarioStore } from '../../../store/scenarioStore';
+import { syncTargetEdge } from './edgeSync';
 
 interface RetryCfg { targetNodeId?: string; }
 interface Props { node: ScenarioNode; }
-
-function syncTargetEdge(nodeId: string, targetNodeId: string | undefined, edges: ScenarioEdge[], setEdges: (e: ScenarioEdge[]) => void) {
-  const without = edges.filter((e) => !(e.from === nodeId && e.label === 'target'));
-  if (targetNodeId) {
-    setEdges([...without, { from: nodeId, to: targetNodeId, label: 'target' }]);
-  } else {
-    setEdges(without);
-  }
-}
 
 export function RetryConfig({ node }: Props) {
   const { t } = useTranslation();
