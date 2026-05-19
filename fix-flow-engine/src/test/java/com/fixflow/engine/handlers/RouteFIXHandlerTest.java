@@ -3,6 +3,8 @@ package com.fixflow.engine.handlers;
 import com.fixflow.core.domain.scenario.*;
 import com.fixflow.engine.correlation.CorrelationEngine;
 import com.fixflow.engine.execution.ExecutionContext;
+import com.fixflow.engine.fix.MessageBuffer;
+import com.fixflow.engine.fix.MessageRouter;
 import com.fixflow.engine.variable.VariableResolver;
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +26,7 @@ class RouteFIXHandlerTest {
     @Test
     void staticMatcherRoutesToCorrectTarget() throws Exception {
         CorrelationEngine correlation = new CorrelationEngine();
-        RouteFIXHandler handler = new RouteFIXHandler(correlation, new VariableResolver());
+        RouteFIXHandler handler = new RouteFIXHandler(correlation, new VariableResolver(), new MessageRouter(correlation, new MessageBuffer()));
         ExecutionContext ctx = freshCtx();
 
         Map<String, Object> rule = Map.of(
@@ -50,7 +52,7 @@ class RouteFIXHandlerTest {
     @Test
     void placeholderMatcherValueResolvedBeforeMatching() throws Exception {
         CorrelationEngine correlation = new CorrelationEngine();
-        RouteFIXHandler handler = new RouteFIXHandler(correlation, new VariableResolver());
+        RouteFIXHandler handler = new RouteFIXHandler(correlation, new VariableResolver(), new MessageRouter(correlation, new MessageBuffer()));
         ExecutionContext ctx = freshCtx();
         ctx.storeNodeMessage("send-rfq", Map.of(131, "RFQ-001"));
 
@@ -76,7 +78,7 @@ class RouteFIXHandlerTest {
     @Test
     void defaultRuleUsedWhenNoMatchersFire() throws Exception {
         CorrelationEngine correlation = new CorrelationEngine();
-        RouteFIXHandler handler = new RouteFIXHandler(correlation, new VariableResolver());
+        RouteFIXHandler handler = new RouteFIXHandler(correlation, new VariableResolver(), new MessageRouter(correlation, new MessageBuffer()));
         ExecutionContext ctx = freshCtx();
 
         Map<String, Object> specificRule = Map.of(
@@ -106,7 +108,7 @@ class RouteFIXHandlerTest {
     @Test
     void timeoutYieldsFailure() throws Exception {
         CorrelationEngine correlation = new CorrelationEngine();
-        RouteFIXHandler handler = new RouteFIXHandler(correlation, new VariableResolver());
+        RouteFIXHandler handler = new RouteFIXHandler(correlation, new VariableResolver(), new MessageRouter(correlation, new MessageBuffer()));
         ExecutionContext ctx = freshCtx();
 
         Map<String, Object> rule = Map.of(
