@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ScenarioNode } from '../../../types';
+import { ScenarioEdge, ScenarioNode } from '../../../types';
 import { useScenarioStore } from '../../../store/scenarioStore';
 import { TimeoutConfig } from './TimeoutConfig';
 import { VarRefPanel } from './VarRefPanel';
@@ -9,23 +9,38 @@ interface RoutingRule { ruleId: string; label: string; matchers: MatcherRow[]; t
 interface RouteCfg { rules?: RoutingRule[]; }
 interface Props { node: ScenarioNode; }
 
+function syncRuleEdge(nodeId: string, rule: RoutingRule, edges: ScenarioEdge[], setEdges: (e: ScenarioEdge[]) => void) {
+  const without = edges.filter((e) => !(e.from === nodeId && e.sourceHandle === rule.ruleId));
+  if (rule.targetNodeId) {
+    setEdges([...without, { from: nodeId, to: rule.targetNodeId, label: rule.label || rule.ruleId, sourceHandle: rule.ruleId }]);
+  } else {
+    setEdges(without);
+  }
+}
+
 export function RouteFIXConfig({ node }: Props) {
   const { t } = useTranslation();
   const updateNode = useScenarioStore((s) => s.updateNode);
   const allNodes = useScenarioStore((s) => s.nodes);
+  const edges = useScenarioStore((s) => s.edges);
+  const setEdges = useScenarioStore((s) => s.setEdges);
   const cfg = (node.config as RouteCfg) ?? {};
   const rules: RoutingRule[] = cfg.rules ?? [];
 
-  const patchRules = (next: RoutingRule[]) =>
-    updateNode(node.id, { config: { ...cfg, rules: next } });
-
   const addRule = () =>
-    patchRules([...rules, { ruleId: crypto.randomUUID(), label: '', matchers: [], targetNodeId: '' }]);
+    updateNode(node.id, { config: { ...cfg, rules: [...rules, { ruleId: crypto.randomUUID(), label: '', matchers: [], targetNodeId: '' }] } });
 
-  const removeRule = (i: number) => patchRules(rules.filter((_, idx) => idx !== i));
+  const removeRule = (i: number) => {
+    const r = rules[i];
+    setEdges(edges.filter((e) => !(e.from === node.id && e.sourceHandle === r.ruleId)));
+    updateNode(node.id, { config: { ...cfg, rules: rules.filter((_, idx) => idx !== i) } });
+  };
 
-  const updateRule = (i: number, patch: Partial<RoutingRule>) =>
-    patchRules(rules.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  const updateRule = (i: number, patch: Partial<RoutingRule>) => {
+    const next = rules.map((r, idx) => (idx === i ? { ...r, ...patch } : r));
+    updateNode(node.id, { config: { ...cfg, rules: next } });
+    syncRuleEdge(node.id, next[i], edges, setEdges);
+  };
 
   const addMatcher = (i: number) =>
     updateRule(i, { matchers: [...rules[i].matchers, { tag: 0, value: '' }] });
