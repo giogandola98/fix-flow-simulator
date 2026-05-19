@@ -40,7 +40,9 @@ export function FIXMessageLog() {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'fix-messages.txt';
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 

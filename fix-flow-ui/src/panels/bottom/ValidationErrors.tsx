@@ -10,7 +10,7 @@ export function ValidationErrors() {
   const errors: ValidationError[] = useMemo(() => {
     const collected: ValidationError[] = [];
     for (const e of events) {
-      if (e.type !== 'VALIDATION_FAILED' || !e.detail) continue;
+      if (e.type !== 'ERROR' || !e.detail) continue;
       try {
         const parsed = JSON.parse(e.detail) as ValidationError | ValidationError[];
         if (Array.isArray(parsed)) collected.push(...parsed);

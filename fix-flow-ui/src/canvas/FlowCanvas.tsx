@@ -26,7 +26,7 @@ const edgeTypes = { default: FlowEdge };
 function InnerCanvas() {
   const nodes = useScenarioStore((s) => s.nodes);
   const edges = useScenarioStore((s) => s.edges);
-  const setNodes = useScenarioStore((s) => s.setNodes);
+
   const setEdges = useScenarioStore((s) => s.setEdges);
   const addNode = useScenarioStore((s) => s.addNode);
   const addEdge = useScenarioStore((s) => s.addEdge);
@@ -161,10 +161,10 @@ function InnerCanvas() {
   // RF v12 sends position:undefined at drag-end in onNodesChange — use onNodeDragStop instead.
   const onNodeDragStop = useCallback(
     (_: React.MouseEvent, node: Node) => {
-      setNodes(nodes.map((n) => n.id === node.id ? { ...n, position: node.position } : n));
+      updateNode(node.id, { position: node.position });
       markDirty();
     },
-    [nodes, setNodes, markDirty],
+    [updateNode, markDirty],
   );
 
   const onEdgesChange = useCallback(

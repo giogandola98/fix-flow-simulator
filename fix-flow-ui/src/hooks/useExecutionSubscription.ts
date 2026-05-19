@@ -27,7 +27,8 @@ export function useExecutionSubscription(executionId: string | null): void {
       if (event.type === 'NODE_EXITED' && event.nodeId) setNodeStatus(event.nodeId, 'passed');
       if (event.type === 'ERROR' && event.nodeId) setNodeStatus(event.nodeId, 'failed');
       if (event.type === 'EXECUTION_FINISHED') {
-        updateStatus('PASSED');
+        const status = (['PASSED', 'FAILED', 'STOPPED'] as const).find((s) => event.detail?.endsWith(s)) ?? 'FAILED';
+        updateStatus(status);
         setEndedAt(event.timestamp);
       }
     };
