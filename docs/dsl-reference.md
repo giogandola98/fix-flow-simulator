@@ -24,6 +24,7 @@ edges: []
 | `VALIDATE` | Apply validation rules to a received message. |
 | `DECISION` | Evaluate a condition expression; branch on true/false. |
 | `ROUTE_FIX` | Wait for inbound FIX; route to first matching rule. |
+| `CALL_SCENARIO` | Synchronously execute another scenario as a reusable sub-flow. |
 | `BRANCH` | Alias for `DECISION`. |
 | `RETRY` / `LOOP` | Retry a sub-graph N times with delay. |
 | `WAIT` / `DELAY` / `TIMEOUT` | Pause for a duration. |
@@ -146,6 +147,30 @@ config:
 ```
 
 Rules evaluated top-to-bottom; first match wins. Matcher values support `{{node:id:tagN}}` placeholders resolved at execution time. After routing, matched rule label appears in the `NODE_EXITED` event detail.
+
+## CALL_SCENARIO config
+
+Executes another scenario synchronously as a sub-flow. The child inherits the parent's FIX session. Output variables are copied back to the parent after the child completes.
+
+```yaml
+- id: call-rfq
+  name: Call RFQ Sub-Flow
+  type: CALL_SCENARIO
+  config:
+    targetScenarioId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"   # UUID of the target scenario
+    inputVars:                                                   # copy parent vars → child
+      - from: "var:orderId"      # parent expression (supports {{...}} syntax)
+        to: "childOrderId"       # variable name in child context
+    outputVars:                                                  # copy child vars → parent
+      - from: "rfqResult"        # variable name in child context
+        to: "parentRfqResult"    # variable name in parent context
+  onSuccess: next-node
+  onFailure: error-node
+```
+
+**Depth limit:** Maximum call depth is 5. Reaching the limit returns failure.
+
+**STOPPED propagation:** If the child is stopped (e.g. the execution is cancelled), the parent execution is also stopped immediately.
 
 ## Variable syntax
 

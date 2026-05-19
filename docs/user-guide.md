@@ -1,6 +1,6 @@
 # FIX Flow Simulator — User Guide
 
-**Version:** 0.2.0-beta
+**Version:** 0.2.8-beta
 
 ---
 
@@ -313,6 +313,30 @@ Blocks execution for a configurable duration, then takes one of these actions:
 #### Delay
 
 Pauses execution for a fixed number of milliseconds, then always continues on the success path. Unlike Wait, it has no timeout actions or branching.
+
+---
+
+### Composition group
+
+#### Call Scenario
+
+**Purpose:** Executes another scenario synchronously as a reusable sub-flow. The child scenario runs to completion before the parent continues. The parent's FIX session is inherited.
+
+**Canvas appearance:** Violet border (`#8b5cf6`). Shows the target scenario name in the body.
+
+**Config fields:**
+
+| Field | Description |
+|---|---|
+| **Target Scenario** | The scenario to execute as a sub-flow. Select from the dropdown. |
+| **Input Variables** | Copy variables from the parent into the child. Each row: *From* (parent expression, e.g. `var:orderId`) → *To* (variable name in child). |
+| **Output Variables** | Copy variables from the child back into the parent. Each row: *From* (variable name in child) → *To* (variable name in parent). |
+
+**Depth limit:** Calls cannot be nested more than 5 levels deep. Exceeding the limit causes the node to fail.
+
+**Stopped propagation:** If the child is stopped (e.g. execution cancelled), the parent is also stopped immediately.
+
+**Typical use case:** Extract a reusable sub-flow (e.g. a RFQ handshake) into a separate scenario and call it from multiple parent scenarios.
 
 ---
 
@@ -689,4 +713,4 @@ After multiple test runs, sequence numbers may desync.
 
 ---
 
-*This guide covers FIX Flow Simulator v0.2.0-beta. For developer/API documentation, see [developer-guide.md](developer-guide.md).*
+*This guide covers FIX Flow Simulator v0.2.8-beta. For developer/API documentation, see [developer-guide.md](developer-guide.md).*
