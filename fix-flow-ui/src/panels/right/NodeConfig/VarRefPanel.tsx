@@ -11,6 +11,7 @@ const VARS: VarEntry[] = [
   { syntax: '{{now}}',                     description: 'Current UTC ISO timestamp',              example: '{{now}}' },
   { syntax: '{{now:offset:+1h}}',          description: 'Current UTC time with offset (s/m/h/d)',example: '{{now:offset:+1h}}' },
   { syntax: '{{nowdate}}',                 description: 'Current UTC date as YYYYMMDD',           example: '{{nowdate}}' },
+  { syntax: '{{nowdate:offset:+1h}}',     description: 'UTC date-time with offset → YYYYMMDD-HH:MM:SS (s/m/h/d)', example: '{{nowdate:offset:+1h}}' },
   { syntax: '{{uuid}}',                    description: 'Random UUID v4',                          example: '{{uuid}}' },
   { syntax: '{{seq:name}}',               description: 'Monotonic counter keyed by name',         example: '{{seq:orderId}}' },
   { syntax: '{{env:VAR}}',                description: 'Environment variable value',              example: '{{env:SENDER_ID}}' },

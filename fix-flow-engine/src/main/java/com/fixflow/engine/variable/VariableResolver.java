@@ -28,6 +28,7 @@ public class VariableResolver {
         this.plugins = List.of(
             new NowPlugin(),
             new NowOffsetPlugin(),
+            new NowDateOffsetPlugin(),
             new NowDatePlugin(),
             new UuidPlugin(),
             new SeqPlugin(sequences),
@@ -81,6 +82,28 @@ public class VariableResolver {
             };
             Instant now = Instant.now();
             return (m.group(1).equals("+") ? now.plus(amount, cu) : now.minus(amount, cu)).toString();
+        }
+    }
+
+    static final class NowDateOffsetPlugin implements VariableResolverPlugin {
+        private static final Pattern P = Pattern.compile("^nowdate:offset:([+\\-])(\\d+)([smhd])$");
+        private static final DateTimeFormatter FMT =
+            DateTimeFormatter.ofPattern("yyyyMMdd-HH:mm:ss").withZone(ZoneOffset.UTC);
+        public boolean supports(String e) { return P.matcher(e).matches(); }
+        public String resolve(String e, ExecutionContext c) {
+            Matcher m = P.matcher(e);
+            if (!m.matches()) throw new IllegalArgumentException("Bad nowdate:offset expression: " + e);
+            long amount = Long.parseLong(m.group(2));
+            ChronoUnit cu = switch (m.group(3)) {
+                case "s" -> ChronoUnit.SECONDS;
+                case "m" -> ChronoUnit.MINUTES;
+                case "h" -> ChronoUnit.HOURS;
+                case "d" -> ChronoUnit.DAYS;
+                default  -> throw new IllegalArgumentException("Bad unit: " + m.group(3));
+            };
+            Instant now = Instant.now();
+            Instant result = m.group(1).equals("+") ? now.plus(amount, cu) : now.minus(amount, cu);
+            return FMT.format(result);
         }
     }
 
