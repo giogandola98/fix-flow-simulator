@@ -21,7 +21,7 @@ class RetryHandlerTest {
         List<ScenarioNode> nodes = new java.util.ArrayList<>();
         nodes.add(start);
         for (ScenarioNode n : extra) nodes.add(n);
-        return new Scenario(UUID.randomUUID(), "test", null, "1", null, null, null, null, nodes, null, null);
+        return new Scenario(UUID.randomUUID(), "test", null, "1", null, null, null, null, nodes, null, null, null);
     }
 
     @Test

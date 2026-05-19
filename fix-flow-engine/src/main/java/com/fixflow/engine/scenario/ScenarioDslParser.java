@@ -33,7 +33,7 @@ public class ScenarioDslParser {
     public Scenario parseYaml(String yaml) {
         try {
             ScenarioDto dto = mapper.readValue(yaml, ScenarioDto.class);
-            return dto.toDomain();
+            return dto.toDomain(yaml);
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to parse scenario YAML", e);
         }
@@ -62,7 +62,7 @@ public class ScenarioDslParser {
             @JsonProperty("edges") List<EdgeDto> edges,
             @JsonProperty("variables") Map<String, VariableDefDto> variables
     ) {
-        Scenario toDomain() {
+        Scenario toDomain(String rawYaml) {
             return new Scenario(
                     id != null ? id : java.util.UUID.randomUUID(),
                     name,
@@ -80,7 +80,8 @@ public class ScenarioDslParser {
                             : edges.stream().map(EdgeDto::toDomain).toList(),
                     variables == null ? Map.of()
                             : variables.entrySet().stream().collect(Collectors.toMap(
-                                    Map.Entry::getKey, e -> e.getValue().toDomain()))
+                                    Map.Entry::getKey, e -> e.getValue().toDomain())),
+                    rawYaml
             );
         }
 

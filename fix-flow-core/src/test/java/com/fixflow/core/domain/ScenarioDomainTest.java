@@ -23,7 +23,7 @@ class ScenarioDomainTest {
             RuntimePolicy.PARALLEL, List.of(), List.of(),
             List.of(start, end),
             List.of(new ScenarioEdge("n1", "n2", "ok")),
-            Map.of());
+            Map.of(), null);
 
         assertThat(scenario.findNode("n1")).contains(start);
         assertThat(scenario.findNode("n2")).contains(end);

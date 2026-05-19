@@ -32,6 +32,7 @@ function InnerCanvas() {
   const addEdge = useScenarioStore((s) => s.addEdge);
   const removeNode = useScenarioStore((s) => s.removeNode);
   const setSelectedNode = useScenarioStore((s) => s.setSelectedNode);
+  const markDirty = useScenarioStore((s) => s.markDirty);
   const activeScenarioId = useScenarioStore((s) => s.activeScenario?.id);
   const nodeStatuses = useExecutionStore((s) => s.nodeStatuses);
   const { screenToFlowPosition, fitView } = useReactFlow();
@@ -152,21 +153,17 @@ function InnerCanvas() {
       changes
         .filter((c) => c.type === 'remove')
         .forEach((c) => removeNode((c as { id: string }).id));
-      // Only write final drag positions back to the store.
-      type PosChange = { id: string; type: 'position'; position?: { x: number; y: number }; dragging?: boolean };
-      const finalPositions = changes.filter(
-        (c) => c.type === 'position' && !(c as PosChange).dragging,
-      ) as PosChange[];
-      if (finalPositions.length > 0) {
-        setNodes(
-          nodes.map((n) => {
-            const change = finalPositions.find((c) => c.id === n.id);
-            return change?.position ? { ...n, position: change.position } : n;
-          }),
-        );
-      }
     },
-    [nodes, setNodes, removeNode],
+    [removeNode],
+  );
+
+  // RF v12 sends position:undefined at drag-end in onNodesChange — use onNodeDragStop instead.
+  const onNodeDragStop = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      setNodes(nodes.map((n) => n.id === node.id ? { ...n, position: node.position } : n));
+      markDirty();
+    },
+    [nodes, setNodes, markDirty],
   );
 
   const onEdgesChange = useCallback(
@@ -240,6 +237,7 @@ function InnerCanvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeDragStop={onNodeDragStop}
         onNodeClick={(_, n) => setSelectedNode(n.id)}
         onPaneClick={() => setSelectedNode(null)}
         defaultViewport={{ x: 0, y: 0, zoom: 1 }}

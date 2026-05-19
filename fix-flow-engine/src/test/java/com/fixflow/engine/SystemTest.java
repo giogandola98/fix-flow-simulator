@@ -177,7 +177,7 @@ class SystemTest {
                     Map.of(), null, null, null, null, null)
             ),
             List.of(),
-            Map.of()
+            Map.of(), null
         );
     }
 }

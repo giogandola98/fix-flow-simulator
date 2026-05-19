@@ -26,7 +26,7 @@ class VariableResolverTest {
 
     private static Scenario minScenario() {
         return new Scenario(UUID.randomUUID(), "test", "", "1.0", "s",
-                RuntimePolicy.PARALLEL, List.of(), List.of(), List.of(), List.of(), Map.of());
+                RuntimePolicy.PARALLEL, List.of(), List.of(), List.of(), List.of(), Map.of(), null);
     }
 
     @BeforeEach

@@ -24,7 +24,7 @@ class ScenarioValidatorTest {
             List.of(
                 new ScenarioNode("n1", "start", NodeType.START, Map.of(), null, null, null, null, null)
             ),
-            List.of(), Map.of()
+            List.of(), Map.of(), null
         );
     }
 
@@ -42,7 +42,7 @@ class ScenarioValidatorTest {
             List.of(
                 new ScenarioNode("n1", "send", NodeType.SEND_FIX, Map.of(), null, null, null, null, null)
             ),
-            List.of(), Map.of()
+            List.of(), Map.of(), null
         );
         List<String> errors = validator.validate(s);
         assertThat(errors).anyMatch(e -> e.contains("START"));
@@ -57,7 +57,7 @@ class ScenarioValidatorTest {
                 new ScenarioNode("n1", "start", NodeType.START, Map.of(), null, null, "n2", null, null),
                 new ScenarioNode("n1", "send",  NodeType.SEND_FIX, Map.of(), null, null, null, null, null)
             ),
-            List.of(), Map.of()
+            List.of(), Map.of(), null
         );
         List<String> errors = validator.validate(s);
         assertThat(errors).anyMatch(e -> e.contains("Duplicate") && e.contains("n1"));
@@ -71,7 +71,7 @@ class ScenarioValidatorTest {
             List.of(
                 new ScenarioNode("n1", "start", NodeType.START, Map.of(), null, null, "GHOST", null, null)
             ),
-            List.of(), Map.of()
+            List.of(), Map.of(), null
         );
         List<String> errors = validator.validate(s);
         assertThat(errors).anyMatch(e -> e.contains("onSuccess") && e.contains("GHOST"));
@@ -85,7 +85,7 @@ class ScenarioValidatorTest {
             List.of(
                 new ScenarioNode("n1", "start", NodeType.START, Map.of(), null, null, null, "GHOST_F", null)
             ),
-            List.of(), Map.of()
+            List.of(), Map.of(), null
         );
         List<String> errors = validator.validate(s);
         assertThat(errors).anyMatch(e -> e.contains("onFailure") && e.contains("GHOST_F"));
@@ -99,7 +99,7 @@ class ScenarioValidatorTest {
             List.of(
                 new ScenarioNode("n1", "start", NodeType.START, Map.of(), null, null, null, null, "GHOST_T")
             ),
-            List.of(), Map.of()
+            List.of(), Map.of(), null
         );
         List<String> errors = validator.validate(s);
         assertThat(errors).anyMatch(e -> e.contains("onTimeout") && e.contains("GHOST_T"));
@@ -114,7 +114,7 @@ class ScenarioValidatorTest {
                 new ScenarioNode("n1", "start", NodeType.START, Map.of(), null, null, null, null, null)
             ),
             List.of(new ScenarioEdge("GHOST", "n1", "default")),
-            Map.of()
+            Map.of(), null
         );
         List<String> errors = validator.validate(s);
         assertThat(errors).anyMatch(e -> e.contains("Edge from") && e.contains("GHOST"));
@@ -129,7 +129,7 @@ class ScenarioValidatorTest {
                 new ScenarioNode("n1", "start", NodeType.START, Map.of(), null, null, null, null, null)
             ),
             List.of(new ScenarioEdge("n1", "GHOST_TO", "default")),
-            Map.of()
+            Map.of(), null
         );
         List<String> errors = validator.validate(s);
         assertThat(errors).anyMatch(e -> e.contains("Edge to") && e.contains("GHOST_TO"));
@@ -157,7 +157,7 @@ class ScenarioValidatorTest {
                 new ScenarioEdge("n3", "n4", "success"),
                 new ScenarioEdge("n3", "nf", "fail")
             ),
-            Map.of()
+            Map.of(), null
         );
         List<String> errors = validator.validate(s);
         assertThat(errors).isEmpty();
@@ -173,7 +173,7 @@ class ScenarioValidatorTest {
                 new ScenarioNode("n1", "send",  NodeType.SEND_FIX, Map.of(), null, null, "GONE", null, null),
                 new ScenarioNode("n1", "send2", NodeType.SEND_FIX, Map.of(), null, null, null, null, null)
             ),
-            List.of(), Map.of()
+            List.of(), Map.of(), null
         );
         List<String> errors = validator.validate(s);
         // Should contain: no START, duplicate n1, bad onSuccess GONE

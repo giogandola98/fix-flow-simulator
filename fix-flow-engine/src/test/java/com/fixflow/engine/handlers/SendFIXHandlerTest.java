@@ -31,7 +31,7 @@ class SendFIXHandlerTest {
 
         Scenario s = new Scenario(UUID.randomUUID(), "demo", "", "1.0", "sess",
                 RuntimePolicy.PARALLEL, List.of(), List.of(),
-                List.of(node), List.of(), Map.of());
+                List.of(node), List.of(), Map.of(), null);
         ExecutionContext ctx = new ExecutionContext(UUID.randomUUID(), s, sessionId);
 
         NodeHandlerResult result = handler.handle(node, ctx);
@@ -58,7 +58,7 @@ class SendFIXHandlerTest {
 
         Scenario s = new Scenario(UUID.randomUUID(), "demo", "", "1.0", "sess",
                 RuntimePolicy.PARALLEL, List.of(), List.of(),
-                List.of(node), List.of(), Map.of());
+                List.of(node), List.of(), Map.of(), null);
         ExecutionContext ctx = new ExecutionContext(UUID.randomUUID(), s, sessionId);
 
         NodeHandlerResult result = handler.handle(node, ctx);

@@ -213,7 +213,7 @@ class SessionFailureTest {
                 new ScenarioNode("n4", "done",   NodeType.END_PASS,   Map.of(), null, null, null, null, null),
                 new ScenarioNode("nf", "fail",   NodeType.END_FAIL,   Map.of(), null, null, null, null, null)
             ),
-            List.of(), Map.of()
+            List.of(), Map.of(), null
         );
     }
 }

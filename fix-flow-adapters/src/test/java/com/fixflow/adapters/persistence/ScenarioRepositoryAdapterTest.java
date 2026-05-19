@@ -43,7 +43,7 @@ class ScenarioRepositoryAdapterTest {
         Scenario s = new Scenario(id, "demo", "desc", "1.0", "sess",
                 RuntimePolicy.PARALLEL, List.of(), List.of(),
                 List.of(new ScenarioNode("n1", "Start", NodeType.START, Map.of(), null, null, null, null, null)),
-                List.of(), Map.of());
+                List.of(), Map.of(), null);
 
         adapter.save(s);
         Scenario loaded = adapter.findById(id).orElseThrow();

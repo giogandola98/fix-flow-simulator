@@ -16,7 +16,8 @@ public record Scenario(
         List<CorrelationRule> correlationRules,
         List<ScenarioNode> nodes,
         List<ScenarioEdge> edges,
-        Map<String, VariableDef> variables
+        Map<String, VariableDef> variables,
+        String rawYaml
 ) {
     public Scenario {
         if (id == null) throw new IllegalArgumentException("scenario id required");

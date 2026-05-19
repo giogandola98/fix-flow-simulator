@@ -21,7 +21,7 @@ class StrictModeValidationTest {
 
     private static ExecutionContext freshCtx() {
         Scenario s = new Scenario(UUID.randomUUID(), "strict-test", "", "1.0", "sess",
-                RuntimePolicy.PARALLEL, List.of(), List.of(), List.of(), List.of(), Map.of());
+                RuntimePolicy.PARALLEL, List.of(), List.of(), List.of(), List.of(), Map.of(), null);
         return new ExecutionContext(UUID.randomUUID(), s, UUID.randomUUID());
     }
 

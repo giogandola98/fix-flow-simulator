@@ -45,7 +45,7 @@ class ExecutionManagerTest {
                                 null, null, "n3", null, null),
                         new ScenarioNode("n3", "done", NodeType.END_PASS, Map.of(), null, null, null, null, null)
                 ),
-                List.of(), Map.of());
+                List.of(), Map.of(), null);
 
         registry.register(scenario);
 

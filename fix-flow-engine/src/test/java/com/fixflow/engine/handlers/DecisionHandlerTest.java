@@ -17,7 +17,7 @@ class DecisionHandlerTest {
 
     private static ExecutionContext freshCtx() {
         Scenario s = new Scenario(UUID.randomUUID(), "t", "", "1.0", "s",
-                RuntimePolicy.PARALLEL, List.of(), List.of(), List.of(), List.of(), Map.of());
+                RuntimePolicy.PARALLEL, List.of(), List.of(), List.of(), List.of(), Map.of(), null);
         return new ExecutionContext(UUID.randomUUID(), s, UUID.randomUUID());
     }
 
