@@ -8,7 +8,7 @@ import com.fixflow.engine.handlers.NodeHandlerResult;
 import org.springframework.stereotype.Service;
 
 @Service
-public class ScenarioExecutor {
+public class ScenarioExecutor implements ScenarioExecutorPort {
 
     private final NodeDispatcher dispatcher;
 

@@ -4,6 +4,7 @@ import com.fixflow.core.domain.execution.ExecutionStatus;
 import com.fixflow.core.domain.scenario.*;
 import com.fixflow.engine.execution.ExecutionContext;
 import com.fixflow.engine.execution.ScenarioExecutor;
+import com.fixflow.engine.execution.ScenarioExecutorPort;
 import com.fixflow.engine.scenario.ScenarioRegistry;
 import com.fixflow.engine.variable.VariableResolver;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CallScenarioHandlerTest {
 
     private ScenarioRegistry registry;
-    private ScenarioExecutor executor;
+    private ScenarioExecutorPort executor;
     private CallScenarioHandler handler;
 
     private static Scenario scenario(UUID id, NodeType endType) {

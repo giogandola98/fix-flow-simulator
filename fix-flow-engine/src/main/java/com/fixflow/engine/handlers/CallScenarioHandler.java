@@ -5,7 +5,7 @@ import com.fixflow.core.domain.scenario.NodeType;
 import com.fixflow.core.domain.scenario.Scenario;
 import com.fixflow.core.domain.scenario.ScenarioNode;
 import com.fixflow.engine.execution.ExecutionContext;
-import com.fixflow.engine.execution.ScenarioExecutor;
+import com.fixflow.engine.execution.ScenarioExecutorPort;
 import com.fixflow.engine.scenario.ScenarioRegistry;
 import com.fixflow.engine.variable.VariableResolver;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,12 +23,12 @@ public class CallScenarioHandler implements NodeHandler {
     private static final String DEPTH_KEY = "call:depth";
 
     private final ScenarioRegistry registry;
-    private final ScenarioExecutor executor;
+    private final ScenarioExecutorPort executor;
     private final VariableResolver resolver;
 
     @Autowired
     public CallScenarioHandler(ScenarioRegistry registry,
-                               @Lazy ScenarioExecutor executor,
+                               @Lazy ScenarioExecutorPort executor,
                                VariableResolver resolver) {
         this.registry = registry;
         this.executor = executor;
