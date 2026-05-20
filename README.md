@@ -27,6 +27,10 @@ open http://localhost:8080
 - Per-session configurable: SenderCompID, TargetCompID, host, port, heartbeat interval
 - Real-time execution monitoring (WebSocket)
 - Validation engine with date/time rules
+- ROUTE_FIX: multi-rule conditional routing on inbound FIX fields
+- CALL_SCENARIO: reusable sub-flows with input/output variable mapping
+- HTTP_REQUEST: REST integration block with response variable capture
+- Dynamic placeholders: `{{uuid}}`, `{{now}}`, `{{now:offset:+5m}}`, `{{seq:...}}`, `{{env:VAR}}`, `{{node:id:tagN}}`
 - Hot reload scenarios without restarting FIX session
 - H2 embedded database (no install required)
 

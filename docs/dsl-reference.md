@@ -179,9 +179,11 @@ Executes another scenario synchronously as a sub-flow. The child inherits the pa
 | `{{now}}` | current UTC ISO timestamp |
 | `{{now:offset:+1h}}` | current UTC time with offset applied |
 | `{{nowdate}}` | current UTC date as `YYYYMMDD` |
+| `{{nowdate:offset:+1d}}` | current UTC date with offset, e.g. `+1d` for tomorrow |
 | `{{uuid}}` | random UUID |
 | `{{seq:name}}` | monotonic sequence keyed by `name` |
 | `{{env:VAR}}` | environment variable |
+| `{{var:name}}` | named variable set earlier via HTTP_REQUEST response or CALL_SCENARIO output |
 | `{{node:id:tagN}}` | value of tag N from a previous node |
 | `{{node:id:tagN:offset:+5m}}` | value with date offset applied |
 

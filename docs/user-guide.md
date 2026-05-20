@@ -1,6 +1,6 @@
 # FIX Flow Simulator — User Guide
 
-**Version:** 0.2.8-beta
+**Version:** 0.3.1-alpha
 
 ---
 
@@ -412,12 +412,16 @@ Variables let you build dynamic FIX messages that reference runtime values.
 
 | Placeholder | Description | Example |
 |---|---|---|
-| `{{now}}` | Current UTC ISO timestamp | `20240101-12:00:00.000` |
+| `{{now}}` | Current UTC ISO timestamp | `2026-05-20T12:00:00Z` |
+| `{{now:offset:+5m}}` | Current UTC time with offset | `{{now:offset:+1h}}` |
+| `{{nowdate}}` | Current UTC date as `YYYYMMDD` | `20260520` |
+| `{{nowdate:offset:+1d}}` | Date with offset (today + N days) | `{{nowdate:offset:+1d}}` |
 | `{{uuid}}` | Random UUID v4 | `550e8400-e29b-41d4...` |
 | `{{seq:name}}` | Auto-incrementing counter (resets each run) | `{{seq:orderId}}` → 1, 2, 3 |
 | `{{env:VAR}}` | Environment variable | `{{env:SENDER_ID}}` |
+| `{{var:name}}` | Named variable (from HTTP_REQUEST response or CALL_SCENARIO output) | `{{var:subHttpStatus}}` |
 | `{{node:id:tagN}}` | Tag N from a previous block | `{{node:send-order:tag11}}` |
-| `{{node:id:tagN:offset:+5m}}` | Tag value with time offset | `{{node:send-order:tag60:offset:+1h}}` |
+| `{{node:id:tagN:offset:+5m}}` | Tag value with date offset | `{{node:send-order:tag60:offset:+1h}}` |
 
 ### Using variables in Send FIX
 
@@ -713,4 +717,4 @@ After multiple test runs, sequence numbers may desync.
 
 ---
 
-*This guide covers FIX Flow Simulator v0.2.8-beta. For developer/API documentation, see [developer-guide.md](developer-guide.md).*
+*This guide covers FIX Flow Simulator v0.3.1-alpha. For developer/API documentation, see [developer-guide.md](developer-guide.md).*
