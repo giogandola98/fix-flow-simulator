@@ -96,10 +96,18 @@ const ID = {
   decResp:    '33333333-0000-0000-0000-000000000006',
   loopMain:   '33333333-0000-0000-0000-000000000007',
   loopResp:   '33333333-0000-0000-0000-000000000008',
-  retryMain:  '33333333-0000-0000-0000-000000000009',
-  retryResp:  '33333333-0000-0000-0000-000000000010',
-  phMain:     '33333333-0000-0000-0000-000000000011',
-  phResp:     '33333333-0000-0000-0000-000000000012',
+  retryMain:   '33333333-0000-0000-0000-000000000009',
+  retryResp:   '33333333-0000-0000-0000-000000000010',
+  phMain:      '33333333-0000-0000-0000-000000000011',
+  phResp:      '33333333-0000-0000-0000-000000000012',
+  valMain:     '33333333-0000-0000-0000-000000000013',
+  valResp:     '33333333-0000-0000-0000-000000000014',
+  httpMain:    '33333333-0000-0000-0000-000000000015',
+  callSub:     '33333333-0000-0000-0000-000000000016',
+  callMain:    '33333333-0000-0000-0000-000000000017',
+  callResp:    '33333333-0000-0000-0000-000000000018',
+  phExtMain:   '33333333-0000-0000-0000-000000000019',
+  phExtResp:   '33333333-0000-0000-0000-000000000020',
 };
 
 // ── YAML templates ──
@@ -604,6 +612,424 @@ nodes:
         14: "0"
         151: "100"
         6: "0"
+    onSuccess: n_drain
+    onFailure: n_fail
+  - id: n_drain
+    type: EXPECT_FIX
+    name: DRAIN_2ND_ORDER
+    config:
+      msgType: D
+    timeout:
+      value: 2000
+      unit: MILLISECONDS
+      onTimeout: CONTINUE
+    onSuccess: n_pass
+    onFailure: n_fail
+  - id: n_pass
+    type: END_PASS
+    name: END_PASS
+  - id: n_fail
+    type: END_FAIL
+    name: END_FAIL`;
+
+// ── Extended YAML templates ──
+
+const VAL_MAIN = id => `\
+id: ${id}
+name: Test VALIDATE+WAIT Main
+version: '1.0'
+nodes:
+  - id: n_start
+    type: START
+    name: START
+    onSuccess: n_send
+  - id: n_send
+    type: SEND_FIX
+    name: SEND_ORDER
+    config:
+      msgType: D
+      fields:
+        11: "{{uuid}}"
+        54: "1"
+        55: AAPL
+        38: "100"
+        40: "2"
+        60: "{{now}}"
+    onSuccess: n_exp
+    onFailure: n_fail
+  - id: n_exp
+    type: EXPECT_FIX
+    name: EXPECT_EXEC
+    config:
+      msgType: "8"
+      correlation:
+        sourceTag: 11
+        fromNode: n_send
+        targetTag: 11
+    timeout:
+      value: 10
+      unit: SECONDS
+      onTimeout: FAIL
+    onSuccess: n_wait
+    onFailure: n_fail
+  - id: n_wait
+    type: WAIT
+    name: WAIT_300MS
+    timeout:
+      value: 300
+      unit: MILLISECONDS
+      onTimeout: CONTINUE
+    onSuccess: n_validate
+    onFailure: n_fail
+  - id: n_validate
+    type: VALIDATE
+    name: VALIDATE_EXEC
+    config:
+      sourceNodeId: n_exp
+      rules:
+        - tag: 39
+          rule: EQUALS
+          value: "2"
+        - tag: 37
+          rule: FIELD_PRESENT
+        - tag: 55
+          rule: EQUALS
+          value: AAPL
+    onSuccess: n_pass
+    onFailure: n_fail
+  - id: n_pass
+    type: END_PASS
+    name: END_PASS
+  - id: n_fail
+    type: END_FAIL
+    name: END_FAIL`;
+
+const VAL_RESP = id => `\
+id: ${id}
+name: Test VALIDATE+WAIT Responder
+version: '1.0'
+nodes:
+  - id: n_start
+    type: START
+    name: START
+    onSuccess: n_exp
+  - id: n_exp
+    type: EXPECT_FIX
+    name: EXPECT_ORDER
+    config:
+      msgType: D
+    timeout:
+      value: 10
+      unit: SECONDS
+      onTimeout: FAIL
+    onSuccess: n_resp
+    onFailure: n_fail
+  - id: n_resp
+    type: SEND_FIX
+    name: SEND_FILLED
+    config:
+      msgType: "8"
+      fields:
+        11: "{{node:n_exp:tag11}}"
+        37: ORD-VAL-001
+        17: EXEC-VAL-001
+        39: "2"
+        150: "2"
+        54: "1"
+        55: AAPL
+        14: "100"
+        151: "0"
+        6: "99.50"
+        31: "99.50"
+        32: "100"
+    onSuccess: n_pass
+    onFailure: n_fail
+  - id: n_pass
+    type: END_PASS
+    name: END_PASS
+  - id: n_fail
+    type: END_FAIL
+    name: END_FAIL`;
+
+const HTTP_MAIN = id => `\
+id: ${id}
+name: Test HTTP_REQUEST Main
+version: '1.0'
+nodes:
+  - id: n_start
+    type: START
+    name: START
+    onSuccess: n_http
+  - id: n_http
+    type: HTTP_REQUEST
+    name: GET_SCENARIOS
+    config:
+      method: GET
+      url: http://localhost:8080/api/v1/scenarios
+    timeout:
+      value: 10
+      unit: SECONDS
+      onTimeout: FAIL
+    onSuccess: n_check
+    onFailure: n_fail
+  - id: n_check
+    type: DECISION
+    name: CHECK_200
+    config:
+      condition: "{{var:node:n_http:responseStatus}} == 200"
+    onSuccess: n_pass
+    onFailure: n_fail
+  - id: n_pass
+    type: END_PASS
+    name: END_PASS
+  - id: n_fail
+    type: END_FAIL
+    name: END_FAIL`;
+
+const CALL_SUB = (id, mainSessionRef) => `\
+id: ${id}
+name: Test CALL_SUB
+version: '1.0'
+nodes:
+  - id: n_start
+    type: START
+    name: START
+    onSuccess: n_http_sub
+  - id: n_http_sub
+    type: HTTP_REQUEST
+    name: HTTP_IN_SUB
+    config:
+      method: GET
+      url: http://localhost:8080/api/v1/scenarios
+    timeout:
+      value: 10
+      unit: SECONDS
+      onTimeout: FAIL
+    onSuccess: n_send_sub
+    onFailure: n_fail
+  - id: n_send_sub
+    type: SEND_FIX
+    name: SEND_FROM_SUB
+    config:
+      msgType: D
+      fields:
+        11: "{{uuid}}"
+        54: "1"
+        55: AAPL
+        38: "100"
+        40: "2"
+        60: "{{now}}"
+    onSuccess: n_exp_sub
+    onFailure: n_fail
+  - id: n_exp_sub
+    type: EXPECT_FIX
+    name: EXPECT_IN_SUB
+    config:
+      msgType: "8"
+      correlation:
+        sourceTag: 11
+        fromNode: n_send_sub
+        targetTag: 11
+    timeout:
+      value: 10
+      unit: SECONDS
+      onTimeout: FAIL
+    onSuccess: n_pass
+    onFailure: n_fail
+  - id: n_pass
+    type: END_PASS
+    name: END_PASS
+  - id: n_fail
+    type: END_FAIL
+    name: END_FAIL`;
+
+const CALL_MAIN = (id, subId) => `\
+id: ${id}
+name: Test CALL_SCENARIO Main
+version: '1.0'
+nodes:
+  - id: n_start
+    type: START
+    name: START
+    onSuccess: n_call
+  - id: n_call
+    type: CALL_SCENARIO
+    name: CALL_SUB
+    config:
+      targetScenarioId: ${subId}
+      inputVars: []
+      outputVars:
+        - from: "node:n_http_sub:responseStatus"
+          to: subHttpStatus
+    onSuccess: n_check
+    onFailure: n_fail
+  - id: n_check
+    type: DECISION
+    name: CHECK_SUB_HTTP
+    config:
+      condition: "{{var:subHttpStatus}} == 200"
+    onSuccess: n_pass
+    onFailure: n_fail
+  - id: n_pass
+    type: END_PASS
+    name: END_PASS
+  - id: n_fail
+    type: END_FAIL
+    name: END_FAIL`;
+
+const CALL_RESP = id => `\
+id: ${id}
+name: Test CALL_SCENARIO Responder
+version: '1.0'
+nodes:
+  - id: n_start
+    type: START
+    name: START
+    onSuccess: n_exp
+  - id: n_exp
+    type: EXPECT_FIX
+    name: EXPECT_FROM_SUB
+    config:
+      msgType: D
+    timeout:
+      value: 10
+      unit: SECONDS
+      onTimeout: FAIL
+    onSuccess: n_resp
+    onFailure: n_fail
+  - id: n_resp
+    type: SEND_FIX
+    name: ECHO_TO_SUB
+    config:
+      msgType: "8"
+      fields:
+        11: "{{node:n_exp:tag11}}"
+        37: ORD-CALL-001
+        17: EXEC-CALL-001
+        39: "0"
+        150: "0"
+        54: "1"
+        55: AAPL
+        14: "0"
+        151: "100"
+        6: "0"
+    onSuccess: n_pass
+    onFailure: n_fail
+  - id: n_pass
+    type: END_PASS
+    name: END_PASS
+  - id: n_fail
+    type: END_FAIL
+    name: END_FAIL`;
+
+const PH_EXT_MAIN = id => `\
+id: ${id}
+name: Test EXTENDED PLACEHOLDERS Main
+version: '1.0'
+nodes:
+  - id: n_start
+    type: START
+    name: START
+    onSuccess: n_send1
+  - id: n_send1
+    type: SEND_FIX
+    name: SEND_ORDER
+    config:
+      msgType: D
+      fields:
+        11: "{{uuid}}"
+        54: "1"
+        55: AAPL
+        38: "100"
+        40: "2"
+        60: "{{now}}"
+    onSuccess: n_exp
+    onFailure: n_fail
+  - id: n_exp
+    type: EXPECT_FIX
+    name: EXPECT_ECHO
+    config:
+      msgType: "8"
+      correlation:
+        sourceTag: 11
+        fromNode: n_send1
+        targetTag: 11
+    timeout:
+      value: 10
+      unit: SECONDS
+      onTimeout: FAIL
+    onSuccess: n_send2
+    onFailure: n_fail
+  - id: n_send2
+    type: SEND_FIX
+    name: SEND_EXT_PLACEHOLDERS
+    config:
+      msgType: D
+      fields:
+        11: "{{uuid}}"
+        54: "2"
+        55: GOOG
+        38: "50"
+        40: "2"
+        60: "{{node:n_send1:tag60:offset:+30m}}"
+        58: "{{env:HOME}}"
+        48: "{{nowdate:offset:+1d}}"
+    onSuccess: n_pass
+    onFailure: n_fail
+  - id: n_pass
+    type: END_PASS
+    name: END_PASS
+  - id: n_fail
+    type: END_FAIL
+    name: END_FAIL`;
+
+const PH_EXT_RESP = id => `\
+id: ${id}
+name: Test EXTENDED PLACEHOLDERS Responder
+version: '1.0'
+nodes:
+  - id: n_start
+    type: START
+    name: START
+    onSuccess: n_exp
+  - id: n_exp
+    type: EXPECT_FIX
+    name: EXPECT_ORDER
+    config:
+      msgType: D
+    timeout:
+      value: 10
+      unit: SECONDS
+      onTimeout: FAIL
+    onSuccess: n_resp
+    onFailure: n_fail
+  - id: n_resp
+    type: SEND_FIX
+    name: ECHO_CLORDID
+    config:
+      msgType: "8"
+      fields:
+        11: "{{node:n_exp:tag11}}"
+        37: ORD-PHEXT-001
+        17: EXEC-PHEXT-001
+        39: "0"
+        150: "0"
+        54: "1"
+        55: AAPL
+        14: "0"
+        151: "100"
+        6: "0"
+    onSuccess: n_drain
+    onFailure: n_fail
+  - id: n_drain
+    type: EXPECT_FIX
+    name: DRAIN_2ND_ORDER
+    config:
+      msgType: D
+    timeout:
+      value: 2000
+      unit: MILLISECONDS
+      onTimeout: CONTINUE
     onSuccess: n_pass
     onFailure: n_fail
   - id: n_pass
@@ -688,7 +1114,15 @@ nodes:
   await create(RETRY_RESP(ID.retryResp));
   await create(PH_MAIN(ID.phMain));
   await create(PH_RESP(ID.phResp));
-  pass('all 12 scenarios created');
+  await create(VAL_MAIN(ID.valMain));
+  await create(VAL_RESP(ID.valResp));
+  await create(HTTP_MAIN(ID.httpMain));
+  await create(CALL_SUB(ID.callSub));
+  await create(CALL_MAIN(ID.callMain, ID.callSub));
+  await create(CALL_RESP(ID.callResp));
+  await create(PH_EXT_MAIN(ID.phExtMain));
+  await create(PH_EXT_RESP(ID.phExtResp));
+  pass('all 20 scenarios created');
 
   // ── Step 4: Open browser ──
   const browser = await puppeteer.launch({
@@ -814,6 +1248,70 @@ nodes:
           : fail('{{node:n_exp1:tag11}} cross-message read mismatch', `send2.tag11=${nodeRef}, recv.tag11=${echoed}`);
       } else {
         fail('F: second OUTBOUND (MSFT) not found for {{node:...}} check');
+      }
+    }
+
+    // ── Test G: VALIDATE + WAIT ──
+    console.log('\n\x1b[1m--- Test G: VALIDATE + WAIT (300ms) ---\x1b[0m');
+    info('VALIDATE rules: tag39=EQUALS("2"), tag37=FIELD_PRESENT, tag55=EQUALS("AAPL")');
+    const respG = await exec(ID.valResp, acceptorId);
+    await sleep(600);
+    const mainG = await exec(ID.valMain, initiatorId);
+    await runPair(respG, mainG, '[G] VALIDATE+WAIT');
+
+    // ── Test H: HTTP_REQUEST + {{var:node:id:responseStatus}} ──
+    console.log('\n\x1b[1m--- Test H: HTTP_REQUEST + {{var:node:n_http:responseStatus}} ---\x1b[0m');
+    const mainH = await exec(ID.httpMain, initiatorId);
+    const mH = await pollExecution(mainH);
+    mH === 'PASSED' ? pass('[H] HTTP_REQUEST main → PASSED') : fail('[H] HTTP_REQUEST main', mH);
+
+    // ── Test I: CALL_SCENARIO (FIX sub + HTTP outputVar + {{var:subHttpStatus}}) ──
+    console.log('\n\x1b[1m--- Test I: CALL_SCENARIO (sub does FIX + HTTP, output var to parent DECISION) ---\x1b[0m');
+    const respI = await exec(ID.callResp, acceptorId);
+    await sleep(600);
+    const mainI = await exec(ID.callMain, initiatorId);
+    await runPair(respI, mainI, '[I] CALL_SCENARIO');
+
+    // ── Test J: Extended placeholders ({{env:HOME}}, {{nowdate:offset:+1d}}, {{node:tag:offset:+30m}}) ──
+    console.log('\n\x1b[1m--- Test J: {{env:HOME}}, {{nowdate:offset:+1d}}, {{node:tag:offset:+30m}} ---\x1b[0m');
+    const respJ = await exec(ID.phExtResp, acceptorId);
+    await sleep(600);
+    const mainJExec = await exec(ID.phExtMain, initiatorId);
+    const { main: mJ } = await runPair(respJ, mainJExec, '[J] Extended placeholders');
+
+    if (mJ === 'PASSED') {
+      const msgs = await apiGet(`/api/v1/executions/${mainJExec}/messages`);
+      // Second OUTBOUND: to GOOG with ext placeholder fields
+      const s2 = msgs.find(m => m.direction === 'OUTBOUND' && m.fields?.[55] === 'GOOG');
+      // First OUTBOUND: to AAPL with tag60={{now}}
+      const s1 = msgs.find(m => m.direction === 'OUTBOUND' && m.fields?.[55] === 'AAPL');
+
+      if (s1 && s2) {
+        // {{node:n_send1:tag60:offset:+30m}} → s2.tag60 should be ~30min after s1.tag60
+        const t60base = s1.fields[60];
+        const t60off  = s2.fields[60];
+        if (t60base && t60off) {
+          const diff = Date.parse(t60off) - Date.parse(t60base);
+          diff > 1700000 && diff < 1900000  // ~28-32 min in ms
+            ? pass(`{{node:n_send1:tag60:offset:+30m}} → +${Math.round(diff/60000)}min offset verified`)
+            : fail('{{node:n_send1:tag60:offset:+30m}} offset wrong', `diff=${Math.round(diff/60000)}min`);
+        } else {
+          fail('{{node:n_send1:tag60:offset:+30m}} tag60 missing');
+        }
+
+        // {{env:HOME}} → s2.tag58 should be a non-empty path
+        const envHome = s2.fields[58];
+        envHome && envHome.startsWith('/')
+          ? pass(`{{env:HOME}} → "${envHome}"`)
+          : fail('{{env:HOME}} invalid or empty', envHome);
+
+        // {{nowdate:offset:+1d}} → s2.tag48 should be a non-empty date string
+        const dateOffset = s2.fields[48];
+        dateOffset && dateOffset.length >= 8
+          ? pass(`{{nowdate:offset:+1d}} → "${dateOffset}"`)
+          : fail('{{nowdate:offset:+1d}} invalid or empty', dateOffset);
+      } else {
+        fail('J: could not find expected OUTBOUND messages', `s1=${!!s1} s2=${!!s2}`);
       }
     }
 
