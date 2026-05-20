@@ -9,3 +9,9 @@ data/
 fix-flow-ui/node/*
 */*.jar
 start_claude.sh
+node_modules/
+# graphify machine-specific state
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+graphify-out/.graphify_incremental.json
+graphify-out/cache/
