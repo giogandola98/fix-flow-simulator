@@ -17,10 +17,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class RouteFIXHandlerTest {
 
+    private static final UUID SESSION_ID = UUID.fromString("00000000-0000-0000-0000-000000000099");
+
     private static ExecutionContext freshCtx() {
         Scenario s = new Scenario(UUID.randomUUID(), "t", "", "1.0", "s",
                 RuntimePolicy.PARALLEL, List.of(), List.of(), List.of(), List.of(), Map.of(), null);
-        return new ExecutionContext(UUID.randomUUID(), s, UUID.randomUUID());
+        return new ExecutionContext(UUID.randomUUID(), s, SESSION_ID);
     }
 
     @Test
@@ -40,7 +42,7 @@ class RouteFIXHandlerTest {
 
         CompletableFuture.runAsync(() -> {
             try { Thread.sleep(50); } catch (InterruptedException ignored) {}
-            correlation.onMessage("sess", Map.of(35, "S", 131, "RFQ-001"));
+            correlation.onMessage(SESSION_ID.toString(), Map.of(35, "S", 131, "RFQ-001"));
         });
 
         NodeHandlerResult r = handler.handle(node, ctx);
@@ -67,7 +69,7 @@ class RouteFIXHandlerTest {
 
         CompletableFuture.runAsync(() -> {
             try { Thread.sleep(50); } catch (InterruptedException ignored) {}
-            correlation.onMessage("sess", Map.of(131, "RFQ-001", 35, "S"));
+            correlation.onMessage(SESSION_ID.toString(), Map.of(131, "RFQ-001", 35, "S"));
         });
 
         NodeHandlerResult r = handler.handle(node, ctx);
@@ -96,7 +98,7 @@ class RouteFIXHandlerTest {
 
         CompletableFuture.runAsync(() -> {
             try { Thread.sleep(50); } catch (InterruptedException ignored) {}
-            correlation.onMessage("sess", Map.of(35, "AG"));
+            correlation.onMessage(SESSION_ID.toString(), Map.of(35, "AG"));
         });
 
         NodeHandlerResult r = handler.handle(node, ctx);

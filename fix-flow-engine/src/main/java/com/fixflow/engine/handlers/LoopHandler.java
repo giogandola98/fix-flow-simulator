@@ -1,5 +1,6 @@
 package com.fixflow.engine.handlers;
 
+import com.fixflow.core.domain.execution.ExecutionEventType;
 import com.fixflow.core.domain.scenario.NodeType;
 import com.fixflow.core.domain.scenario.ScenarioNode;
 import com.fixflow.engine.execution.ExecutionContext;
@@ -30,7 +31,9 @@ public class LoopHandler implements NodeHandler {
             : ((Number) node.config().get("iterations")).intValue();
 
         for (int i = 0; i < iterations; i++) {
+            ctx.emitNodeEvent(ExecutionEventType.NODE_ENTERED, target.id());
             NodeHandlerResult r = dispatcher.dispatch(target, ctx);
+            ctx.emitNodeEvent(r.success() ? ExecutionEventType.NODE_EXITED : ExecutionEventType.ERROR, target.id());
             if (!r.success()) {
                 return NodeHandlerResult.failure(node.onFailure(),
                     "loop iteration " + i + " failed: " + r.errorMessage());

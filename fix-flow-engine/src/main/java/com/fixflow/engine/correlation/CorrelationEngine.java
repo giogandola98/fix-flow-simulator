@@ -13,6 +13,7 @@ public class CorrelationEngine {
 
     public record CorrelationWaiter(
             String executionId,
+            String sessionId,
             CorrelationRule rule,
             String expectedValue,
             CompletableFuture<Map<Integer, String>> future) {}
@@ -23,6 +24,7 @@ public class CorrelationEngine {
 
     public record MultiRouteWaiter(
             String executionId,
+            String sessionId,
             List<RoutingRule> rules,
             CompletableFuture<RoutedResult> future) {}
 
@@ -30,24 +32,28 @@ public class CorrelationEngine {
     private final ConcurrentHashMap<String, MultiRouteWaiter> multiWaiters = new ConcurrentHashMap<>();
 
     public CompletableFuture<Map<Integer, String>> register(String executionId,
+                                                            String sessionId,
                                                             CorrelationRule rule,
                                                             String expectedValue) {
         CompletableFuture<Map<Integer, String>> future = new CompletableFuture<>();
-        CorrelationWaiter waiter = new CorrelationWaiter(executionId, rule, expectedValue, future);
+        CorrelationWaiter waiter = new CorrelationWaiter(executionId, sessionId, rule, expectedValue, future);
         if (waiters.putIfAbsent(executionId, waiter) != null) {
             throw new IllegalStateException("duplicate executionId: " + executionId);
         }
         return future;
     }
 
-    public CompletableFuture<RoutedResult> registerMulti(String executionId, List<RoutingRule> rules) {
+    public CompletableFuture<RoutedResult> registerMulti(String executionId, String sessionId, List<RoutingRule> rules) {
         CompletableFuture<RoutedResult> future = new CompletableFuture<>();
-        multiWaiters.put(executionId, new MultiRouteWaiter(executionId, rules, future));
+        if (multiWaiters.putIfAbsent(executionId, new MultiRouteWaiter(executionId, sessionId, rules, future)) != null) {
+            throw new IllegalStateException("duplicate executionId: " + executionId);
+        }
         return future;
     }
 
     public boolean onMessage(String sessionId, Map<Integer, String> fields) {
         for (CorrelationWaiter w : waiters.values()) {
+            if (!w.sessionId().equals(sessionId)) continue;
             String actual = fields.get(w.rule().sourceTag());
             if (actual != null && actual.equals(w.expectedValue())) {
                 waiters.remove(w.executionId());
@@ -56,6 +62,7 @@ public class CorrelationEngine {
             }
         }
         for (MultiRouteWaiter w : multiWaiters.values()) {
+            if (!w.sessionId().equals(sessionId)) continue;
             RoutingRule matched = null;
             RoutingRule defaultRule = null;
             for (RoutingRule rule : w.rules()) {

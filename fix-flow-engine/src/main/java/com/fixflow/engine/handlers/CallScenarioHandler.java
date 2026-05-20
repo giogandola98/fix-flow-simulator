@@ -59,13 +59,14 @@ public class CallScenarioHandler implements NodeHandler {
         }
 
         int depth = parseDepth(ctx.getVariable(DEPTH_KEY));
-        if (depth >= MAX_DEPTH) {
+        int childDepth = depth + 1;
+        if (childDepth > MAX_DEPTH) {
             return NodeHandlerResult.failure(node.onFailure(),
                     "Max call depth exceeded (" + MAX_DEPTH + ")");
         }
 
         ExecutionContext childCtx = new ExecutionContext(UUID.randomUUID(), target, ctx.sessionId());
-        childCtx.setVariable(DEPTH_KEY, String.valueOf(depth + 1));
+        childCtx.setVariable(DEPTH_KEY, String.valueOf(childDepth));
 
         List<Map<String, String>> inputVars = readVarList(node.config(), "inputVars");
         for (Map<String, String> entry : inputVars) {

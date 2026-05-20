@@ -32,11 +32,12 @@ class ExpectFIXHandlerTest {
                 RuntimePolicy.PARALLEL, List.of(),
                 List.of(new CorrelationRule(131, "n3", 131, 2000)),
                 List.of(node), List.of(), Map.of(), null);
-        ExecutionContext ctx = new ExecutionContext(UUID.randomUUID(), s, UUID.randomUUID());
+        UUID sessionId = UUID.randomUUID();
+        ExecutionContext ctx = new ExecutionContext(UUID.randomUUID(), s, sessionId);
 
         CompletableFuture.runAsync(() -> {
             try { Thread.sleep(50); } catch (InterruptedException ignored) {}
-            engine.onMessage("sess", Map.of(131, "REQ-1", 35, "8"));
+            engine.onMessage(sessionId.toString(), Map.of(131, "REQ-1", 35, "8"));
         });
 
         NodeHandlerResult result = handler.handle(node, ctx);
@@ -62,7 +63,7 @@ class ExpectFIXHandlerTest {
                 RuntimePolicy.PARALLEL, List.of(),
                 List.of(new CorrelationRule(131, "n3", 131, 100)),
                 List.of(node), List.of(), Map.of(), null);
-        ExecutionContext ctx = new ExecutionContext(UUID.randomUUID(), s, UUID.randomUUID());
+        ExecutionContext ctx = new ExecutionContext(UUID.randomUUID(), s, UUID.randomUUID()); // no message arrives, sessionId irrelevant
 
         NodeHandlerResult result = handler.handle(node, ctx);
 

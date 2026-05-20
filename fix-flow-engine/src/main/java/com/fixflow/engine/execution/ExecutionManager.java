@@ -15,6 +15,8 @@ import com.fixflow.core.ports.outbound.ExecutionRepositoryPort;
 import com.fixflow.engine.handlers.NodeDispatcher;
 import com.fixflow.engine.handlers.NodeHandlerResult;
 import com.fixflow.engine.scenario.ScenarioRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -29,11 +31,14 @@ import java.util.concurrent.Executors;
 @Service
 public class ExecutionManager {
 
+    private static final Logger log = LoggerFactory.getLogger(ExecutionManager.class);
+
     private final ScenarioRegistry registry;
     private final NodeDispatcher dispatcher;
     private final ExecutionRepositoryPort executionRepo;
     private final EventPublisherPort eventPublisher;
     private final Map<UUID, ExecutionContext> contexts = new ConcurrentHashMap<>();
+    private final Map<UUID, ExecutionStatus> completedStatuses = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
     @Autowired
@@ -77,7 +82,8 @@ public class ExecutionManager {
 
     public ExecutionStatus getStatus(UUID executionId) {
         ExecutionContext ctx = contexts.get(executionId);
-        return ctx == null ? null : ctx.status();
+        if (ctx != null) return ctx.status();
+        return completedStatuses.get(executionId);
     }
 
     public ExecutionContext getContext(UUID executionId) {
@@ -85,6 +91,8 @@ public class ExecutionManager {
     }
 
     private void runScenario(ExecutionContext ctx) {
+        ctx.setNodeEventEmitter((type, nodeId) -> emitAndPersist(ctx.executionId(), type, nodeId,
+                type + " " + nodeId));
         emitAndPersist(ctx.executionId(), ExecutionEventType.EXECUTION_STARTED, null,
                 "Execution started for scenario " + ctx.scenario().id());
         try {
@@ -140,16 +148,22 @@ public class ExecutionManager {
             emitAndPersist(ctx.executionId(), ExecutionEventType.EXECUTION_FINISHED, null,
                     "Execution finished with status " + ctx.status());
             persistFinalStatus(ctx);
+            completedStatuses.put(ctx.executionId(), ctx.status());
+            contexts.remove(ctx.executionId());
         }
     }
 
     private void emitAndPersist(UUID executionId, ExecutionEventType type, String nodeId, String detail) {
         ExecutionEvent event = ExecutionEvent.of(executionId, type, nodeId, detail);
         if (eventPublisher != null) {
-            try { eventPublisher.publish(event); } catch (Throwable ignored) {}
+            try { eventPublisher.publish(event); } catch (Throwable t) {
+                log.warn("Failed to publish event {} for execution {}: {}", type, executionId, t.getMessage());
+            }
         }
         if (executionRepo != null) {
-            try { executionRepo.addEvent(executionId, event); } catch (Throwable ignored) {}
+            try { executionRepo.addEvent(executionId, event); } catch (Throwable t) {
+                log.warn("Failed to persist event {} for execution {}: {}", type, executionId, t.getMessage());
+            }
         }
     }
 
@@ -165,12 +179,18 @@ public class ExecutionManager {
                     UUID.randomUUID(), ctx.executionId(), direction, raw,
                     fields, Instant.now());
             if (executionRepo != null) {
-                try { executionRepo.addMessage(ctx.executionId(), msg); } catch (Throwable ignored) {}
+                try { executionRepo.addMessage(ctx.executionId(), msg); } catch (Throwable t) {
+                    log.warn("Failed to save message for execution {}: {}", ctx.executionId(), t.getMessage());
+                }
             }
             if (eventPublisher != null) {
-                try { eventPublisher.publishMessage(ctx.executionId(), msg); } catch (Throwable ignored) {}
+                try { eventPublisher.publishMessage(ctx.executionId(), msg); } catch (Throwable t) {
+                    log.warn("Failed to publish message for execution {}: {}", ctx.executionId(), t.getMessage());
+                }
             }
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) {
+            log.warn("Failed to persist message for execution {}: {}", ctx.executionId(), t.getMessage());
+        }
     }
 
     private void persistNodeResult(UUID executionId, String nodeId, NodeHandlerResult result,
@@ -182,7 +202,9 @@ public class ExecutionManager {
                     result.success() ? "PASSED" : "FAILED",
                     start, end,
                     result.success() ? null : result.errorMessage()));
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) {
+            log.warn("Failed to persist node result for execution {}/{}: {}", executionId, nodeId, t.getMessage());
+        }
     }
 
     private void persistFinalStatus(ExecutionContext ctx) {
@@ -193,9 +215,10 @@ public class ExecutionManager {
                     ctx.executionId(), s.id(),
                     s.version() == null ? "1" : s.version(),
                     ctx.sessionId(), ctx.status(),
-                    Instant.now(), Instant.now(), ctx.currentNodeId(),
+                    ctx.startTime(), Instant.now(), ctx.currentNodeId(),
                     ctx.variables(), List.of(), List.of()));
-        } catch (Throwable ignored) {
+        } catch (Throwable t) {
+            log.error("Failed to persist final status for execution {}: {}", ctx.executionId(), t.getMessage(), t);
         }
     }
 }

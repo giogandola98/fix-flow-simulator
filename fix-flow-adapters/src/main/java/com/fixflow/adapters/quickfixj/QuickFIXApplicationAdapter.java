@@ -60,7 +60,9 @@ public class QuickFIXApplicationAdapter implements Application {
     @Override
     public void fromApp(Message message, SessionID sessionId) {
         Map<Integer, String> fields = extractFields(message);
-        listener.onMessage(sessionId.toString(), fields);
+        UUID uuid = sessionUUIDs.get(sessionId);
+        String sessionKey = uuid != null ? uuid.toString() : sessionId.toString();
+        listener.onMessage(sessionKey, fields);
     }
 
     private Map<Integer, String> extractFields(Message message) {

@@ -63,8 +63,9 @@ public class ExpectFIXHandler implements NodeHandler {
             rule = new CorrelationRule(35, node.id(), 35, 0);
         }
 
+        String sessionIdStr = ctx.sessionId() != null ? ctx.sessionId().toString() : "";
         CompletableFuture<Map<Integer, String>> future =
-                correlation.register(ctx.executionId().toString(), rule, expectedValue);
+                correlation.register(ctx.executionId().toString(), sessionIdStr, rule, expectedValue);
         if (ctx.sessionId() != null) router.drain(ctx.sessionId().toString());
 
         long timeoutMs = node.timeout() == null ? 5_000L : node.timeout().toMillis();

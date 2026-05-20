@@ -49,8 +49,9 @@ export function ExpectFIXConfig({ node }: { node: ScenarioNode }) {
             {t('nodeConfig.expectFix.sourceTag')}
             <span title="The FIX tag number in the inbound message whose value is checked for correlation. e.g. 11 for ClOrdID." className="ml-1 text-gray-600 cursor-help">?</span>
           </label>
-          <input type="number" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
-            value={corr.sourceTag ?? 0} onChange={(e) => patchCorr({ sourceTag: Number(e.target.value) })} />
+          <input type="number" min={1} placeholder="e.g. 11"
+            className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
+            value={corr.sourceTag ?? ''} onChange={(e) => patchCorr({ sourceTag: e.target.value ? Number(e.target.value) : undefined })} />
         </div>
         <div className="mt-1">
           <label className="text-[10px] text-gray-500">
@@ -70,8 +71,9 @@ export function ExpectFIXConfig({ node }: { node: ScenarioNode }) {
             {t('nodeConfig.expectFix.targetTag')}
             <span title="The FIX tag number in the referenced send node whose outbound value must match the Source Tag in the reply." className="ml-1 text-gray-600 cursor-help">?</span>
           </label>
-          <input type="number" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
-            value={corr.targetTag ?? 0} onChange={(e) => patchCorr({ targetTag: Number(e.target.value) })} />
+          <input type="number" min={1} placeholder="e.g. 11"
+            className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
+            value={corr.targetTag ?? ''} onChange={(e) => patchCorr({ targetTag: e.target.value ? Number(e.target.value) : undefined })} />
         </div>
       </div>
       <TimeoutConfig value={node.timeout} onChange={(next) => updateNode(node.id, { timeout: next })} currentNodeId={node.id} />

@@ -55,7 +55,8 @@ public class RouteFIXHandler implements NodeHandler {
                 rules.add(new CorrelationEngine.RoutingRule(ruleId, label, matchers, targetNodeId));
             }
 
-            CompletableFuture<CorrelationEngine.RoutedResult> future = correlation.registerMulti(execId, rules);
+            String sessionIdStr = ctx.sessionId() != null ? ctx.sessionId().toString() : "";
+            CompletableFuture<CorrelationEngine.RoutedResult> future = correlation.registerMulti(execId, sessionIdStr, rules);
             if (ctx.sessionId() != null) router.drain(ctx.sessionId().toString());
 
             CorrelationEngine.RoutedResult result =
