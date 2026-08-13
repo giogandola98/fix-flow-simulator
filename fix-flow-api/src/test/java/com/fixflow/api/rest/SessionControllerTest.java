@@ -2,6 +2,7 @@ package com.fixflow.api.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fixflow.adapters.persistence.FIXSessionRepositoryAdapter;
+import com.fixflow.api.config.GlobalExceptionHandler;
 import com.fixflow.api.rest.dto.FIXSessionRequest;
 import com.fixflow.core.domain.session.FIXMode;
 import com.fixflow.core.domain.session.FIXSessionConfig;
@@ -15,6 +16,7 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerA
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -34,6 +36,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         HibernateJpaAutoConfiguration.class
     }
 )
+// Explicitly register the advice so the 409 mapping holds regardless of test ordering.
+@Import(GlobalExceptionHandler.class)
 class SessionControllerTest {
 
     @Autowired MockMvc mvc;

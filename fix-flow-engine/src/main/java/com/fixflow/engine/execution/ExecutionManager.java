@@ -31,6 +31,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -39,10 +40,12 @@ public class ExecutionManager {
     private static final Logger log = LoggerFactory.getLogger(ExecutionManager.class);
 
     private final ScenarioRegistry registry;
-    private final NodeDispatcher dispatcher;
+    private final NodeWalker walker;
     private final ExecutionRepositoryPort executionRepo;
     private final EventPublisherPort eventPublisher;
     private final Map<UUID, ExecutionContext> contexts = new ConcurrentHashMap<>();
+    /** Tracks the running task per execution so a stop can interrupt a blocked node. */
+    private final Map<UUID, Future<?>> runningTasks = new ConcurrentHashMap<>();
     /** Size-capped LRU so completed-status history cannot grow unbounded. */
     private final Map<UUID, ExecutionStatus> completedStatuses = Collections.synchronizedMap(
             new LinkedHashMap<>(16, 0.75f, true) {
@@ -54,18 +57,18 @@ public class ExecutionManager {
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
     @Autowired
-    public ExecutionManager(ScenarioRegistry registry, NodeDispatcher dispatcher,
+    public ExecutionManager(ScenarioRegistry registry, NodeWalker walker,
                             ExecutionRepositoryPort executionRepo,
                             EventPublisherPort eventPublisher) {
         this.registry = registry;
-        this.dispatcher = dispatcher;
+        this.walker = walker;
         this.executionRepo = executionRepo;
         this.eventPublisher = eventPublisher;
     }
 
     /** Convenience constructor for unit tests that don't need persistence. */
     public ExecutionManager(ScenarioRegistry registry, NodeDispatcher dispatcher) {
-        this(registry, dispatcher, null, null);
+        this(registry, new NodeWalker(dispatcher), null, null);
     }
 
     @PreDestroy
@@ -97,13 +100,19 @@ public class ExecutionManager {
                     Map.of(), List.of(), List.of()));
         }
 
-        executor.submit(() -> runScenario(ctx));
+        Future<?> task = executor.submit(() -> runScenario(ctx));
+        runningTasks.put(executionId, task);
+        // Guard the rare case where the run finished before we recorded the task.
+        if (task.isDone()) runningTasks.remove(executionId);
         return executionId;
     }
 
     public void stop(UUID executionId) {
         ExecutionContext ctx = contexts.get(executionId);
         if (ctx != null) ctx.setStatus(ExecutionStatus.STOPPED);
+        // Interrupt the worker so a node blocked in a wait/sleep/loop unwinds immediately.
+        Future<?> task = runningTasks.get(executionId);
+        if (task != null) task.cancel(true);
     }
 
     public ExecutionStatus getStatus(UUID executionId) {
@@ -117,65 +126,78 @@ public class ExecutionManager {
     }
 
     private void runScenario(ExecutionContext ctx) {
+        // Per-node persistence/eventing lives in the walker's StepListener so that nodes executed
+        // inside a LOOP sub-block are recorded exactly like top-level nodes.
+        ctx.setStepListener(new PersistingStepListener());
+        // Kept for handlers (e.g. RetryHandler) that emit node events directly.
         ctx.setNodeEventEmitter((type, nodeId) -> emitAndPersist(ctx.executionId(), type, nodeId,
                 type + " " + nodeId));
         emitAndPersist(ctx.executionId(), ExecutionEventType.EXECUTION_STARTED, null,
                 "Execution started for scenario " + ctx.scenario().id());
         try {
-            ScenarioNode current = ctx.scenario().startNode()
+            ScenarioNode start = ctx.scenario().startNode()
                     .orElseThrow(() -> new IllegalStateException("Scenario has no START node"));
 
-            while (current != null && ctx.status() == ExecutionStatus.RUNNING) {
-                ctx.setCurrentNodeId(current.id());
-                emitAndPersist(ctx.executionId(), ExecutionEventType.NODE_ENTERED, current.id(),
-                        "Entering node " + current.name() + " [" + current.type() + "]");
+            WalkOutcome outcome = walker.walk(start, ctx, null);
 
-                Instant nodeStart = Instant.now();
-                NodeHandlerResult result = dispatcher.dispatch(current, ctx);
-                Instant nodeEnd = Instant.now();
-
-                persistNodeResult(ctx.executionId(), current.id(), result, nodeStart, nodeEnd);
-                if (current.type() == NodeType.SEND_FIX) {
-                    persistMessage(ctx, current.id(), Direction.OUTBOUND);
-                } else if ((current.type() == NodeType.EXPECT_FIX || current.type() == NodeType.ROUTE_FIX) && result.success()) {
-                    persistMessage(ctx, current.id(), Direction.INBOUND);
-                }
-
-                if (result.success()) {
-                    String exitDetail = "Node " + current.name() + " completed";
-                    if (current.type() == NodeType.ROUTE_FIX) {
-                        String matchedLabel = ctx.getVariable("node:" + current.id() + ":matchedRuleLabel");
-                        if (matchedLabel != null) exitDetail = "Routed via rule: " + matchedLabel;
-                    }
-                    emitAndPersist(ctx.executionId(), ExecutionEventType.NODE_EXITED, current.id(), exitDetail);
-                } else {
-                    emitAndPersist(ctx.executionId(), ExecutionEventType.ERROR, current.id(),
-                            result.errorMessage() != null ? result.errorMessage() : "Node failed");
-                }
-
-                if (ctx.status() != ExecutionStatus.RUNNING) break;
-
-                if (!result.success()) {
-                    ctx.setStatus(ExecutionStatus.FAILED);
-                    break;
-                }
-                if (result.nextNodeId() == null) break;
-                current = ctx.scenario().findNode(result.nextNodeId()).orElse(null);
-            }
-
-            if (ctx.status() == ExecutionStatus.RUNNING) {
+            if (outcome == WalkOutcome.FAILED) {
+                ctx.setStatus(ExecutionStatus.FAILED);
+            } else if (ctx.status() == ExecutionStatus.RUNNING) {
+                // COMPLETED (ran off the end without an explicit END node).
                 ctx.setStatus(ExecutionStatus.PASSED);
+            }
+            // HALTED: an END node or a stop already set the terminal status — leave it.
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            // A stop request already set STOPPED; only an unexpected interrupt marks it FAILED.
+            if (ctx.status() != ExecutionStatus.STOPPED) {
+                emitAndPersist(ctx.executionId(), ExecutionEventType.ERROR, ctx.currentNodeId(),
+                        "Execution interrupted");
+                if (ctx.status() == ExecutionStatus.RUNNING) ctx.setStatus(ExecutionStatus.FAILED);
             }
         } catch (Throwable t) {
             emitAndPersist(ctx.executionId(), ExecutionEventType.ERROR, ctx.currentNodeId(),
                     t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName());
-            ctx.setStatus(ExecutionStatus.FAILED);
+            if (ctx.status() == ExecutionStatus.RUNNING) ctx.setStatus(ExecutionStatus.FAILED);
         } finally {
             emitAndPersist(ctx.executionId(), ExecutionEventType.EXECUTION_FINISHED, null,
                     "Execution finished with status " + ctx.status());
             persistFinalStatus(ctx);
             completedStatuses.put(ctx.executionId(), ctx.status());
             contexts.remove(ctx.executionId());
+            runningTasks.remove(ctx.executionId());
+        }
+    }
+
+    /** Emits events and persists node results/messages for every node the walker visits. */
+    private final class PersistingStepListener implements StepListener {
+        @Override
+        public void entered(ScenarioNode node, ExecutionContext ctx) {
+            emitAndPersist(ctx.executionId(), ExecutionEventType.NODE_ENTERED, node.id(),
+                    "Entering node " + node.name() + " [" + node.type() + "]");
+        }
+
+        @Override
+        public void completed(ScenarioNode node, NodeHandlerResult result,
+                              Instant start, Instant end, ExecutionContext ctx) {
+            persistNodeResult(ctx.executionId(), node.id(), result, start, end);
+            if (node.type() == NodeType.SEND_FIX) {
+                persistMessage(ctx, node.id(), Direction.OUTBOUND);
+            } else if ((node.type() == NodeType.EXPECT_FIX || node.type() == NodeType.ROUTE_FIX) && result.success()) {
+                persistMessage(ctx, node.id(), Direction.INBOUND);
+            }
+
+            if (result.success()) {
+                String exitDetail = "Node " + node.name() + " completed";
+                if (node.type() == NodeType.ROUTE_FIX) {
+                    String matchedLabel = ctx.getVariable("node:" + node.id() + ":matchedRuleLabel");
+                    if (matchedLabel != null) exitDetail = "Routed via rule: " + matchedLabel;
+                }
+                emitAndPersist(ctx.executionId(), ExecutionEventType.NODE_EXITED, node.id(), exitDetail);
+            } else {
+                emitAndPersist(ctx.executionId(), ExecutionEventType.ERROR, node.id(),
+                        result.errorMessage() != null ? result.errorMessage() : "Node failed");
+            }
         }
     }
 

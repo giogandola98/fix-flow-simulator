@@ -19,6 +19,7 @@ public class ExecutionContext {
     private final Instant startTime = Instant.now();
     private volatile ExecutionStatus status = ExecutionStatus.RUNNING;
     private BiConsumer<ExecutionEventType, String> nodeEventEmitter = (type, nodeId) -> {};
+    private volatile StepListener stepListener = StepListener.NOOP;
     private volatile String currentNodeId;
     private final Map<String, String> variables = new ConcurrentHashMap<>();
     private final Map<String, Map<Integer, String>> nodeMessages = new ConcurrentHashMap<>();
@@ -39,6 +40,9 @@ public class ExecutionContext {
     public void setCurrentNodeId(String id) { this.currentNodeId = id; }
     public void setNodeEventEmitter(BiConsumer<ExecutionEventType, String> emitter) { this.nodeEventEmitter = emitter; }
     public void emitNodeEvent(ExecutionEventType type, String nodeId) { nodeEventEmitter.accept(type, nodeId); }
+
+    public StepListener stepListener() { return stepListener; }
+    public void setStepListener(StepListener listener) { this.stepListener = listener == null ? StepListener.NOOP : listener; }
 
     public Map<String, String> variables() { return variables; }
     public void setVariable(String k, String v) { variables.put(k, v); }

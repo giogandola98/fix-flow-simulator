@@ -4,36 +4,34 @@ import com.fixflow.core.domain.execution.ExecutionStatus;
 import com.fixflow.core.domain.scenario.Scenario;
 import com.fixflow.core.domain.scenario.ScenarioNode;
 import com.fixflow.engine.handlers.NodeDispatcher;
-import com.fixflow.engine.handlers.NodeHandlerResult;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ScenarioExecutor implements ScenarioExecutorPort {
 
-    private final NodeDispatcher dispatcher;
+    private final NodeWalker walker;
 
+    @Autowired
+    public ScenarioExecutor(NodeWalker walker) {
+        this.walker = walker;
+    }
+
+    /** Convenience constructor for unit tests that supply a dispatcher directly. */
     public ScenarioExecutor(NodeDispatcher dispatcher) {
-        this.dispatcher = dispatcher;
+        this(new NodeWalker(dispatcher));
     }
 
     public ExecutionStatus execute(Scenario scenario, ExecutionContext ctx)
             throws InterruptedException {
-        ScenarioNode current = scenario.startNode()
+        ScenarioNode start = scenario.startNode()
                 .orElseThrow(() -> new IllegalStateException("Scenario has no START node: " + scenario.id()));
 
-        while (current != null && ctx.status() == ExecutionStatus.RUNNING) {
-            ctx.setCurrentNodeId(current.id());
-            NodeHandlerResult result = dispatcher.dispatch(current, ctx);
+        WalkOutcome outcome = walker.walk(start, ctx, null);
 
-            if (!result.success()) {
-                ctx.setStatus(ExecutionStatus.FAILED);
-                return ExecutionStatus.FAILED;
-            }
-            if (result.nextNodeId() == null) break;
-            current = scenario.findNode(result.nextNodeId()).orElse(null);
-        }
-
-        if (ctx.status() == ExecutionStatus.RUNNING) {
+        if (outcome == WalkOutcome.FAILED) {
+            ctx.setStatus(ExecutionStatus.FAILED);
+        } else if (ctx.status() == ExecutionStatus.RUNNING) {
             ctx.setStatus(ExecutionStatus.PASSED);
         }
         return ctx.status();

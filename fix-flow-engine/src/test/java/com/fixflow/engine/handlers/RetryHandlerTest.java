@@ -69,25 +69,31 @@ class RetryHandlerTest {
     }
 
     @Test
-    void loopRunsTargetTheConfiguredNumberOfTimes() throws InterruptedException {
+    void loopWalksEntireSubBlockEachIteration() throws InterruptedException {
+        // #62: each iteration must walk the whole block (a -> b), not just the attached node.
         NodeDispatcher dispatcher = mock(NodeDispatcher.class);
-        AtomicInteger calls = new AtomicInteger();
+        Map<String, Integer> calls = new java.util.HashMap<>();
         when(dispatcher.dispatch(any(ScenarioNode.class), any())).thenAnswer(inv -> {
-            calls.incrementAndGet();
-            return NodeHandlerResult.success("body");
+            ScenarioNode n = inv.getArgument(0);
+            calls.merge(n.id(), 1, Integer::sum);
+            return NodeHandlerResult.success(n.onSuccess());
         });
 
-        ScenarioNode body = new ScenarioNode("body", "body", NodeType.SEND_FIX, Map.of(), null, null, "body", "fail", null);
-        Scenario scenario = scenarioWith(body);
+        // a -> b -> back to the LOOP node "l" (the loop-back boundary).
+        ScenarioNode a = new ScenarioNode("a", "a", NodeType.SEND_FIX, Map.of(), null, null, "b", "fail", null);
+        ScenarioNode b = new ScenarioNode("b", "b", NodeType.SEND_FIX, Map.of(), null, null, "l", "fail", null);
+        Scenario scenario = scenarioWith(a, b);
         ExecutionContext ctx = new ExecutionContext(UUID.randomUUID(), scenario, UUID.randomUUID());
 
         ScenarioNode node = new ScenarioNode("l", "l", NodeType.LOOP,
-            Map.of("targetNodeId", "body", "iterations", 4),
+            Map.of("targetNodeId", "a", "iterations", 3),
             null, null, "done", "fail", null);
 
         LoopHandler h = new LoopHandler(dispatcher);
         NodeHandlerResult r = h.handle(node, ctx);
+
         assertThat(r.nextNodeId()).isEqualTo("done");
-        assertThat(calls.get()).isEqualTo(4);
+        assertThat(calls.get("a")).isEqualTo(3);
+        assertThat(calls.get("b")).isEqualTo(3);
     }
 }
