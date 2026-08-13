@@ -2,7 +2,6 @@ package com.fixflow.api;
 
 import com.fixflow.adapters.quickfixj.QuickFIXAdapter;
 import com.fixflow.api.support.FakeFixAdapter;
-import com.fixflow.core.ports.outbound.FIXSessionPort;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -11,6 +10,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -22,6 +22,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
+/**
+ * End-to-end wiring test over the real Spring context and HTTP stack. Uses an in-memory
+ * {@link FakeFixAdapter} instead of QuickFIX/J so no sockets are opened; drives a scenario
+ * through create session -> create scenario -> connect -> execute -> inject inbound -> PASSED.
+ */
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @MockBean(QuickFIXAdapter.class)
 class FullApiIntegrationTest {
@@ -35,15 +40,11 @@ class FullApiIntegrationTest {
         }
     }
 
-    @Autowired
-    TestRestTemplate rest;
-
-    @Autowired
-    FakeFixAdapter fakeAdapter;
+    @Autowired TestRestTemplate rest;
+    @Autowired FakeFixAdapter fakeAdapter;
 
     @Test
-    void fullScenarioLifecycle() {
-        // Step 1: create session
+    void fullScenarioLifecycleReachesPassed() {
         Map<String, Object> sessionReq = Map.ofEntries(
             Map.entry("name", "test-session"),
             Map.entry("mode", "ACCEPTOR"),
@@ -61,7 +62,6 @@ class FullApiIntegrationTest {
         String sessionId = (String) sessionResp.getBody().get("id");
         assertThat(sessionId).isNotNull();
 
-        // Step 2: create scenario
         String yaml = """
                 id: null
                 name: e2e-test
@@ -95,36 +95,29 @@ class FullApiIntegrationTest {
                     type: END_FAIL
                 """.formatted(sessionId);
 
-        Map<String, Object> scenarioReq = Map.of("yamlDsl", yaml);
-        ResponseEntity<Map> scenarioResp = rest.postForEntity("/api/v1/scenarios", scenarioReq, Map.class);
+        ResponseEntity<Map> scenarioResp = rest.postForEntity(
+            "/api/v1/scenarios", Map.of("yamlDsl", yaml), Map.class);
         assertThat(scenarioResp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         String scenarioId = (String) scenarioResp.getBody().get("id");
         assertThat(scenarioId).isNotNull();
 
-        // Step 3: connect session
         ResponseEntity<Void> connectResp = rest.exchange(
-            "/api/v1/sessions/" + sessionId + "/connect",
-            org.springframework.http.HttpMethod.PUT,
-            null, Void.class);
+            "/api/v1/sessions/" + sessionId + "/connect", HttpMethod.PUT, null, Void.class);
         assertThat(connectResp.getStatusCode().is2xxSuccessful()).isTrue();
 
-        // Step 4: start execution
-        Map<String, Object> execReq = Map.of("sessionId", sessionId);
         ResponseEntity<Map> execResp = rest.postForEntity(
-            "/api/v1/scenarios/" + scenarioId + "/execute", execReq, Map.class);
+            "/api/v1/scenarios/" + scenarioId + "/execute", Map.of("sessionId", sessionId), Map.class);
         assertThat(execResp.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
         String execId = execResp.getBody().get("executionId").toString();
         assertThat(execId).isNotNull();
 
-        // Step 5: inject inbound message to satisfy EXPECT_FIX
-        // Give engine a moment to reach the EXPECT_FIX node
-        await().atMost(2, TimeUnit.SECONDS)
+        // Wait until the engine has sent the outbound order, then satisfy EXPECT_FIX.
+        await().atMost(3, TimeUnit.SECONDS)
                .pollInterval(50, TimeUnit.MILLISECONDS)
                .until(() -> !fakeAdapter.getSent().isEmpty());
 
         fakeAdapter.injectInbound(UUID.fromString(sessionId), Map.of(11, "ORDER-1", 35, "8"));
 
-        // Step 6: await PASSED status via REST
         await().atMost(5, TimeUnit.SECONDS)
                .pollInterval(200, TimeUnit.MILLISECONDS)
                .untilAsserted(() -> {

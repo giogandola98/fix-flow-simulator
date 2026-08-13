@@ -1,73 +1,115 @@
 package com.fixflow.engine.validation;
 
-import com.fixflow.core.domain.scenario.RuntimePolicy;
 import com.fixflow.core.domain.scenario.Scenario;
 import com.fixflow.engine.execution.ExecutionContext;
+import com.fixflow.engine.support.Fixtures;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static com.fixflow.engine.support.Fixtures.endPass;
+import static com.fixflow.engine.support.Fixtures.scenario;
+import static com.fixflow.engine.support.Fixtures.start;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class DateRuleEngineTest {
 
-    private final DateRuleEngine engine = new DateRuleEngine();
+    private DateRuleEngine engine;
+    private ExecutionContext ctx;
 
-    private static ExecutionContext freshCtx() {
-        Scenario s = new Scenario(UUID.randomUUID(), "t", "", "1.0", "s",
-                RuntimePolicy.PARALLEL, List.of(), List.of(), List.of(), List.of(), Map.of(), null);
-        return new ExecutionContext(UUID.randomUUID(), s, UUID.randomUUID());
+    @BeforeEach
+    void setUp() {
+        engine = new DateRuleEngine();
+        Scenario s = scenario("s", start("end"), endPass("end"));
+        ctx = Fixtures.ctx(s);
+    }
+
+    private DateRule currentTimestamp(long toleranceSec) {
+        return new DateRule("d", DateRuleType.CURRENT_TIMESTAMP, null, 0, 0, TimeUnit.SECONDS,
+                toleranceSec, TimeUnit.SECONDS);
+    }
+
+    private DateRule fieldOffset(String srcNode, int srcTag, long offsetSec, long tolSec) {
+        return new DateRule("d", DateRuleType.FIELD_OFFSET, srcNode, srcTag, offsetSec, TimeUnit.SECONDS,
+                tolSec, TimeUnit.SECONDS);
     }
 
     @Test
-    void currentTimestampPassesWhenWithinTolerance() {
+    void currentTimestampWithinTolerancePasses() {
         Instant now = Instant.now();
-        DateRule rule = new DateRule("ct", DateRuleType.CURRENT_TIMESTAMP,
-                null, 0, 0, TimeUnit.SECONDS, 4, TimeUnit.SECONDS);
-        Map<Integer, String> fields = Map.of(60, now.toString());
-        ValidationResult r = engine.validate(rule, 60, fields, freshCtx(), now);
+        ValidationResult r = engine.validate(currentTimestamp(5), 52, Fixtures.fields(52, now.toString()), ctx, now);
         assertThat(r.passed()).isTrue();
     }
 
     @Test
-    void currentTimestampFailsWhenOutsideTolerance() {
+    void currentTimestampOutsideTolferanceFails() {
         Instant now = Instant.now();
-        Instant tenMinAgo = now.minus(10, ChronoUnit.MINUTES);
-        DateRule rule = new DateRule("ct", DateRuleType.CURRENT_TIMESTAMP,
-                null, 0, 0, TimeUnit.SECONDS, 4, TimeUnit.SECONDS);
-        Map<Integer, String> fields = Map.of(60, tenMinAgo.toString());
-        ValidationResult r = engine.validate(rule, 60, fields, freshCtx(), now);
+        Instant actual = now.plusSeconds(3600);
+        ValidationResult r = engine.validate(currentTimestamp(5), 52, Fixtures.fields(52, actual.toString()), ctx, now);
         assertThat(r.passed()).isFalse();
+        assertThat(r.message()).contains("delta=");
     }
 
     @Test
-    void fieldOffsetPassesWhenOffsetMatches() {
-        ExecutionContext ctx = freshCtx();
-        Instant base = Instant.parse("2026-01-01T10:00:00Z");
-        ctx.storeNodeMessage("n1", Map.of(60, base.toString()));
-        Instant target = base.plus(5, ChronoUnit.MINUTES);
-        DateRule rule = new DateRule("fo", DateRuleType.FIELD_OFFSET,
-                "n1", 60, 5, TimeUnit.MINUTES, 1, TimeUnit.SECONDS);
-        Map<Integer, String> fields = Map.of(126, target.toString());
-        ValidationResult r = engine.validate(rule, 126, fields, ctx, Instant.now());
+    void missingFieldFails() {
+        ValidationResult r = engine.validate(currentTimestamp(5), 52, Map.of(), ctx, Instant.now());
+        assertThat(r.passed()).isFalse();
+        assertThat(r.message()).isEqualTo("field missing");
+    }
+
+    @Test
+    void unparseableValueFails() {
+        ValidationResult r = engine.validate(currentTimestamp(5), 52, Fixtures.fields(52, "not-a-date"), ctx, Instant.now());
+        assertThat(r.passed()).isFalse();
+        assertThat(r.message()).isEqualTo("cannot parse");
+    }
+
+    @Test
+    void fieldOffsetWithinTolerancePasses() {
+        Instant base = Instant.parse("2026-01-01T00:00:00Z");
+        ctx.storeNodeMessage("src", Fixtures.fields(60, base.toString()));
+        Instant actual = base.plusSeconds(30);
+        ValidationResult r = engine.validate(fieldOffset("src", 60, 30, 2), 52,
+                Fixtures.fields(52, actual.toString()), ctx, Instant.now());
         assertThat(r.passed()).isTrue();
     }
 
     @Test
-    void fieldOffsetFailsWhenOffsetTooLarge() {
-        ExecutionContext ctx = freshCtx();
-        Instant base = Instant.parse("2026-01-01T10:00:00Z");
-        ctx.storeNodeMessage("n1", Map.of(60, base.toString()));
-        Instant target = base.plus(10, ChronoUnit.MINUTES);
-        DateRule rule = new DateRule("fo", DateRuleType.FIELD_OFFSET,
-                "n1", 60, 5, TimeUnit.MINUTES, 1, TimeUnit.SECONDS);
-        Map<Integer, String> fields = Map.of(126, target.toString());
-        ValidationResult r = engine.validate(rule, 126, fields, ctx, Instant.now());
+    void fieldOffsetOutsideToleranceFails() {
+        Instant base = Instant.parse("2026-01-01T00:00:00Z");
+        ctx.storeNodeMessage("src", Fixtures.fields(60, base.toString()));
+        Instant actual = base.plusSeconds(300);
+        ValidationResult r = engine.validate(fieldOffset("src", 60, 30, 2), 52,
+                Fixtures.fields(52, actual.toString()), ctx, Instant.now());
         assertThat(r.passed()).isFalse();
+    }
+
+    @Test
+    void fieldOffsetSourceNodeMissingFails() {
+        ValidationResult r = engine.validate(fieldOffset("ghost", 60, 30, 2), 52,
+                Fixtures.fields(52, Instant.now().toString()), ctx, Instant.now());
+        assertThat(r.passed()).isFalse();
+        assertThat(r.message()).isEqualTo("source node not found");
+    }
+
+    @Test
+    void fieldOffsetSourceTagMissingFails() {
+        ctx.storeNodeMessage("src", Fixtures.fields(99, "x"));
+        ValidationResult r = engine.validate(fieldOffset("src", 60, 30, 2), 52,
+                Fixtures.fields(52, Instant.now().toString()), ctx, Instant.now());
+        assertThat(r.passed()).isFalse();
+        assertThat(r.message()).isEqualTo("source tag missing");
+    }
+
+    @Test
+    void fieldOffsetSourceUnparseableFails() {
+        ctx.storeNodeMessage("src", Fixtures.fields(60, "bad"));
+        ValidationResult r = engine.validate(fieldOffset("src", 60, 30, 2), 52,
+                Fixtures.fields(52, Instant.now().toString()), ctx, Instant.now());
+        assertThat(r.passed()).isFalse();
+        assertThat(r.message()).isEqualTo("source not parseable");
     }
 }

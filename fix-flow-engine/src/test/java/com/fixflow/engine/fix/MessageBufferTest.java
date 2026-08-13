@@ -1,5 +1,6 @@
 package com.fixflow.engine.fix;
 
+import com.fixflow.engine.support.Fixtures;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -10,45 +11,78 @@ import static org.assertj.core.api.Assertions.assertThat;
 class MessageBufferTest {
 
     @Test
-    void parkAndPollExactMatch() {
-        MessageBuffer buf = new MessageBuffer(10, 60_000);
-        buf.park("s1", Map.of(35, "8", 131, "REQ-1"));
+    void parkThenPollReturnsMatchingMessageAndRemovesIt() {
+        MessageBuffer buffer = new MessageBuffer();
+        buffer.park("s1", Fixtures.fields(11, "ORD1"));
+        assertThat(buffer.size("s1")).isEqualTo(1);
 
-        Optional<Map<Integer, String>> found =
-                buf.poll("s1", f -> "REQ-1".equals(f.get(131)));
-
-        assertThat(found).isPresent();
-        assertThat(found.get()).containsEntry(35, "8");
-        assertThat(buf.poll("s1", f -> "REQ-1".equals(f.get(131)))).isEmpty();
+        Optional<Map<Integer, String>> polled = buffer.poll("s1", f -> "ORD1".equals(f.get(11)));
+        assertThat(polled).isPresent();
+        assertThat(polled.get()).containsEntry(11, "ORD1");
+        assertThat(buffer.size("s1")).isZero();
     }
 
     @Test
-    void capacityEvictsOldestOnOverflow() {
-        MessageBuffer buf = new MessageBuffer(2, 60_000);
-        buf.park("s1", Map.of(11, "A"));
-        buf.park("s1", Map.of(11, "B"));
-        buf.park("s1", Map.of(11, "C"));
-
-        assertThat(buf.poll("s1", f -> "A".equals(f.get(11)))).isEmpty();
-        assertThat(buf.poll("s1", f -> "B".equals(f.get(11)))).isPresent();
-        assertThat(buf.poll("s1", f -> "C".equals(f.get(11)))).isPresent();
+    void pollNonMatchingLeavesMessageParked() {
+        MessageBuffer buffer = new MessageBuffer();
+        buffer.park("s1", Fixtures.fields(11, "ORD1"));
+        assertThat(buffer.poll("s1", f -> "nope".equals(f.get(11)))).isEmpty();
+        assertThat(buffer.size("s1")).isEqualTo(1);
     }
 
     @Test
-    void ttlExpiryRemovesStaleEntries() throws Exception {
-        MessageBuffer buf = new MessageBuffer(10, 50);
-        buf.park("s1", Map.of(11, "X"));
-        Thread.sleep(100);
-        assertThat(buf.poll("s1", f -> "X".equals(f.get(11)))).isEmpty();
+    void pollUnknownSessionIsEmpty() {
+        assertThat(new MessageBuffer().poll("ghost", f -> true)).isEmpty();
     }
 
     @Test
-    void pauseAndResume() {
-        MessageBuffer buf = new MessageBuffer(10, 60_000);
-        assertThat(buf.isPaused()).isFalse();
-        buf.pause();
-        assertThat(buf.isPaused()).isTrue();
-        buf.resume();
-        assertThat(buf.isPaused()).isFalse();
+    void pollReturnsNewestMatchFirst() {
+        MessageBuffer buffer = new MessageBuffer();
+        buffer.park("s1", Fixtures.fields(11, "OLD"));
+        buffer.park("s1", Fixtures.fields(11, "NEW"));
+        Optional<Map<Integer, String>> polled = buffer.poll("s1", f -> true);
+        assertThat(polled).isPresent();
+        assertThat(polled.get()).containsEntry(11, "NEW"); // head = most recently parked
+    }
+
+    @Test
+    void capacityEvictsOldestKeepingNewest() {
+        MessageBuffer buffer = new MessageBuffer(2, Long.MAX_VALUE);
+        buffer.park("s1", Fixtures.fields(1, "A"));
+        buffer.park("s1", Fixtures.fields(1, "B"));
+        buffer.park("s1", Fixtures.fields(1, "C"));
+        assertThat(buffer.size("s1")).isEqualTo(2);
+        // oldest (A) evicted; B and C remain
+        assertThat(buffer.poll("s1", f -> "A".equals(f.get(1)))).isEmpty();
+        assertThat(buffer.poll("s1", f -> "C".equals(f.get(1)))).isPresent();
+        assertThat(buffer.poll("s1", f -> "B".equals(f.get(1)))).isPresent();
+    }
+
+    @Test
+    void expiredMessagesAreEvictedOnPoll() {
+        MessageBuffer buffer = new MessageBuffer(1024, -1L); // any age exceeds ttl
+        buffer.park("s1", Fixtures.fields(11, "ORD1"));
+        assertThat(buffer.poll("s1", f -> true)).isEmpty();
+        assertThat(buffer.size("s1")).isZero();
+    }
+
+    @Test
+    void pauseResumeTogglesState() {
+        MessageBuffer buffer = new MessageBuffer();
+        assertThat(buffer.isPaused()).isFalse();
+        buffer.pause();
+        assertThat(buffer.isPaused()).isTrue();
+        buffer.resume();
+        assertThat(buffer.isPaused()).isFalse();
+    }
+
+    @Test
+    void parkCopiesFieldsDefensively() {
+        MessageBuffer buffer = new MessageBuffer();
+        Map<Integer, String> src = Fixtures.fields(11, "ORD1");
+        buffer.park("s1", src);
+        src.put(99, "x");
+        Optional<Map<Integer, String>> polled = buffer.poll("s1", f -> true);
+        assertThat(polled.get()).doesNotContainKey(99);
     }
 }

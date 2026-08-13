@@ -3,48 +3,59 @@ package com.fixflow.engine.fix;
 import com.fixflow.core.domain.scenario.Scenario;
 import com.fixflow.core.ports.outbound.ScenarioRepositoryPort;
 import com.fixflow.engine.scenario.ScenarioRegistry;
+import com.fixflow.engine.support.Fixtures;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static com.fixflow.engine.support.Fixtures.endPass;
+import static com.fixflow.engine.support.Fixtures.scenario;
+import static com.fixflow.engine.support.Fixtures.start;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.when;
 
 class HotReloadServiceTest {
 
-    @Test
-    void pausesBufferReloadsRegistryThenResumes() {
-        ScenarioRegistry registry = mock(ScenarioRegistry.class);
-        MessageBuffer buffer = mock(MessageBuffer.class);
-        ScenarioRepositoryPort repo = mock(ScenarioRepositoryPort.class);
-        UUID scenarioId = UUID.randomUUID();
-        Scenario latest = mock(Scenario.class);
-        when(repo.findById(scenarioId)).thenReturn(Optional.of(latest));
+    private ScenarioRegistry registry;
+    private MessageBuffer buffer;
+    private ScenarioRepositoryPort repo;
+    private HotReloadService service;
 
-        HotReloadService svc = new HotReloadService(registry, buffer, repo);
-        svc.reload(scenarioId);
-
-        var inOrder = inOrder(buffer, registry);
-        inOrder.verify(buffer).pause();
-        inOrder.verify(registry).reload(latest);
-        inOrder.verify(buffer).resume();
+    @BeforeEach
+    void setUp() {
+        registry = new ScenarioRegistry();
+        buffer = new MessageBuffer();
+        repo = Mockito.mock(ScenarioRepositoryPort.class);
+        service = new HotReloadService(registry, buffer, repo);
     }
 
     @Test
-    void resumesBufferEvenIfReloadThrows() {
-        ScenarioRegistry registry = mock(ScenarioRegistry.class);
-        MessageBuffer buffer = mock(MessageBuffer.class);
-        ScenarioRepositoryPort repo = mock(ScenarioRepositoryPort.class);
-        UUID scenarioId = UUID.randomUUID();
-        Scenario latest = mock(Scenario.class);
-        when(repo.findById(scenarioId)).thenReturn(Optional.of(latest));
-        doThrow(new RuntimeException("boom")).when(registry).reload(any());
+    void reloadPausesBufferFetchesLatestRegistersAndResumes() {
+        UUID id = UUID.randomUUID();
+        Scenario latest = scenario(id, "s", java.util.List.of(), start("end"), endPass("end"));
+        AtomicBoolean pausedDuringFetch = new AtomicBoolean();
+        when(repo.findById(id)).thenAnswer(inv -> {
+            pausedDuringFetch.set(buffer.isPaused());
+            return Optional.of(latest);
+        });
 
-        HotReloadService svc = new HotReloadService(registry, buffer, repo);
-        try { svc.reload(scenarioId); } catch (RuntimeException ignored) {}
+        service.reload(id);
 
-        verify(buffer).pause();
-        verify(buffer).resume();
+        assertThat(pausedDuringFetch).isTrue();               // paused while reloading
+        assertThat(buffer.isPaused()).isFalse();              // resumed afterwards
+        assertThat(registry.getById(id)).contains(latest);    // registry updated
+    }
+
+    @Test
+    void reloadUnknownScenarioThrowsAndStillResumesBuffer() {
+        UUID id = UUID.randomUUID();
+        when(repo.findById(id)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.reload(id)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(buffer.isPaused()).isFalse(); // finally-block resumed
     }
 }

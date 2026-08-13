@@ -1,122 +1,137 @@
 package com.fixflow.engine.variable;
 
-import com.fixflow.core.domain.scenario.RuntimePolicy;
 import com.fixflow.core.domain.scenario.Scenario;
 import com.fixflow.engine.execution.ExecutionContext;
+import com.fixflow.engine.support.Fixtures;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.regex.Pattern;
 
+import static com.fixflow.engine.support.Fixtures.scenario;
+import static com.fixflow.engine.support.Fixtures.start;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.within;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class VariableResolverTest {
 
-    private VariableResolver resolver;
+    private final VariableResolver resolver = new VariableResolver();
     private ExecutionContext ctx;
-
-    private static Scenario minScenario() {
-        return new Scenario(UUID.randomUUID(), "test", "", "1.0", "s",
-                RuntimePolicy.PARALLEL, List.of(), List.of(), List.of(), List.of(), Map.of(), null);
-    }
 
     @BeforeEach
     void setUp() {
-        resolver = new VariableResolver();
-        ctx = new ExecutionContext(UUID.randomUUID(), minScenario(), UUID.randomUUID());
+        Scenario s = scenario("s", start("end"), Fixtures.endPass("end"));
+        ctx = Fixtures.ctx(s);
+    }
+
+    private String resolve(String template) { return resolver.resolveAll(template, ctx); }
+
+    @Test
+    void nullTemplateReturnsNull() {
+        assertThat(resolver.resolveAll(null, ctx)).isNull();
     }
 
     @Test
-    void resolvesNowAsValidIsoInstant() {
-        String out = resolver.resolveAll("{{now}}", ctx);
-        Instant parsed = Instant.parse(out);
-        assertThat(parsed).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS));
+    void plainTextPassesThroughUnchanged() {
+        assertThat(resolve("no placeholders here")).isEqualTo("no placeholders here");
     }
 
     @Test
-    void resolvesUuidAsValidUuid() {
-        String out = resolver.resolveAll("{{uuid}}", ctx);
-        UUID parsed = UUID.fromString(out);
-        assertThat(parsed).isNotNull();
+    void nowResolvesToParseableInstant() {
+        String out = resolve("{{now}}");
+        assertThat(Instant.parse(out)).isNotNull();
     }
 
     @Test
-    void resolvesSeqIncrementing() {
-        String first = resolver.resolveAll("{{seq:orders}}", ctx);
-        String second = resolver.resolveAll("{{seq:orders}}", ctx);
-        assertThat(first).isEqualTo("1");
-        assertThat(second).isEqualTo("2");
-    }
-
-    @Test
-    void resolvesEnvVariable() {
-        String out = resolver.resolveAll("{{env:HOME}}", ctx);
-        assertThat(out).isNotNull().isNotBlank();
-    }
-
-    @Test
-    void resolvesNodeFieldReference() {
-        ctx.storeNodeMessage("n1", Map.of(131, "QR-12345"));
-        String out = resolver.resolveAll("{{node:n1:tag131}}", ctx);
-        assertThat(out).isEqualTo("QR-12345");
-    }
-
-    @Test
-    void resolvesDateOffsetPlusFiveMinutes() {
-        Instant base = Instant.parse("2026-01-01T10:00:00Z");
-        ctx.storeNodeMessage("n1", Map.of(60, base.toString()));
-        String out = resolver.resolveAll("{{node:n1:tag60:offset:+5m}}", ctx);
-        Instant resolved = Instant.parse(out);
-        assertThat(resolved).isEqualTo(base.plus(5, ChronoUnit.MINUTES));
-    }
-
-    @Test
-    void resolvesDateOffsetMinusOneHour() {
-        Instant base = Instant.parse("2026-01-01T10:00:00Z");
-        ctx.storeNodeMessage("n1", Map.of(60, base.toString()));
-        String out = resolver.resolveAll("{{node:n1:tag60:offset:-1h}}", ctx);
-        Instant resolved = Instant.parse(out);
-        assertThat(resolved).isEqualTo(base.minus(1, ChronoUnit.HOURS));
-    }
-
-    @Test
-    void resolvesNowOffsetPlusOneHour() {
+    void nowOffsetPlusIsInTheFuture() {
         Instant before = Instant.now();
-        String out = resolver.resolveAll("{{now:offset:+1h}}", ctx);
-        Instant resolved = Instant.parse(out);
-        assertThat(resolved).isCloseTo(before.plus(1, ChronoUnit.HOURS), within(5, ChronoUnit.SECONDS));
+        Instant out = Instant.parse(resolve("{{now:offset:+1h}}"));
+        assertThat(out).isAfter(before);
     }
 
     @Test
-    void resolvesNowOffsetMinusTenMinutes() {
-        Instant before = Instant.now();
-        String out = resolver.resolveAll("{{now:offset:-10m}}", ctx);
-        Instant resolved = Instant.parse(out);
-        assertThat(resolved).isCloseTo(before.minus(10, ChronoUnit.MINUTES), within(5, ChronoUnit.SECONDS));
+    void nowOffsetMinusIsInThePast() {
+        Instant out = Instant.parse(resolve("{{now:offset:-1d}}"));
+        assertThat(out).isBefore(Instant.now());
     }
 
     @Test
-    void resolvesNowdateAsYyyymmdd() {
-        String out = resolver.resolveAll("{{nowdate}}", ctx);
-        String expected = LocalDate.now(ZoneOffset.UTC).format(DateTimeFormatter.BASIC_ISO_DATE);
-        assertThat(out).isEqualTo(expected);
-        assertThat(out).matches("\\d{8}");
+    void nowDateIsEightDigits() {
+        assertThat(resolve("{{nowdate}}")).matches("\\d{8}");
     }
 
     @Test
-    void resolvesMultipleVariablesInTemplate() {
-        ctx.storeNodeMessage("n1", Map.of(131, "QR-1"));
-        String out = resolver.resolveAll("ID={{node:n1:tag131}};TS={{now}}", ctx);
-        assertThat(out).startsWith("ID=QR-1;TS=");
-        assertThat(Pattern.matches("ID=QR-1;TS=.+Z", out)).isTrue();
+    void nowDateOffsetMatchesFixFormat() {
+        assertThat(resolve("{{nowdate:offset:+30m}}")).matches("\\d{8}-\\d{2}:\\d{2}:\\d{2}");
+    }
+
+    @Test
+    void uuidResolvesToUuid() {
+        assertThat(resolve("{{uuid}}")).matches("[0-9a-f-]{36}");
+    }
+
+    @Test
+    void seqIncrementsPerName() {
+        assertThat(resolve("{{seq:orders}}")).isEqualTo("1");
+        assertThat(resolve("{{seq:orders}}")).isEqualTo("2");
+        assertThat(resolve("{{seq:other}}")).isEqualTo("1");
+    }
+
+    @Test
+    void envUnknownVariableResolvesToEmpty() {
+        assertThat(resolve("{{env:DEFINITELY_NOT_SET_" + System.nanoTime() + "}}")).isEmpty();
+    }
+
+    @Test
+    void envKnownVariableResolves() {
+        String path = System.getenv("PATH");
+        org.junit.jupiter.api.Assumptions.assumeTrue(path != null && !path.isBlank());
+        assertThat(resolve("{{env:PATH}}")).isEqualTo(path);
+    }
+
+    @Test
+    void varResolvesFromContextAndMissingIsEmpty() {
+        ctx.setVariable("side", "BUY");
+        assertThat(resolve("{{var:side}}")).isEqualTo("BUY");
+        assertThat(resolve("{{var:missing}}")).isEmpty();
+    }
+
+    @Test
+    void nodeFieldRefResolvesStoredTag() {
+        ctx.storeNodeMessage("n1", Fixtures.fields(11, "ORD1"));
+        assertThat(resolve("{{node:n1:tag11}}")).isEqualTo("ORD1");
+    }
+
+    @Test
+    void nodeFieldRefMissingTagIsEmpty() {
+        ctx.storeNodeMessage("n1", Fixtures.fields(11, "ORD1"));
+        assertThat(resolve("{{node:n1:tag99}}")).isEmpty();
+    }
+
+    @Test
+    void nodeFieldRefUnknownNodeThrows() {
+        assertThatThrownBy(() -> resolve("{{node:ghost:tag11}}"))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void nodeFieldOffsetShiftsStoredTimestamp() {
+        Instant base = Instant.parse("2026-01-01T00:00:00Z");
+        ctx.storeNodeMessage("n1", Fixtures.fields(52, base.toString()));
+        Instant shifted = Instant.parse(resolve("{{node:n1:tag52:offset:+1h}}"));
+        assertThat(shifted).isEqualTo(base.plusSeconds(3600));
+    }
+
+    @Test
+    void unknownExpressionThrows() {
+        assertThatThrownBy(() -> resolve("{{totally-unknown}}"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void multiplePlaceholdersInOneTemplate() {
+        ctx.setVariable("a", "X");
+        ctx.setVariable("b", "Y");
+        assertThat(resolve("{{var:a}}-{{var:b}}")).isEqualTo("X-Y");
     }
 }

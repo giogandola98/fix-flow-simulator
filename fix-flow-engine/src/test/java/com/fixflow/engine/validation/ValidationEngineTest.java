@@ -1,87 +1,90 @@
 package com.fixflow.engine.validation;
 
-import com.fixflow.core.domain.scenario.RuntimePolicy;
-import com.fixflow.core.domain.scenario.Scenario;
-import com.fixflow.engine.execution.ExecutionContext;
+import com.fixflow.engine.support.Fixtures;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ValidationEngineTest {
 
-    private final ValidationEngine engine = new ValidationEngine(new DateRuleEngine());
+    private ValidationEngine engine;
 
-    private static ExecutionContext freshCtx() {
-        Scenario s = new Scenario(UUID.randomUUID(), "t", "", "1.0", "s",
-                RuntimePolicy.PARALLEL, List.of(), List.of(), List.of(), List.of(), Map.of(), null);
-        return new ExecutionContext(UUID.randomUUID(), s, UUID.randomUUID());
+    @BeforeEach
+    void setUp() { engine = new ValidationEngine(new DateRuleEngine()); }
+
+    private ValidationRuleConfig rc(int tag, String rule, String value) {
+        return new ValidationRuleConfig(tag, rule, value, null, null, null, null, 0);
+    }
+
+    private ValidationConfig config(boolean strict, ValidationRuleConfig... rules) {
+        return new ValidationConfig(List.of(rules), Map.of(), strict);
     }
 
     @Test
-    void passesWhenAllRulesPass() {
-        ValidationConfig cfg = new ValidationConfig(
-            List.of(
-                new ValidationRuleConfig(35, "EQUALS", "S", null, null, null, null, 0),
-                new ValidationRuleConfig(131, "FIELD_PRESENT", null, null, null, null, null, 0)
-            ),
-            Map.of(),
-            false
-        );
-        Map<Integer, String> fields = Map.of(35, "S", 131, "QR-1");
-        ValidationSummary s = engine.validate(cfg, fields, freshCtx(), Instant.now());
+    void allRulesPassProducesPassedSummary() {
+        ValidationSummary s = engine.validate(config(false, rc(35, "EQUALS", "8")),
+                Fixtures.fields(35, "8"), null, Instant.now());
         assertThat(s.passed()).isTrue();
+        assertThat(s.results()).hasSize(1);
     }
 
     @Test
-    void failsInStrictModeWhenUnexpectedTagPresent() {
-        ValidationConfig cfg = new ValidationConfig(
-            List.of(
-                new ValidationRuleConfig(35, "EQUALS", "S", null, null, null, null, 0),
-                new ValidationRuleConfig(131, "FIELD_PRESENT", null, null, null, null, null, 0)
-            ),
-            Map.of(),
-            true
-        );
-        Map<Integer, String> fields = Map.of(35, "S", 131, "QR-1", 999, "EXTRA");
-        ValidationSummary s = engine.validate(cfg, fields, freshCtx(), Instant.now());
+    void anyRuleFailingProducesFailedSummary() {
+        ValidationSummary s = engine.validate(config(false, rc(35, "EQUALS", "8"), rc(44, "EQUALS", "10")),
+                Fixtures.fields(35, "8", 44, "99"), null, Instant.now());
         assertThat(s.passed()).isFalse();
-        assertThat(s.results()).anyMatch(r -> !r.passed() && r.tag() == 999);
     }
 
     @Test
-    void passesInNonStrictModeWhenExtraTagPresent() {
-        ValidationConfig cfg = new ValidationConfig(
-            List.of(
-                new ValidationRuleConfig(35, "EQUALS", "S", null, null, null, null, 0)
-            ),
-            Map.of(),
-            false
-        );
-        Map<Integer, String> fields = Map.of(35, "S", 999, "EXTRA");
-        ValidationSummary s = engine.validate(cfg, fields, freshCtx(), Instant.now());
+    void strictModeFailsOnUnexpectedNonHeaderField() {
+        ValidationSummary s = engine.validate(config(true, rc(35, "EQUALS", "8")),
+                Fixtures.fields(35, "8", 44, "extra"), null, Instant.now());
+        assertThat(s.passed()).isFalse();
+        assertThat(s.results()).anyMatch(r -> !r.passed() && r.ruleName().equals("STRICT"));
+    }
+
+    @Test
+    void strictModeIgnoresHeaderTags() {
+        // header tags 8,9,10,34,35,49,52,56 must not trip strict mode
+        ValidationSummary s = engine.validate(config(true, rc(35, "EQUALS", "8")),
+                Fixtures.fields(35, "8", 8, "FIX.4.4", 49, "SENDER", 56, "TARGET"), null, Instant.now());
         assertThat(s.passed()).isTrue();
     }
 
     @Test
-    void appliesDateRuleFromConfig() {
-        ExecutionContext ctx = freshCtx();
-        Instant base = Instant.parse("2026-01-01T10:00:00Z");
-        ctx.storeNodeMessage("n1", Map.of(60, base.toString()));
-        DateRule fo = new DateRule("fo1", DateRuleType.FIELD_OFFSET, "n1", 60, 5, TimeUnit.MINUTES, 1, TimeUnit.SECONDS);
-        ValidationConfig cfg = new ValidationConfig(
-            List.of(new ValidationRuleConfig(126, "DATE_RULE", null, null, null, "fo1", null, 0)),
-            Map.of("fo1", fo),
-            false
-        );
-        Map<Integer, String> fields = Map.of(126, base.plus(300, ChronoUnit.SECONDS).toString());
-        ValidationSummary s = engine.validate(cfg, fields, ctx, Instant.now());
+    void dispatchesDateRuleToDateRuleEngine() {
+        DateRule dr = new DateRule("d1", DateRuleType.CURRENT_TIMESTAMP, null, 0, 0,
+                java.util.concurrent.TimeUnit.SECONDS, 5, java.util.concurrent.TimeUnit.SECONDS);
+        ValidationRuleConfig rule = new ValidationRuleConfig(52, "DATE_RULE", null, null, null, "d1", null, 0);
+        ValidationConfig cfg = new ValidationConfig(List.of(rule), Map.of("d1", dr), false);
+        Instant now = Instant.now();
+        ValidationSummary s = engine.validate(cfg, Fixtures.fields(52, now.toString()), null, now);
         assertThat(s.passed()).isTrue();
+    }
+
+    @Test
+    void unknownRuleTypeThrows() {
+        assertThatThrownBy(() -> engine.validate(config(false, rc(35, "NOPE", "x")),
+                Fixtures.fields(35, "8"), null, Instant.now()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void unknownDateRuleIdThrows() {
+        ValidationRuleConfig rule = new ValidationRuleConfig(52, "DATE_RULE", null, null, null, "ghost", null, 0);
+        ValidationConfig cfg = new ValidationConfig(List.of(rule), Map.of(), false);
+        assertThatThrownBy(() -> engine.validate(cfg, Fixtures.fields(52, Instant.now().toString()), null, Instant.now()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void emptyRuleSetPasses() {
+        assertThat(engine.validate(config(false), Fixtures.fields(35, "8"), null, Instant.now()).passed()).isTrue();
     }
 }

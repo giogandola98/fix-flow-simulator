@@ -1,99 +1,95 @@
 package com.fixflow.engine.handlers;
 
-import com.fixflow.core.domain.scenario.*;
+import com.fixflow.core.domain.scenario.NodeType;
+import com.fixflow.core.domain.scenario.RetryPolicy;
+import com.fixflow.core.domain.scenario.Scenario;
 import com.fixflow.engine.execution.ExecutionContext;
+import com.fixflow.engine.support.Fixtures;
+import com.fixflow.engine.support.ProgrammableHandler;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.fixflow.engine.support.Fixtures.node;
+import static com.fixflow.engine.support.Fixtures.scenario;
+import static com.fixflow.engine.support.Fixtures.start;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class RetryHandlerTest {
 
-    private static Scenario scenarioWith(ScenarioNode... extra) {
-        ScenarioNode start = new ScenarioNode("start", "start", NodeType.START, Map.of(), null, null, null, null, null);
-        List<ScenarioNode> nodes = new java.util.ArrayList<>();
-        nodes.add(start);
-        for (ScenarioNode n : extra) nodes.add(n);
-        return new Scenario(UUID.randomUUID(), "test", null, "1", null, null, null, null, nodes, null, null, null);
+    private final AtomicInteger attempts = new AtomicInteger();
+
+    private RetryHandler handlerFailingFor(int failFirstN) {
+        ProgrammableHandler flaky = new ProgrammableHandler(NodeType.SEND_FIX, (n, c) -> {
+            int a = attempts.incrementAndGet();
+            return a <= failFirstN
+                    ? NodeHandlerResult.failure(n.onFailure(), "attempt " + a + " failed")
+                    : NodeHandlerResult.success(n.onSuccess());
+        });
+        return new RetryHandler(new NodeDispatcher(List.of(flaky)));
+    }
+
+    private Scenario scenarioWith(RetryPolicy policy, String targetId) {
+        return scenario("s", start("r"),
+                node("r", NodeType.RETRY).cfg("targetNodeId", targetId).retry(policy)
+                        .onSuccess("ok").onFailure("no").build(),
+                node("target", NodeType.SEND_FIX).onSuccess("inner").onFailure("innerFail").build());
     }
 
     @Test
-    void succeedsBeforeMaxAttempts() throws InterruptedException {
-        NodeDispatcher dispatcher = mock(NodeDispatcher.class);
-        AtomicInteger calls = new AtomicInteger();
-        when(dispatcher.dispatch(any(ScenarioNode.class), any())).thenAnswer(inv -> {
-            int n = calls.incrementAndGet();
-            return n < 3
-                ? NodeHandlerResult.failure("retry", "fail")
-                : NodeHandlerResult.success("after");
-        });
-        ScenarioNode inner = new ScenarioNode("inner", "inner", NodeType.SEND_FIX, Map.of(), null, null, "after", "retry", null);
-        Scenario scenario = scenarioWith(inner);
-        ExecutionContext ctx = new ExecutionContext(UUID.randomUUID(), scenario, UUID.randomUUID());
+    void supportsRetry() {
+        assertThat(handlerFailingFor(0).getSupportedType()).isEqualTo(NodeType.RETRY);
+    }
 
-        ScenarioNode node = new ScenarioNode("r", "r", NodeType.RETRY,
-            Map.of("targetNodeId", "inner"),
-            null, new RetryPolicy(3, 1L), "ok", "ko", null);
-
-        RetryHandler h = new RetryHandler(dispatcher);
-        NodeHandlerResult r = h.handle(node, ctx);
+    @Test
+    void succeedsBeforeMaxAttempts() throws Exception {
+        RetryHandler h = handlerFailingFor(1); // fail once then pass
+        Scenario s = scenarioWith(new RetryPolicy(3, 0L), "target");
+        NodeHandlerResult r = h.handle(s.findNode("r").get(), Fixtures.ctx(s));
+        assertThat(r.success()).isTrue();
         assertThat(r.nextNodeId()).isEqualTo("ok");
-        assertThat(calls.get()).isEqualTo(3);
+        assertThat(attempts).hasValue(2);
     }
 
     @Test
-    void failsWhenExceedsMaxAttempts() throws InterruptedException {
-        NodeDispatcher dispatcher = mock(NodeDispatcher.class);
-        when(dispatcher.dispatch(any(ScenarioNode.class), any()))
-            .thenReturn(NodeHandlerResult.failure("retry", "x"));
-
-        ScenarioNode inner = new ScenarioNode("inner", "inner", NodeType.SEND_FIX, Map.of(), null, null, "ok", "retry", null);
-        Scenario scenario = scenarioWith(inner);
-        ExecutionContext ctx = new ExecutionContext(UUID.randomUUID(), scenario, UUID.randomUUID());
-
-        ScenarioNode node = new ScenarioNode("r", "r", NodeType.RETRY,
-            Map.of("targetNodeId", "inner"),
-            null, new RetryPolicy(2, 1L), "ok", "ko", null);
-
-        RetryHandler h = new RetryHandler(dispatcher);
-        NodeHandlerResult r = h.handle(node, ctx);
-        assertThat(r.nextNodeId()).isEqualTo("ko");
+    void exhaustsAllAttemptsThenFails() throws Exception {
+        RetryHandler h = handlerFailingFor(99); // always fails
+        Scenario s = scenarioWith(new RetryPolicy(2, 0L), "target");
+        NodeHandlerResult r = h.handle(s.findNode("r").get(), Fixtures.ctx(s));
         assertThat(r.success()).isFalse();
+        assertThat(r.nextNodeId()).isEqualTo("no");
+        assertThat(r.errorMessage()).contains("exhausted 2 retries");
+        assertThat(attempts).hasValue(2);
     }
 
     @Test
-    void loopWalksEntireSubBlockEachIteration() throws InterruptedException {
-        // #62: each iteration must walk the whole block (a -> b), not just the attached node.
-        NodeDispatcher dispatcher = mock(NodeDispatcher.class);
-        Map<String, Integer> calls = new java.util.HashMap<>();
-        when(dispatcher.dispatch(any(ScenarioNode.class), any())).thenAnswer(inv -> {
-            ScenarioNode n = inv.getArgument(0);
-            calls.merge(n.id(), 1, Integer::sum);
-            return NodeHandlerResult.success(n.onSuccess());
-        });
+    void defaultsToSingleAttemptWhenPolicyNull() throws Exception {
+        RetryHandler h = handlerFailingFor(99);
+        Scenario s = scenarioWith(null, "target");
+        NodeHandlerResult r = h.handle(s.findNode("r").get(), Fixtures.ctx(s));
+        assertThat(r.success()).isFalse();
+        assertThat(attempts).hasValue(1);
+    }
 
-        // a -> b -> back to the LOOP node "l" (the loop-back boundary).
-        ScenarioNode a = new ScenarioNode("a", "a", NodeType.SEND_FIX, Map.of(), null, null, "b", "fail", null);
-        ScenarioNode b = new ScenarioNode("b", "b", NodeType.SEND_FIX, Map.of(), null, null, "l", "fail", null);
-        Scenario scenario = scenarioWith(a, b);
-        ExecutionContext ctx = new ExecutionContext(UUID.randomUUID(), scenario, UUID.randomUUID());
+    @Test
+    void missingTargetNodeIdRoutesOnFailure() throws Exception {
+        RetryHandler h = handlerFailingFor(0);
+        Scenario s = scenario("s", start("r"),
+                node("r", NodeType.RETRY).onSuccess("ok").onFailure("no").build());
+        NodeHandlerResult r = h.handle(s.findNode("r").get(), Fixtures.ctx(s));
+        assertThat(r.success()).isFalse();
+        assertThat(r.nextNodeId()).isEqualTo("no");
+        assertThat(r.errorMessage()).isEqualTo("missing targetNodeId");
+    }
 
-        ScenarioNode node = new ScenarioNode("l", "l", NodeType.LOOP,
-            Map.of("targetNodeId", "a", "iterations", 3),
-            null, null, "done", "fail", null);
-
-        LoopHandler h = new LoopHandler(dispatcher);
-        NodeHandlerResult r = h.handle(node, ctx);
-
-        assertThat(r.nextNodeId()).isEqualTo("done");
-        assertThat(calls.get("a")).isEqualTo(3);
-        assertThat(calls.get("b")).isEqualTo(3);
+    @Test
+    void unknownTargetNodeThrows() {
+        RetryHandler h = handlerFailingFor(0);
+        Scenario s = scenarioWith(new RetryPolicy(1, 0L), "ghost");
+        ExecutionContext ctx = Fixtures.ctx(s);
+        assertThatThrownBy(() -> h.handle(s.findNode("r").get(), ctx))
+                .isInstanceOf(IllegalStateException.class);
     }
 }

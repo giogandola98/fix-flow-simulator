@@ -1,103 +1,113 @@
 package com.fixflow.engine.correlation;
 
 import com.fixflow.core.domain.scenario.CorrelationRule;
+import com.fixflow.engine.support.Fixtures;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CorrelationEngineTest {
 
+    private CorrelationEngine engine;
+    private static final String SESSION = "sess-1";
+
+    @BeforeEach
+    void setUp() { engine = new CorrelationEngine(); }
+
+    private CorrelationRule rule(int tag) { return new CorrelationRule(tag, "node", tag, 0); }
+
     @Test
-    void deliversMatchingMessageToWaiter() throws Exception {
-        CorrelationEngine engine = new CorrelationEngine();
-        CorrelationRule rule = new CorrelationRule(131, "n1", 131, 1000);
-        CompletableFuture<Map<Integer, String>> f = engine.register("exec-1", "sess", rule, "REQ-1");
+    void registerThenMatchingMessageCompletesFuture() {
+        CompletableFuture<Map<Integer, String>> f = engine.register("exec-1", SESSION, rule(11), "ORD1");
+        assertThat(engine.pendingCount()).isEqualTo(1);
 
-        engine.onMessage("sess", Map.of(131, "REQ-1", 35, "8"));
-
-        Map<Integer, String> got = f.get(500, TimeUnit.MILLISECONDS);
-        assertThat(got).containsEntry(131, "REQ-1");
+        boolean consumed = engine.onMessage(SESSION, Fixtures.fields(11, "ORD1", 35, "8"));
+        assertThat(consumed).isTrue();
+        assertThat(f).isCompleted();
+        assertThat(f.join()).containsEntry(11, "ORD1");
+        assertThat(engine.pendingCount()).isZero();
     }
 
     @Test
-    void nonMatchingMessageLeavesWaiterPending() {
-        CorrelationEngine engine = new CorrelationEngine();
-        CorrelationRule rule = new CorrelationRule(131, "n1", 131, 1000);
-        CompletableFuture<Map<Integer, String>> f = engine.register("exec-1", "sess", rule, "REQ-1");
-
-        engine.onMessage("sess", Map.of(131, "REQ-OTHER"));
-
-        assertThatThrownBy(() -> f.get(100, TimeUnit.MILLISECONDS))
-                .isInstanceOf(java.util.concurrent.TimeoutException.class);
+    void nonMatchingValueDoesNotConsume() {
+        engine.register("exec-1", SESSION, rule(11), "ORD1");
+        assertThat(engine.onMessage(SESSION, Fixtures.fields(11, "OTHER"))).isFalse();
+        assertThat(engine.pendingCount()).isEqualTo(1);
     }
 
     @Test
-    void cancelCompletesFutureExceptionally() {
-        CorrelationEngine engine = new CorrelationEngine();
-        CorrelationRule rule = new CorrelationRule(131, "n1", 131, 1000);
-        CompletableFuture<Map<Integer, String>> f = engine.register("exec-1", "sess", rule, "REQ-1");
+    void differentSessionIsIgnored() {
+        engine.register("exec-1", SESSION, rule(11), "ORD1");
+        assertThat(engine.onMessage("other-session", Fixtures.fields(11, "ORD1"))).isFalse();
+        assertThat(engine.pendingCount()).isEqualTo(1);
+    }
 
+    @Test
+    void cancelRemovesWaiterAndCancelsFuture() {
+        CompletableFuture<Map<Integer, String>> f = engine.register("exec-1", SESSION, rule(11), "ORD1");
         engine.cancel("exec-1");
         assertThat(f).isCancelled();
+        assertThat(engine.pendingCount()).isZero();
+        assertThat(engine.onMessage(SESSION, Fixtures.fields(11, "ORD1"))).isFalse();
     }
 
     @Test
-    void multiRuleRoutesToFirstMatchingRule() throws Exception {
-        CorrelationEngine engine = new CorrelationEngine();
-        CorrelationEngine.RoutingRule quoteRule = new CorrelationEngine.RoutingRule("r1", "Quote", Map.of(35, "S"), "quote-node");
-        CorrelationEngine.RoutingRule rejectRule = new CorrelationEngine.RoutingRule("r2", "Reject", Map.of(35, "AG"), "reject-node");
-
-        CompletableFuture<CorrelationEngine.RoutedResult> f =
-                engine.registerMulti("exec-1", "sess", List.of(quoteRule, rejectRule));
-
-        engine.onMessage("sess", Map.of(35, "S", 131, "RFQ-001"));
-
-        CorrelationEngine.RoutedResult result = f.get(500, TimeUnit.MILLISECONDS);
-        assertThat(result.matchedRuleId()).isEqualTo("r1");
-        assertThat(result.targetNodeId()).isEqualTo("quote-node");
-        assertThat(result.fields()).containsEntry(35, "S");
+    void duplicateExecutionIdThrows() {
+        engine.register("exec-1", SESSION, rule(11), "ORD1");
+        assertThatThrownBy(() -> engine.register("exec-1", SESSION, rule(11), "ORD2"))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
-    void multiRuleDefaultRuleMatchesWhenNoSpecificRuleFires() throws Exception {
-        CorrelationEngine engine = new CorrelationEngine();
-        CorrelationEngine.RoutingRule quoteRule = new CorrelationEngine.RoutingRule("r1", "Quote", Map.of(35, "S"), "quote-node");
-        CorrelationEngine.RoutingRule defaultRule = new CorrelationEngine.RoutingRule("r2", "Default", Map.of(), "default-node");
-
-        CompletableFuture<CorrelationEngine.RoutedResult> f =
-                engine.registerMulti("exec-1", "sess", List.of(quoteRule, defaultRule));
-
-        engine.onMessage("sess", Map.of(35, "8", 39, "2"));
-
-        CorrelationEngine.RoutedResult result = f.get(500, TimeUnit.MILLISECONDS);
-        assertThat(result.matchedRuleId()).isEqualTo("r2");
-        assertThat(result.targetNodeId()).isEqualTo("default-node");
+    void multiRuleRoutesToFirstMatchingRule() {
+        List<CorrelationEngine.RoutingRule> rules = List.of(
+                new CorrelationEngine.RoutingRule("r1", "typeD", Map.of(35, "D"), "t1"),
+                new CorrelationEngine.RoutingRule("r2", "typeEight", Map.of(35, "8"), "t2"));
+        CompletableFuture<CorrelationEngine.RoutedResult> f = engine.registerMulti("m1", SESSION, rules);
+        assertThat(engine.onMessage(SESSION, Fixtures.fields(35, "8"))).isTrue();
+        CorrelationEngine.RoutedResult res = f.join();
+        assertThat(res.matchedRuleId()).isEqualTo("r2");
+        assertThat(res.targetNodeId()).isEqualTo("t2");
     }
 
     @Test
-    void multiRuleCompoundAndConditionRequiresAllTagsToMatch() throws Exception {
-        CorrelationEngine engine = new CorrelationEngine();
-        CorrelationEngine.RoutingRule rejectedRule = new CorrelationEngine.RoutingRule(
-                "r1", "Rejected", Map.of(35, "8", 39, "8"), "rejected-node");
+    void multiRuleFallsBackToDefaultRule() {
+        List<CorrelationEngine.RoutingRule> rules = List.of(
+                new CorrelationEngine.RoutingRule("r1", "typeD", Map.of(35, "D"), "t1"),
+                new CorrelationEngine.RoutingRule("def", "default", Map.of(), "tDefault"));
+        CompletableFuture<CorrelationEngine.RoutedResult> f = engine.registerMulti("m1", SESSION, rules);
+        assertThat(engine.onMessage(SESSION, Fixtures.fields(35, "Z"))).isTrue();
+        assertThat(f.join().targetNodeId()).isEqualTo("tDefault");
+    }
 
-        CompletableFuture<CorrelationEngine.RoutedResult> f =
-                engine.registerMulti("exec-1", "sess", List.of(rejectedRule));
+    @Test
+    void multiRuleNoMatchAndNoDefaultDoesNotConsume() {
+        List<CorrelationEngine.RoutingRule> rules = List.of(
+                new CorrelationEngine.RoutingRule("r1", "typeD", Map.of(35, "D"), "t1"));
+        engine.registerMulti("m1", SESSION, rules);
+        assertThat(engine.onMessage(SESSION, Fixtures.fields(35, "Z"))).isFalse();
+        assertThat(engine.pendingCount()).isEqualTo(1);
+    }
 
-        // Partial match — tag 35 matches but tag 39 does not
-        boolean matched = engine.onMessage("sess", Map.of(35, "8", 39, "2"));
-        assertThat(matched).isFalse();
+    @Test
+    void cancelMultiRemovesAndCancels() {
+        CompletableFuture<CorrelationEngine.RoutedResult> f = engine.registerMulti("m1", SESSION,
+                List.of(new CorrelationEngine.RoutingRule("r1", "x", Map.of(35, "D"), "t1")));
+        engine.cancelMulti("m1");
+        assertThat(f).isCancelled();
+        assertThat(engine.pendingCount()).isZero();
+    }
 
-        // Full match — both tags match
-        engine.onMessage("sess", Map.of(35, "8", 39, "8"));
-
-        CorrelationEngine.RoutedResult result = f.get(500, TimeUnit.MILLISECONDS);
-        assertThat(result.matchedRuleId()).isEqualTo("r1");
-        assertThat(result.targetNodeId()).isEqualTo("rejected-node");
+    @Test
+    void duplicateMultiExecutionIdThrows() {
+        engine.registerMulti("m1", SESSION, List.of());
+        assertThatThrownBy(() -> engine.registerMulti("m1", SESSION, List.of()))
+                .isInstanceOf(IllegalStateException.class);
     }
 }

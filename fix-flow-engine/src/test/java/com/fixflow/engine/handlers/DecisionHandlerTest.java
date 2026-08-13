@@ -1,78 +1,90 @@
 package com.fixflow.engine.handlers;
 
-import com.fixflow.core.domain.scenario.*;
+import com.fixflow.core.domain.scenario.NodeType;
+import com.fixflow.core.domain.scenario.Scenario;
 import com.fixflow.engine.execution.ExecutionContext;
+import com.fixflow.engine.support.Fixtures;
 import com.fixflow.engine.variable.VariableResolver;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
+import static com.fixflow.engine.support.Fixtures.node;
+import static com.fixflow.engine.support.Fixtures.scenario;
+import static com.fixflow.engine.support.Fixtures.start;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class DecisionHandlerTest {
 
-    private final VariableResolver resolver = new VariableResolver();
+    private final DecisionHandler handler = new DecisionHandler(new VariableResolver());
 
-    private static ExecutionContext freshCtx() {
-        Scenario s = new Scenario(UUID.randomUUID(), "t", "", "1.0", "s",
-                RuntimePolicy.PARALLEL, List.of(), List.of(), List.of(), List.of(), Map.of(), null);
-        return new ExecutionContext(UUID.randomUUID(), s, UUID.randomUUID());
+    private ExecutionContext ctx() {
+        Scenario s = scenario("s", start("d"), node("d", NodeType.DECISION).onSuccess("ok").onFailure("no").build());
+        return Fixtures.ctx(s);
+    }
+
+    private NodeHandlerResult run(String condition) {
+        return handler.handle(node("d", NodeType.DECISION).cfg("condition", condition)
+                .onSuccess("ok").onFailure("no").build(), ctx());
     }
 
     @Test
-    void decisionGoesOnSuccessWhenConditionTrue() throws Exception {
-        DecisionHandler h = new DecisionHandler(resolver);
-        ExecutionContext ctx = freshCtx();
-        ctx.storeNodeMessage("n1", Map.of(39, "2"));
-        ScenarioNode node = new ScenarioNode("d", "decide", NodeType.DECISION,
-            Map.of("condition", "{{node:n1:tag39}} == 2"),
-            null, null, "yes", "no", null);
-        NodeHandlerResult r = h.handle(node, ctx);
-        assertThat(r.nextNodeId()).isEqualTo("yes");
+    void supportsDecision() {
+        assertThat(handler.getSupportedType()).isEqualTo(NodeType.DECISION);
+    }
+
+    @Test
+    void equalsTrueRoutesOnSuccess() {
+        NodeHandlerResult r = run("foo == foo");
+        assertThat(r.success()).isTrue();
+        assertThat(r.nextNodeId()).isEqualTo("ok");
+    }
+
+    @Test
+    void equalsFalseRoutesOnFailure() {
+        NodeHandlerResult r = run("foo == bar");
+        assertThat(r.success()).isFalse();
+        assertThat(r.nextNodeId()).isEqualTo("no");
+        assertThat(r.errorMessage()).isEqualTo("condition false");
+    }
+
+    @Test
+    void notEqualsOperator() {
+        assertThat(run("foo != bar").success()).isTrue();
+        assertThat(run("foo != foo").success()).isFalse();
+    }
+
+    @Test
+    void containsOperator() {
+        assertThat(run("hello world contains world").success()).isTrue();
+        assertThat(run("hello contains zzz").success()).isFalse();
+    }
+
+    @Test
+    void unquotesQuotedOperands() {
+        assertThat(run("\"a b\" == \"a b\"").success()).isTrue();
+    }
+
+    @Test
+    void resolvesVariablesBeforeEvaluating() {
+        ExecutionContext ctx = ctx();
+        ctx.setVariable("side", "BUY");
+        NodeHandlerResult r = handler.handle(node("d", NodeType.DECISION)
+                .cfg("condition", "{{var:side}} == BUY").onSuccess("ok").onFailure("no").build(), ctx);
         assertThat(r.success()).isTrue();
     }
 
     @Test
-    void decisionGoesOnFailureWhenConditionFalse() throws Exception {
-        DecisionHandler h = new DecisionHandler(resolver);
-        ExecutionContext ctx = freshCtx();
-        ctx.storeNodeMessage("n1", Map.of(39, "1"));
-        ScenarioNode node = new ScenarioNode("d", "decide", NodeType.DECISION,
-            Map.of("condition", "{{node:n1:tag39}} == 2"),
-            null, null, "yes", "no", null);
-        NodeHandlerResult r = h.handle(node, ctx);
-        assertThat(r.nextNodeId()).isEqualTo("no");
+    void missingConditionRoutesOnFailure() {
+        NodeHandlerResult r = handler.handle(node("d", NodeType.DECISION)
+                .onSuccess("ok").onFailure("no").build(), ctx());
         assertThat(r.success()).isFalse();
+        assertThat(r.nextNodeId()).isEqualTo("no");
+        assertThat(r.errorMessage()).isEqualTo("missing condition");
     }
 
     @Test
-    void waitBlocksForConfiguredDuration() throws Exception {
-        WaitHandler h = new WaitHandler();
-        ExecutionContext ctx = freshCtx();
-        ScenarioNode node = new ScenarioNode("w", "wait", NodeType.WAIT,
-            Map.of(),
-            new TimeoutConfig(50, TimeUnit.MILLISECONDS, TimeoutAction.FAIL, null),
-            null, "next", "fail", null);
-        long start = System.nanoTime();
-        NodeHandlerResult r = h.handle(node, ctx);
-        long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
-        assertThat(elapsedMs).isGreaterThanOrEqualTo(50L);
-        assertThat(r.nextNodeId()).isEqualTo("next");
-    }
-
-    @Test
-    void delayBlocksForConfiguredMs() throws Exception {
-        DelayHandler h = new DelayHandler();
-        ExecutionContext ctx = freshCtx();
-        ScenarioNode node = new ScenarioNode("d", "delay", NodeType.DELAY,
-            Map.of("delayMs", 50),
-            null, null, "next", "fail", null);
-        long start = System.nanoTime();
-        NodeHandlerResult r = h.handle(node, ctx);
-        long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
-        assertThat(elapsedMs).isGreaterThanOrEqualTo(50L);
-        assertThat(r.nextNodeId()).isEqualTo("next");
+    void unparseableConditionThrows() {
+        assertThatThrownBy(() -> run("this has no operator"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }
