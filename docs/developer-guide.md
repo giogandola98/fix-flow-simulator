@@ -1,6 +1,6 @@
 # FIX Flow Simulator — Developer Guide
 
-**Version:** 0.3.2-alpha  
+**Version:** 0.4.0-beta  
 **Stack:** Java 21 · Spring Boot 3.3.2 · QuickFIX/J 2.3.1 · React 18 · Vite · Zustand · ReactFlow v12
 
 ---
@@ -108,7 +108,7 @@ Browser                 API                    Engine               QuickFIX/J
 
 ```bash
 ~/maven/bin/mvn clean package -DskipTests
-java -jar fix-flow-api/target/fix-flow-api-0.3.2-alpha.jar
+java -jar fix-flow-api/target/fix-flow-api-0.4.0-beta.jar
 ```
 
 The fat JAR copies `fix-flow-ui/target/dist` into `BOOT-INF/classes/static` via `maven-resources-plugin`. Open `http://localhost:8080`.
@@ -132,7 +132,7 @@ Prior sessions and scenarios pollute test results. Before any integration test r
 ```bash
 fuser -k 8080/tcp                     # stop running instance
 rm -rf ./data/fixflow.*               # wipe H2 database
-java -jar fix-flow-api/target/fix-flow-api-0.3.2-alpha.jar
+java -jar fix-flow-api/target/fix-flow-api-0.4.0-beta.jar
 ```
 
 Recreate sessions and scenarios from scratch. Never test against a DB with leftover state.
@@ -1024,18 +1024,18 @@ The script tests: session creation via form, drag-drop from palette, node config
 
 Build order enforced by POM: `fix-flow-core` → `fix-flow-engine` → `fix-flow-adapters` → `fix-flow-ui` (runs `npm run build`) → `fix-flow-api` (copies `fix-flow-ui/target/dist` → static resources).
 
-Output: `fix-flow-api/target/fix-flow-api-0.3.2-alpha.jar` (~50 MB, self-contained).
+Output: `fix-flow-api/target/fix-flow-api-0.4.0-beta.jar` (~50 MB, self-contained).
 
 ### Running the fat JAR
 
 ```bash
-java -jar fix-flow-api/target/fix-flow-api-0.3.2-alpha.jar
+java -jar fix-flow-api/target/fix-flow-api-0.4.0-beta.jar
 ```
 
 Optional overrides:
 
 ```bash
-java -jar fix-flow-api/target/fix-flow-api-0.3.2-alpha.jar \
+java -jar fix-flow-api/target/fix-flow-api-0.4.0-beta.jar \
   --server.port=9090 \
   --spring.datasource.url=jdbc:h2:file:/data/prod/fixflow
 ```
@@ -1151,7 +1151,7 @@ Before any UAT run, wipe the H2 database to avoid cross-test pollution:
 ```bash
 fuser -k 8080/tcp
 rm -rf ./data/fixflow.*
-java -jar fix-flow-api/target/fix-flow-api-0.3.2-alpha.jar
+java -jar fix-flow-api/target/fix-flow-api-0.4.0-beta.jar
 ```
 
 ### Scenario `nodeCount` field

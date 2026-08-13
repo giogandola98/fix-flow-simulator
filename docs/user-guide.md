@@ -1,6 +1,6 @@
 # FIX Flow Simulator — User Guide
 
-**Version:** 0.3.2-alpha
+**Version:** 0.4.0-beta
 
 ---
 
@@ -717,4 +717,4 @@ After multiple test runs, sequence numbers may desync.
 
 ---
 
-*This guide covers FIX Flow Simulator v0.3.2-alpha. For developer/API documentation, see [developer-guide.md](developer-guide.md).*
+*This guide covers FIX Flow Simulator v0.4.0-beta. For developer/API documentation, see [developer-guide.md](developer-guide.md).*
