@@ -17,11 +17,17 @@ export function useExecutionSubscription(executionId: string | null): void {
     let disposer: (() => void) | null = null;
     let cancelled = false;
 
+    const TERMINAL: ReadonlyArray<string> = ['PASSED', 'FAILED', 'STOPPED'];
+
     const handleEvent = (event: ExecutionEvent) => {
       addEvent(event);
       if (event.type === 'EXECUTION_STARTED') {
         setStartedAt(event.timestamp);
-        updateStatus('RUNNING');
+        // Monotonic status: never drop a finished run back to RUNNING. The persisted-event
+        // backfill can replay EXECUTION_STARTED after the live EXECUTION_FINISHED has already
+        // arrived; without this guard the status would be stranded at RUNNING and the Stop
+        // button would never reset to Run (issue #63).
+        if (!TERMINAL.includes(useExecutionStore.getState().executionStatus)) updateStatus('RUNNING');
       }
       if (event.type === 'NODE_ENTERED' && event.nodeId) setNodeStatus(event.nodeId, 'running');
       if (event.type === 'NODE_EXITED' && event.nodeId) setNodeStatus(event.nodeId, 'passed');
