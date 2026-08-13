@@ -136,6 +136,7 @@
   "nodeConfig": {
     "nodeName": "Nom du Nœud",
     "tag": "Tag",
+    "field": "Champ",
     "value": "Valeur",
     "key": "Clé",
     "selectNode": "-- sélectionner un nœud --",

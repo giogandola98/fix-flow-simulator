@@ -136,6 +136,7 @@
   "nodeConfig": {
     "nodeName": "Nome Nodo",
     "tag": "Tag",
+    "field": "Campo",
     "value": "Valore",
     "key": "Chiave",
     "selectNode": "-- seleziona nodo --",

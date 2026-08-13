@@ -4,6 +4,7 @@ import { ScenarioNode } from '../../../types';
 import { useScenarioStore } from '../../../store/scenarioStore';
 import { TimeoutConfig } from './TimeoutConfig';
 import { parseFIXMessage, ENGINE_TAGS } from '../../../lib/parseFIXMessage';
+import { fixTagName, FIX_TAGS } from '../../../lib/fixTags';
 import { VarRefPanel } from './VarRefPanel';
 
 interface FieldRow { tag: number; value: string; }
@@ -110,18 +111,25 @@ export function SendFIXConfig({ node }: Props) {
           </label>
           <button className="text-[10px] px-2 py-0.5 bg-blue-600 hover:bg-blue-500 rounded" onClick={addField}>{t('nodeConfig.sendFix.addField')}</button>
         </div>
+        <datalist id="fix-tag-list">
+          {Object.entries(FIX_TAGS).map(([tag, name]) => (
+            <option key={tag} value={tag}>{`${tag} — ${name}`}</option>
+          ))}
+        </datalist>
         <table className="w-full mt-1">
           <thead className="text-[10px] text-gray-500">
-            <tr><th className="text-left">{t('nodeConfig.tag')}</th><th className="text-left">{t('nodeConfig.value')}</th><th /></tr>
+            <tr><th className="text-left w-16">{t('nodeConfig.tag')}</th><th className="text-left">{t('nodeConfig.field')}</th><th className="text-left">{t('nodeConfig.value')}</th><th /></tr>
           </thead>
           <tbody>
             {fields.map((f, i) => {
               const isRestricted = ENGINE_TAGS.has(f.tag);
+              const tagName = fixTagName(f.tag);
               return (
                 <tr key={i}>
-                  <td className="pr-1">
+                  <td className="pr-1 align-top">
                     <input
                       type="number"
+                      list="fix-tag-list"
                       className={`w-full bg-[#0f1117] border rounded px-1 py-0.5 ${isRestricted ? 'border-yellow-500' : 'border-[#2a2d3a]'}`}
                       value={f.tag}
                       onChange={(e) => updateField(i, { tag: Number(e.target.value) })}
@@ -131,11 +139,16 @@ export function SendFIXConfig({ node }: Props) {
                       <div className="text-yellow-400 text-[9px] leading-tight mt-0.5">engine-managed</div>
                     )}
                   </td>
-                  <td className="pr-1">
+                  <td className="pr-1 align-top">
+                    <div className={`px-1 py-0.5 text-[10px] leading-tight ${tagName ? 'text-gray-400' : 'text-gray-600 italic'}`} title={tagName ?? undefined}>
+                      {tagName ?? '—'}
+                    </div>
+                  </td>
+                  <td className="pr-1 align-top">
                     <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-1 py-0.5"
                       value={f.value} onChange={(e) => updateField(i, { value: e.target.value })} />
                   </td>
-                  <td className="pl-1">
+                  <td className="pl-1 align-top">
                     <button className="text-red-400 hover:text-red-300 text-xs" onClick={() => removeField(i)}>x</button>
                   </td>
                 </tr>

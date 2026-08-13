@@ -2,6 +2,13 @@ import { useTranslation } from 'react-i18next';
 import { ScenarioNode } from '../../../types';
 import { useScenarioStore } from '../../../store/scenarioStore';
 import { TimeoutConfig } from './TimeoutConfig';
+import { fixTagName } from '../../../lib/fixTags';
+
+function TagNameHint({ tag }: { tag?: number }) {
+  const name = tag ? fixTagName(tag) : undefined;
+  if (!name) return null;
+  return <div className="text-[9px] text-gray-500 leading-tight mt-0.5">{name}</div>;
+}
 
 interface CorrelationCfg { sourceTag?: number; fromNode?: string; targetTag?: number; }
 interface ExpectCfg { msgType?: string; correlation?: CorrelationCfg; }
@@ -52,6 +59,7 @@ export function ExpectFIXConfig({ node }: { node: ScenarioNode }) {
           <input type="number" min={1} placeholder="e.g. 11"
             className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
             value={corr.sourceTag ?? ''} onChange={(e) => patchCorr({ sourceTag: e.target.value ? Number(e.target.value) : undefined })} />
+          <TagNameHint tag={corr.sourceTag} />
         </div>
         <div className="mt-1">
           <label className="text-[10px] text-gray-500">
@@ -74,6 +82,7 @@ export function ExpectFIXConfig({ node }: { node: ScenarioNode }) {
           <input type="number" min={1} placeholder="e.g. 11"
             className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
             value={corr.targetTag ?? ''} onChange={(e) => patchCorr({ targetTag: e.target.value ? Number(e.target.value) : undefined })} />
+          <TagNameHint tag={corr.targetTag} />
         </div>
       </div>
       <TimeoutConfig value={node.timeout} onChange={(next) => updateNode(node.id, { timeout: next })} currentNodeId={node.id} />

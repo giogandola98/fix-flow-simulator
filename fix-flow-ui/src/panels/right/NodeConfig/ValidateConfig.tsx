@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { ScenarioNode } from '../../../types';
 import { useScenarioStore } from '../../../store/scenarioStore';
 import { DateRulesEditor, DateRule } from './DateRulesEditor';
+import { fixTagName } from '../../../lib/fixTags';
 
 type RuleKind = 'EQUALS' | 'NOT_EQUALS' | 'ENUM' | 'REGEX' | 'NUMERIC_MIN' | 'NUMERIC_MAX' | 'FIELD_PRESENT' | 'FIELD_ABSENT' | 'DATE_RULE';
 interface ValidationRule { tag: number; rule: RuleKind; value?: string; values?: string[]; pattern?: string; numericValue?: number; ref?: string; dateRuleId?: string; }
@@ -48,9 +49,12 @@ export function ValidateConfig({ node }: { node: ScenarioNode }) {
       <div className="space-y-1">
         {rules.map((r, i) => (
           <div key={i} className="border border-[#2a2d3a] rounded p-2">
-            <div className="flex gap-1 items-center">
-              <input type="number" className="w-16 bg-[#0f1117] border border-[#2a2d3a] rounded px-1 py-0.5"
-                value={r.tag} onChange={(e) => updateRule(i, { tag: Number(e.target.value) })} placeholder="tag" />
+            <div className="flex gap-1 items-start">
+              <div className="w-16 flex-shrink-0">
+                <input type="number" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-1 py-0.5"
+                  value={r.tag} onChange={(e) => updateRule(i, { tag: Number(e.target.value) })} placeholder="tag" />
+                {fixTagName(r.tag) && <div className="text-[9px] text-gray-500 leading-tight mt-0.5">{fixTagName(r.tag)}</div>}
+              </div>
               <select className="flex-1 bg-[#0f1117] border border-[#2a2d3a] rounded px-1 py-0.5"
                 value={r.rule} onChange={(e) => updateRule(i, { rule: e.target.value as RuleKind })}>
                 {RULES.map((rk) => <option key={rk}>{rk}</option>)}
