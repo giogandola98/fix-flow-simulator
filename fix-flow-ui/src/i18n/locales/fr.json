@@ -7,7 +7,8 @@
     "save": "Enregistrer",
     "import": "Importer",
     "importing": "Importation…",
-    "export": "Exporter"
+    "export": "Exporter",
+    "autoLayout": "Auto-agencement"
   },
   "session": {
     "noSession": "Aucune session",

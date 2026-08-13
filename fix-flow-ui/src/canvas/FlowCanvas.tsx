@@ -33,6 +33,7 @@ function InnerCanvas() {
   const updateNode = useScenarioStore((s) => s.updateNode);
   const setSelectedNode = useScenarioStore((s) => s.setSelectedNode);
   const markDirty = useScenarioStore((s) => s.markDirty);
+  const layoutVersion = useScenarioStore((s) => s.layoutVersion);
   const activeScenarioId = useScenarioStore((s) => s.activeScenario?.id);
   const nodeStatuses = useExecutionStore((s) => s.nodeStatuses);
   const { screenToFlowPosition, fitView } = useReactFlow();
@@ -45,6 +46,8 @@ function InnerCanvas() {
 
   // Track which node ids are in rfNodes to detect drag-and-drop additions.
   const trackedNodeIds = useRef(new Set<string>());
+  // Track the last applied layout version to detect auto-layout bumps.
+  const appliedLayoutVersion = useRef(layoutVersion);
 
   // Reset rfNodes/rfEdges when the active scenario changes.
   // Must be declared before the nodes-sync effect so it runs first.
@@ -122,6 +125,27 @@ function InnerCanvas() {
       }),
     );
   }, [nodeStatuses]);
+
+  // Apply auto-layout: the store recomputed node positions and bumped
+  // layoutVersion. Re-apply ONLY the position to each local rfNode, preserving
+  // React Flow's internal 'measured' field (a full reset would strip it and
+  // leave nodes visibility:hidden — see CLAUDE.md ReactFlow v12 gotcha).
+  useEffect(() => {
+    if (layoutVersion === appliedLayoutVersion.current) return;
+    appliedLayoutVersion.current = layoutVersion;
+    const posMap = new Map(
+      useScenarioStore.getState().nodes.map((n) => [n.id, n.position]),
+    );
+    setRfNodes((prev) =>
+      prev.map((rfNode) => {
+        const pos = posMap.get(rfNode.id);
+        return pos ? { ...rfNode, position: pos } : rfNode;
+      }),
+    );
+    const t = setTimeout(() => fitView({ padding: 0.2 }), 50);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutVersion]);
 
   // Keep rfEdges in sync with store (edges have no measured state issue).
   useEffect(() => {

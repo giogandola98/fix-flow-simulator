@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Scenario, ScenarioNode, ScenarioEdge } from '../types';
+import { autoLayout } from '../lib/autoLayout';
 
 interface ScenarioState {
   scenarios: Scenario[];
@@ -8,6 +9,9 @@ interface ScenarioState {
   edges: ScenarioEdge[];
   selectedNodeId: string | null;
   isDirty: boolean;
+  /** Bumped whenever positions are recomputed (e.g. auto-layout), so the
+   *  canvas can re-apply them to its local RF nodes without a full reset. */
+  layoutVersion: number;
   setScenarios: (s: Scenario[]) => void;
   setActiveScenario: (s: Scenario | null) => void;
   setNodes: (nodes: ScenarioNode[]) => void;
@@ -20,6 +24,8 @@ interface ScenarioState {
   setSelectedNode: (id: string | null) => void;
   markDirty: () => void;
   markClean: () => void;
+  /** Re-arrange all nodes into a hierarchical top-to-bottom layout. */
+  applyAutoLayout: () => void;
 }
 
 export const useScenarioStore = create<ScenarioState>((set) => ({
@@ -29,6 +35,7 @@ export const useScenarioStore = create<ScenarioState>((set) => ({
   edges: [],
   selectedNodeId: null,
   isDirty: false,
+  layoutVersion: 0,
   setScenarios: (scenarios) => set({ scenarios }),
   setActiveScenario: (activeScenario) => set({ activeScenario, isDirty: false }),
   setNodes: (nodes) => set({ nodes }),
@@ -70,4 +77,17 @@ export const useScenarioStore = create<ScenarioState>((set) => ({
   setSelectedNode: (id) => set({ selectedNodeId: id }),
   markDirty: () => set({ isDirty: true }),
   markClean: () => set({ isDirty: false }),
+  applyAutoLayout: () =>
+    set((s) => {
+      if (s.nodes.length === 0) return {};
+      const positions = autoLayout(s.nodes, s.edges);
+      const posMap = new Map(positions.map((p) => [p.id, p.position]));
+      return {
+        nodes: s.nodes.map((n) =>
+          posMap.has(n.id) ? { ...n, position: posMap.get(n.id)! } : n,
+        ),
+        isDirty: true,
+        layoutVersion: s.layoutVersion + 1,
+      };
+    }),
 }));
