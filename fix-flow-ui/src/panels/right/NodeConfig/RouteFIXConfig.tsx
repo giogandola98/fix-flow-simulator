@@ -3,6 +3,7 @@ import { ScenarioEdge, ScenarioNode } from '../../../types';
 import { useScenarioStore } from '../../../store/scenarioStore';
 import { TimeoutConfig } from './TimeoutConfig';
 import { VarRefPanel } from './VarRefPanel';
+import { fixTagName } from '../../../lib/fixTags';
 
 interface MatcherRow { tag: number; value: string; }
 interface RoutingRule { ruleId: string; label: string; matchers: MatcherRow[]; targetNodeId: string; }
@@ -95,17 +96,23 @@ export function RouteFIXConfig({ node }: Props) {
                   </span>
                   <button className="text-[10px] px-1 bg-blue-700 hover:bg-blue-600 rounded" onClick={() => addMatcher(i)}>{t('nodeConfig.routeFix.addTag')}</button>
                 </div>
-                {r.matchers.map((m, j) => (
-                  <div key={j} className="flex gap-1 mt-0.5">
-                    <input type="number" className="w-14 bg-[#0f1117] border border-[#2a2d3a] rounded px-1 py-0.5"
-                      placeholder="Tag" value={m.tag}
-                      onChange={(e) => updateMatcher(i, j, { tag: Number(e.target.value) })} />
-                    <input type="text" className="flex-1 bg-[#0f1117] border border-[#2a2d3a] rounded px-1 py-0.5"
-                      placeholder="Value or {{node:id:tagN}}"
-                      value={m.value} onChange={(e) => updateMatcher(i, j, { value: e.target.value })} />
-                    <button className="text-red-400 hover:text-red-300" onClick={() => removeMatcher(i, j)}>x</button>
-                  </div>
-                ))}
+                {r.matchers.map((m, j) => {
+                  const mName = fixTagName(m.tag);
+                  return (
+                    <div key={j} className="flex gap-1 mt-0.5 items-start">
+                      <div className="w-14 flex-shrink-0">
+                        <input type="number" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-1 py-0.5"
+                          placeholder="Tag" value={m.tag}
+                          onChange={(e) => updateMatcher(i, j, { tag: Number(e.target.value) })} />
+                        {mName && <div className="text-[9px] text-gray-500 leading-tight mt-0.5">{mName}</div>}
+                      </div>
+                      <input type="text" className="flex-1 bg-[#0f1117] border border-[#2a2d3a] rounded px-1 py-0.5"
+                        placeholder="Value or {{node:id:tagN}}"
+                        value={m.value} onChange={(e) => updateMatcher(i, j, { value: e.target.value })} />
+                      <button className="text-red-400 hover:text-red-300" onClick={() => removeMatcher(i, j)}>x</button>
+                    </div>
+                  );
+                })}
               </div>
               <div>
                 <label className="text-[10px] text-gray-500">
