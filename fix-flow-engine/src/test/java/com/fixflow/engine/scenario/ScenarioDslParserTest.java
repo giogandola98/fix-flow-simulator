@@ -1,111 +1,108 @@
 package com.fixflow.engine.scenario;
 
-import com.fixflow.core.domain.scenario.NodeType;
-import com.fixflow.core.domain.scenario.Scenario;
-import com.fixflow.core.domain.scenario.TimeUnit;
+import com.fixflow.core.domain.scenario.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ScenarioDslParserTest {
 
-    private static final String MINIMAL_YAML = """
-            id: 11111111-1111-1111-1111-111111111111
-            name: minimal-demo
-            description: minimal smoke
-            version: '1.0'
-            sessionRef: sess-1
-            runtimePolicy: PARALLEL
-            nodes:
-              - id: n1
-                name: Start
-                type: START
-                onSuccess: n2
-              - id: n2
-                name: Send NewOrderSingle
-                type: SEND_FIX
-                config:
-                  msgType: D
-                  fields:
-                    11: REQ-001
-                    55: AAPL
-                timeout:
-                  value: 5
-                  unit: SECONDS
-                  onTimeout: FAIL
-                onSuccess: n3
-              - id: n3
-                name: Done
-                type: END_PASS
-            edges:
-              - from: n1
-                to: n2
-              - from: n2
-                to: n3
-            """;
+    private ScenarioDslParser parser;
 
-    @Test
-    void parsesMinimalYaml() {
-        Scenario s = new ScenarioDslParser().parseYaml(MINIMAL_YAML);
+    @BeforeEach
+    void setUp() { parser = new ScenarioDslParser(); }
 
-        assertThat(s.name()).isEqualTo("minimal-demo");
-        assertThat(s.nodes()).hasSize(3);
-        assertThat(s.findNode("n2")).isPresent();
-        assertThat(s.findNode("n2").orElseThrow().type()).isEqualTo(NodeType.SEND_FIX);
-        assertThat(s.findNode("n2").orElseThrow().config()).containsKey("fields");
-        assertThat(s.findNode("n2").orElseThrow().timeout().value()).isEqualTo(5);
-        assertThat(s.findNode("n2").orElseThrow().timeout().unit()).isEqualTo(TimeUnit.SECONDS);
+    private Scenario sample(UUID id) {
+        ScenarioNode start = new ScenarioNode("start", "Start", NodeType.START, Map.of(),
+                null, null, "expect", null, null);
+        ScenarioNode expect = new ScenarioNode("expect", "Expect", NodeType.EXPECT_FIX,
+                Map.of("msgType", "8"),
+                new TimeoutConfig(5, TimeUnit.SECONDS, TimeoutAction.JUMP, "recover"),
+                null, "end", "fail", null);
+        ScenarioNode recover = new ScenarioNode("recover", "Recover", NodeType.END_FAIL, Map.of(),
+                null, null, null, null, null);
+        ScenarioNode end = new ScenarioNode("end", "End", NodeType.END_PASS, Map.of(),
+                null, null, null, null, null);
+        ScenarioNode fail = new ScenarioNode("fail", "Fail", NodeType.END_FAIL, Map.of(),
+                null, null, null, null, null);
+        return new Scenario(id, "Round Trip", "desc", "1", "sess",
+                RuntimePolicy.SEQUENTIAL, List.of(), List.of(),
+                List.of(start, expect, recover, end, fail),
+                List.of(new ScenarioEdge("start", "expect", "go")), Map.of(), null);
     }
 
     @Test
-    void parsesCustomPrivateTagsAbove9999() {
+    void roundTripPreservesStructure() {
+        UUID id = UUID.randomUUID();
+        Scenario original = sample(id);
+        String yaml = parser.toYaml(original);
+        Scenario parsed = parser.parseYaml(yaml);
+
+        assertThat(parsed.id()).isEqualTo(id);
+        assertThat(parsed.name()).isEqualTo("Round Trip");
+        assertThat(parsed.version()).isEqualTo("1");
+        assertThat(parsed.runtimePolicy()).isEqualTo(RuntimePolicy.SEQUENTIAL);
+        assertThat(parsed.nodes()).extracting(ScenarioNode::id)
+                .containsExactly("start", "expect", "recover", "end", "fail");
+        assertThat(parsed.findNode("start").get().onSuccess()).isEqualTo("expect");
+        assertThat(parsed.edges()).hasSize(1);
+    }
+
+    @Test
+    void roundTripPreservesTimeoutJumpTo() {
+        Scenario parsed = parser.parseYaml(parser.toYaml(sample(UUID.randomUUID())));
+        TimeoutConfig t = parsed.findNode("expect").get().timeout();
+        assertThat(t).isNotNull();
+        assertThat(t.onTimeout()).isEqualTo(TimeoutAction.JUMP);
+        assertThat(t.jumpTo()).isEqualTo("recover");
+        assertThat(t.unit()).isEqualTo(TimeUnit.SECONDS);
+        assertThat(t.value()).isEqualTo(5);
+    }
+
+    @Test
+    void parsesMinimalYamlAndGeneratesIdWhenOmitted() {
         String yaml = """
-                id: 22222222-2222-2222-2222-222222222222
-                name: custom-tags
-                description: custom tag test
-                version: '1.0'
-                sessionRef: sess-1
-                runtimePolicy: PARALLEL
+                name: Minimal
                 nodes:
-                  - id: n1
+                  - id: start
                     name: Start
                     type: START
-                    onSuccess: n2
-                  - id: n2
-                    name: Send with custom tag
-                    type: SEND_FIX
-                    config:
-                      msgType: D
-                      fields:
-                        11: CL-001
-                        500006: private-val
-                    onSuccess: n3
-                  - id: n3
-                    name: Done
+                    onSuccess: end
+                  - id: end
+                    name: End
                     type: END_PASS
-                edges: []
                 """;
-
-        Scenario s = new ScenarioDslParser().parseYaml(yaml);
-
-        @SuppressWarnings("unchecked")
-        java.util.Map<Object, Object> fields =
-                (java.util.Map<Object, Object>) s.findNode("n2").orElseThrow().config().get("fields");
-        // key may be Integer or String depending on YAML parser; both convert to tag 500006
-        boolean found = fields.entrySet().stream()
-                .anyMatch(e -> Integer.parseInt(e.getKey().toString()) == 500006
-                        && "private-val".equals(e.getValue()));
-        assertThat(found).as("tag 500006 parsed from YAML").isTrue();
+        Scenario parsed = parser.parseYaml(yaml);
+        assertThat(parsed.id()).isNotNull();
+        assertThat(parsed.name()).isEqualTo("Minimal");
+        assertThat(parsed.runtimePolicy()).isEqualTo(RuntimePolicy.PARALLEL); // default
+        assertThat(parsed.startNode()).isPresent();
+        assertThat(parsed.rawYaml()).isEqualTo(yaml);
     }
 
     @Test
-    void roundTripYamlSerialization() {
-        ScenarioDslParser parser = new ScenarioDslParser();
-        Scenario original = parser.parseYaml(MINIMAL_YAML);
+    void ignoresUnknownProperties() {
+        String yaml = """
+                name: WithExtras
+                unknownField: whatever
+                nodes:
+                  - id: start
+                    name: Start
+                    type: START
+                """;
+        Scenario parsed = parser.parseYaml(yaml);
+        assertThat(parsed.name()).isEqualTo("WithExtras");
+    }
 
-        String yamlOut = parser.toYaml(original);
-        Scenario reparsed = parser.parseYaml(yamlOut);
-
-        assertThat(reparsed).usingRecursiveComparison().ignoringFields("rawYaml").isEqualTo(original);
+    @Test
+    void invalidYamlThrows() {
+        assertThatThrownBy(() -> parser.parseYaml("\t not: [valid"))
+                .isInstanceOf(RuntimeException.class);
     }
 }

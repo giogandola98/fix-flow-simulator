@@ -1,11 +1,14 @@
 package com.fixflow.engine.handlers;
 
 import com.fixflow.core.domain.execution.ExecutionStatus;
-import com.fixflow.core.domain.scenario.*;
+import com.fixflow.core.domain.scenario.NodeType;
+import com.fixflow.core.domain.scenario.Scenario;
+import com.fixflow.core.domain.scenario.ScenarioNode;
 import com.fixflow.engine.execution.ExecutionContext;
 import com.fixflow.engine.execution.ScenarioExecutor;
-import com.fixflow.engine.execution.ScenarioExecutorPort;
 import com.fixflow.engine.scenario.ScenarioRegistry;
+import com.fixflow.engine.support.Fixtures;
+import com.fixflow.engine.support.ProgrammableHandler;
 import com.fixflow.engine.variable.VariableResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,143 +17,116 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.fixflow.engine.support.Fixtures.node;
+import static com.fixflow.engine.support.Fixtures.scenario;
+import static com.fixflow.engine.support.Fixtures.start;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class CallScenarioHandlerTest {
 
     private ScenarioRegistry registry;
-    private ScenarioExecutorPort executor;
     private CallScenarioHandler handler;
-
-    private static Scenario scenario(UUID id, NodeType endType) {
-        String endNode = endType == NodeType.END_PASS ? "n2pass" : "n2fail";
-        return new Scenario(id, "sub", "", "1", "s",
-                RuntimePolicy.PARALLEL, List.of(), List.of(),
-                List.of(
-                        new ScenarioNode("n1", "start", NodeType.START, Map.of(), null, null, endNode, null, null),
-                        new ScenarioNode(endNode, "end", endType, Map.of(), null, null, null, null, null)
-                ),
-                List.of(), Map.of(), null);
-    }
-
-    private static ExecutionContext ctx() {
-        Scenario parent = new Scenario(UUID.randomUUID(), "parent", "", "1", "s",
-                RuntimePolicy.PARALLEL, List.of(), List.of(), List.of(), List.of(), Map.of(), null);
-        return new ExecutionContext(UUID.randomUUID(), parent, UUID.randomUUID());
-    }
 
     @BeforeEach
     void setUp() {
         registry = new ScenarioRegistry();
-        NodeDispatcher dispatcher = new NodeDispatcher(List.of(
-                new StartHandler(), new EndHandler(), new EndFailHandler()));
-        executor = new ScenarioExecutor(dispatcher);
+        ProgrammableHandler stopper = new ProgrammableHandler(NodeType.WAIT, (n, c) -> {
+            c.setStatus(ExecutionStatus.STOPPED);
+            return NodeHandlerResult.terminal();
+        });
+        NodeDispatcher d = new NodeDispatcher(List.of(new StartHandler(), new EndHandler(), new EndFailHandler(), stopper));
+        ScenarioExecutor executor = new ScenarioExecutor(d);
         handler = new CallScenarioHandler(registry, executor, new VariableResolver());
     }
 
+    private ScenarioNode callNode(String targetId) {
+        return node("call", NodeType.CALL_SCENARIO).cfg("targetScenarioId", targetId)
+                .onSuccess("ok").onFailure("no").build();
+    }
+
+    private ExecutionContext parentCtx() { return Fixtures.ctx(scenario("parent", start("call"))); }
+
     @Test
-    void childPassedReturnsSuccess() throws Exception {
-        UUID childId = UUID.randomUUID();
-        registry.register(scenario(childId, NodeType.END_PASS));
-        ScenarioNode node = new ScenarioNode("cs", "call", NodeType.CALL_SCENARIO,
-                Map.of("targetScenarioId", childId.toString()),
-                null, null, "next", "fail", null);
-        NodeHandlerResult r = handler.handle(node, ctx());
+    void supportsCallScenario() {
+        assertThat(handler.getSupportedType()).isEqualTo(NodeType.CALL_SCENARIO);
+    }
+
+    @Test
+    void subScenarioPassRoutesOnSuccess() throws Exception {
+        Scenario target = scenario(UUID.randomUUID(), "child", List.of(), start("end"), Fixtures.endPass("end"));
+        registry.register(target);
+        NodeHandlerResult r = handler.handle(callNode(target.id().toString()), parentCtx());
         assertThat(r.success()).isTrue();
-        assertThat(r.nextNodeId()).isEqualTo("next");
+        assertThat(r.nextNodeId()).isEqualTo("ok");
     }
 
     @Test
-    void childFailedReturnsFailure() throws Exception {
-        UUID childId = UUID.randomUUID();
-        registry.register(scenario(childId, NodeType.END_FAIL));
-        ScenarioNode node = new ScenarioNode("cs", "call", NodeType.CALL_SCENARIO,
-                Map.of("targetScenarioId", childId.toString()),
-                null, null, "next", "fail", null);
-        NodeHandlerResult r = handler.handle(node, ctx());
+    void subScenarioFailRoutesOnFailure() throws Exception {
+        Scenario target = scenario(UUID.randomUUID(), "child", List.of(), start("end"), Fixtures.endFail("end"));
+        registry.register(target);
+        NodeHandlerResult r = handler.handle(callNode(target.id().toString()), parentCtx());
         assertThat(r.success()).isFalse();
-        assertThat(r.nextNodeId()).isEqualTo("fail");
+        assertThat(r.nextNodeId()).isEqualTo("no");
+        assertThat(r.errorMessage()).contains("Sub-scenario ended with FAIL");
     }
 
     @Test
-    void missingTargetReturnsFailure() throws Exception {
-        ScenarioNode node = new ScenarioNode("cs", "call", NodeType.CALL_SCENARIO,
-                Map.of(),
-                null, null, "next", "fail", null);
-        NodeHandlerResult r = handler.handle(node, ctx());
+    void subScenarioStoppedPropagatesToParent() throws Exception {
+        Scenario target = scenario(UUID.randomUUID(), "child", List.of(),
+                start("stop"), node("stop", NodeType.WAIT).build());
+        registry.register(target);
+        ExecutionContext parent = parentCtx();
+        NodeHandlerResult r = handler.handle(callNode(target.id().toString()), parent);
         assertThat(r.success()).isFalse();
-        assertThat(r.errorMessage()).contains("No target scenario configured");
+        assertThat(r.errorMessage()).isEqualTo("Sub-scenario was stopped");
+        assertThat(parent.status()).isEqualTo(ExecutionStatus.STOPPED);
     }
 
     @Test
-    void unknownTargetIdReturnsFailure() throws Exception {
-        ScenarioNode node = new ScenarioNode("cs", "call", NodeType.CALL_SCENARIO,
-                Map.of("targetScenarioId", UUID.randomUUID().toString()),
-                null, null, "next", "fail", null);
-        NodeHandlerResult r = handler.handle(node, ctx());
-        assertThat(r.success()).isFalse();
-        assertThat(r.errorMessage()).contains("Scenario not found");
+    void passesInputAndOutputVariables() throws Exception {
+        Scenario target = scenario(UUID.randomUUID(), "child", List.of(), start("end"), Fixtures.endPass("end"));
+        registry.register(target);
+        ScenarioNode call = node("call", NodeType.CALL_SCENARIO)
+                .cfg("targetScenarioId", target.id().toString())
+                .cfg("inputVars", List.of(Map.of("from", "var:x", "to", "y")))
+                .cfg("outputVars", List.of(Map.of("from", "y", "to", "z")))
+                .onSuccess("ok").onFailure("no").build();
+        ExecutionContext parent = parentCtx();
+        parent.setVariable("x", "hello");
+        NodeHandlerResult r = handler.handle(call, parent);
+        assertThat(r.success()).isTrue();
+        assertThat(parent.getVariable("z")).isEqualTo("hello");
     }
 
     @Test
-    void depthLimitExceededReturnsFailure() throws Exception {
-        UUID childId = UUID.randomUUID();
-        registry.register(scenario(childId, NodeType.END_PASS));
-        ScenarioNode node = new ScenarioNode("cs", "call", NodeType.CALL_SCENARIO,
-                Map.of("targetScenarioId", childId.toString()),
-                null, null, "next", "fail", null);
-        ExecutionContext c = ctx();
-        c.setVariable("call:depth", "5");
-        NodeHandlerResult r = handler.handle(node, c);
+    void maxDepthExceededRoutesOnFailure() throws Exception {
+        Scenario target = scenario(UUID.randomUUID(), "child", List.of(), start("end"), Fixtures.endPass("end"));
+        registry.register(target);
+        ExecutionContext parent = parentCtx();
+        parent.setVariable("call:depth", "5"); // childDepth would be 6 > MAX_DEPTH 5
+        NodeHandlerResult r = handler.handle(callNode(target.id().toString()), parent);
         assertThat(r.success()).isFalse();
         assertThat(r.errorMessage()).contains("Max call depth exceeded");
     }
 
     @Test
-    void inputVarCopiedToChild() throws Exception {
-        UUID childId = UUID.randomUUID();
-        registry.register(scenario(childId, NodeType.END_PASS));
-        ScenarioNode node = new ScenarioNode("cs", "call", NodeType.CALL_SCENARIO,
-                Map.of("targetScenarioId", childId.toString(),
-                       "inputVars", List.of(Map.of("from", "var:x", "to", "x"))),
-                null, null, "next", "fail", null);
-        ExecutionContext c = ctx();
-        c.setVariable("x", "hello");
-        NodeHandlerResult r = handler.handle(node, c);
-        assertThat(r.success()).isTrue();
+    void blankTargetRoutesOnFailure() throws Exception {
+        NodeHandlerResult r = handler.handle(callNode(""), parentCtx());
+        assertThat(r.success()).isFalse();
+        assertThat(r.errorMessage()).isEqualTo("No target scenario configured");
     }
 
     @Test
-    void outputVarCopiedFromChild() throws Exception {
-        UUID childId = UUID.randomUUID();
-        NodeHandler setter = new NodeHandler() {
-            @Override public NodeType getSupportedType() { return NodeType.VALIDATE; }
-            @Override public NodeHandlerResult handle(ScenarioNode n, ExecutionContext ctx2) {
-                ctx2.setVariable("result", "ok");
-                return NodeHandlerResult.success(n.onSuccess());
-            }
-        };
-        NodeDispatcher d = new NodeDispatcher(List.of(new StartHandler(), setter, new EndHandler(), new EndFailHandler()));
-        ScenarioExecutor ex = new ScenarioExecutor(d);
-        CallScenarioHandler h = new CallScenarioHandler(registry, ex, new VariableResolver());
+    void invalidUuidRoutesOnFailure() throws Exception {
+        NodeHandlerResult r = handler.handle(callNode("not-a-uuid"), parentCtx());
+        assertThat(r.success()).isFalse();
+        assertThat(r.errorMessage()).contains("Invalid targetScenarioId");
+    }
 
-        Scenario child = new Scenario(childId, "sub", "", "1", "s",
-                RuntimePolicy.PARALLEL, List.of(), List.of(),
-                List.of(
-                        new ScenarioNode("n1", "start", NodeType.START,    Map.of(), null, null, "n2", null, null),
-                        new ScenarioNode("n2", "set",   NodeType.VALIDATE, Map.of(), null, null, "n3", null, null),
-                        new ScenarioNode("n3", "end",   NodeType.END_PASS, Map.of(), null, null, null, null, null)
-                ),
-                List.of(), Map.of(), null);
-        registry.register(child);
-
-        ScenarioNode node = new ScenarioNode("cs", "call", NodeType.CALL_SCENARIO,
-                Map.of("targetScenarioId", childId.toString(),
-                       "outputVars", List.of(Map.of("from", "result", "to", "parentResult"))),
-                null, null, "next", "fail", null);
-        ExecutionContext parent = ctx();
-        NodeHandlerResult r = h.handle(node, parent);
-        assertThat(r.success()).isTrue();
-        assertThat(parent.getVariable("parentResult")).isEqualTo("ok");
+    @Test
+    void unknownScenarioRoutesOnFailure() throws Exception {
+        NodeHandlerResult r = handler.handle(callNode(UUID.randomUUID().toString()), parentCtx());
+        assertThat(r.success()).isFalse();
+        assertThat(r.errorMessage()).contains("Scenario not found");
     }
 }

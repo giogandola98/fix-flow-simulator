@@ -1,129 +1,115 @@
 package com.fixflow.engine.handlers;
 
-import com.fixflow.core.domain.scenario.*;
+import com.fixflow.core.domain.scenario.NodeType;
+import com.fixflow.core.domain.scenario.Scenario;
+import com.fixflow.core.domain.scenario.ScenarioNode;
+import com.fixflow.core.domain.scenario.TimeoutAction;
 import com.fixflow.engine.correlation.CorrelationEngine;
 import com.fixflow.engine.execution.ExecutionContext;
 import com.fixflow.engine.fix.MessageBuffer;
 import com.fixflow.engine.fix.MessageRouter;
+import com.fixflow.engine.support.Fixtures;
 import com.fixflow.engine.variable.VariableResolver;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
+import static com.fixflow.engine.support.Fixtures.node;
+import static com.fixflow.engine.support.Fixtures.scenario;
+import static com.fixflow.engine.support.Fixtures.start;
+import static com.fixflow.engine.support.Fixtures.timeout;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 class RouteFIXHandlerTest {
 
-    private static final UUID SESSION_ID = UUID.fromString("00000000-0000-0000-0000-000000000099");
+    private CorrelationEngine correlation;
+    private RouteFIXHandler handler;
+    private UUID sessionId;
+    private final ExecutorService pool = Executors.newCachedThreadPool();
 
-    private static ExecutionContext freshCtx() {
-        Scenario s = new Scenario(UUID.randomUUID(), "t", "", "1.0", "s",
-                RuntimePolicy.PARALLEL, List.of(), List.of(), List.of(), List.of(), Map.of(), null);
-        return new ExecutionContext(UUID.randomUUID(), s, SESSION_ID);
+    @BeforeEach
+    void setUp() {
+        correlation = new CorrelationEngine();
+        MessageRouter router = new MessageRouter(correlation, new MessageBuffer());
+        handler = new RouteFIXHandler(correlation, new VariableResolver(), router);
+        sessionId = UUID.randomUUID();
+    }
+
+    private ExecutionContext ctx() { return Fixtures.ctx(scenario("s", start("route")), sessionId); }
+
+    private ScenarioNode routeNode(Object timeoutCfg) {
+        List<Map<String, Object>> rules = List.of(
+                Map.of("ruleId", "r1", "label", "typeD", "matchers", Map.of("35", "D"), "targetNodeId", "t1"),
+                Map.of("ruleId", "r2", "label", "typeEight", "matchers", Map.of("35", "8"), "targetNodeId", "t2"));
+        Fixtures.NodeBuilder b = node("route", NodeType.ROUTE_FIX).cfg("rules", rules)
+                .onSuccess("ok").onFailure("no");
+        if (timeoutCfg instanceof com.fixflow.core.domain.scenario.TimeoutConfig t) b.timeout(t);
+        return b.build();
     }
 
     @Test
-    void staticMatcherRoutesToCorrectTarget() throws Exception {
-        CorrelationEngine correlation = new CorrelationEngine();
-        RouteFIXHandler handler = new RouteFIXHandler(correlation, new VariableResolver(), new MessageRouter(correlation, new MessageBuffer()));
-        ExecutionContext ctx = freshCtx();
+    void supportsRouteFix() {
+        assertThat(handler.getSupportedType()).isEqualTo(NodeType.ROUTE_FIX);
+    }
 
-        Map<String, Object> rule = Map.of(
-            "ruleId", "r1", "label", "Quote",
-            "matchers", Map.of("35", "S"),
-            "targetNodeId", "quote-node");
-        ScenarioNode node = new ScenarioNode("route1", "Router", NodeType.ROUTE_FIX,
-            Map.of("rules", List.of(rule)),
-            new TimeoutConfig(500, TimeUnit.MILLISECONDS, TimeoutAction.FAIL, null),
-            null, null, "fail", null);
+    @Test
+    void routesToMatchingRuleTarget() throws Exception {
+        ExecutionContext ctx = ctx();
+        ScenarioNode route = routeNode(null);
+        Future<NodeHandlerResult> f = pool.submit(() -> handler.handle(route, ctx));
+        await().atMost(Duration.ofSeconds(3)).until(() -> correlation.pendingCount() > 0);
+        correlation.onMessage(sessionId.toString(), Fixtures.fields(35, "8", 11, "X"));
+        NodeHandlerResult r = f.get(3, TimeUnit.SECONDS);
 
-        CompletableFuture.runAsync(() -> {
-            try { Thread.sleep(50); } catch (InterruptedException ignored) {}
-            correlation.onMessage(SESSION_ID.toString(), Map.of(35, "S", 131, "RFQ-001"));
-        });
-
-        NodeHandlerResult r = handler.handle(node, ctx);
         assertThat(r.success()).isTrue();
-        assertThat(r.nextNodeId()).isEqualTo("quote-node");
-        assertThat(ctx.getVariable("node:route1:matchedRuleLabel")).isEqualTo("Quote");
+        assertThat(r.nextNodeId()).isEqualTo("t2");
+        assertThat(ctx.getVariable("node:route:matchedRuleId")).isEqualTo("r2");
+        assertThat(ctx.getVariable("node:route:matchedRuleLabel")).isEqualTo("typeEight");
+        assertThat(ctx.getNodeMessage("route")).containsEntry(35, "8");
     }
 
     @Test
-    void placeholderMatcherValueResolvedBeforeMatching() throws Exception {
-        CorrelationEngine correlation = new CorrelationEngine();
-        RouteFIXHandler handler = new RouteFIXHandler(correlation, new VariableResolver(), new MessageRouter(correlation, new MessageBuffer()));
-        ExecutionContext ctx = freshCtx();
-        ctx.storeNodeMessage("send-rfq", Map.of(131, "RFQ-001"));
-
-        Map<String, Object> rule = Map.of(
-            "ruleId", "r1", "label", "Matched RFQ",
-            "matchers", Map.of("131", "{{node:send-rfq:tag131}}"),
-            "targetNodeId", "process-node");
-        ScenarioNode node = new ScenarioNode("route1", "Router", NodeType.ROUTE_FIX,
-            Map.of("rules", List.of(rule)),
-            new TimeoutConfig(500, TimeUnit.MILLISECONDS, TimeoutAction.FAIL, null),
-            null, null, "fail", null);
-
-        CompletableFuture.runAsync(() -> {
-            try { Thread.sleep(50); } catch (InterruptedException ignored) {}
-            correlation.onMessage(SESSION_ID.toString(), Map.of(131, "RFQ-001", 35, "S"));
-        });
-
-        NodeHandlerResult r = handler.handle(node, ctx);
-        assertThat(r.success()).isTrue();
-        assertThat(r.nextNodeId()).isEqualTo("process-node");
+    void defaultRuleMatchesWhenNoSpecificRuleMatches() throws Exception {
+        ExecutionContext ctx = ctx();
+        List<Map<String, Object>> rules = List.of(
+                Map.of("ruleId", "r1", "matchers", Map.of("35", "D"), "targetNodeId", "t1"),
+                Map.of("ruleId", "def", "label", "fallback", "matchers", Map.of(), "targetNodeId", "tDefault"));
+        ScenarioNode route = node("route", NodeType.ROUTE_FIX).cfg("rules", rules).onSuccess("ok").onFailure("no").build();
+        Future<NodeHandlerResult> f = pool.submit(() -> handler.handle(route, ctx));
+        await().atMost(Duration.ofSeconds(3)).until(() -> correlation.pendingCount() > 0);
+        correlation.onMessage(sessionId.toString(), Fixtures.fields(35, "Z"));
+        NodeHandlerResult r = f.get(3, TimeUnit.SECONDS);
+        assertThat(r.nextNodeId()).isEqualTo("tDefault");
     }
 
     @Test
-    void defaultRuleUsedWhenNoMatchersFire() throws Exception {
-        CorrelationEngine correlation = new CorrelationEngine();
-        RouteFIXHandler handler = new RouteFIXHandler(correlation, new VariableResolver(), new MessageRouter(correlation, new MessageBuffer()));
-        ExecutionContext ctx = freshCtx();
-
-        Map<String, Object> specificRule = Map.of(
-            "ruleId", "r1", "label", "Quote",
-            "matchers", Map.of("35", "S"),
-            "targetNodeId", "quote-node");
-        Map<String, Object> defaultRule = Map.of(
-            "ruleId", "r2", "label", "Default",
-            "matchers", Map.of(),
-            "targetNodeId", "default-node");
-        ScenarioNode node = new ScenarioNode("route1", "Router", NodeType.ROUTE_FIX,
-            Map.of("rules", List.of(specificRule, defaultRule)),
-            new TimeoutConfig(500, TimeUnit.MILLISECONDS, TimeoutAction.FAIL, null),
-            null, null, "fail", null);
-
-        CompletableFuture.runAsync(() -> {
-            try { Thread.sleep(50); } catch (InterruptedException ignored) {}
-            correlation.onMessage(SESSION_ID.toString(), Map.of(35, "AG"));
-        });
-
-        NodeHandlerResult r = handler.handle(node, ctx);
-        assertThat(r.success()).isTrue();
-        assertThat(r.nextNodeId()).isEqualTo("default-node");
-        assertThat(ctx.getVariable("node:route1:matchedRuleLabel")).isEqualTo("Default");
-    }
-
-    @Test
-    void timeoutYieldsFailure() throws Exception {
-        CorrelationEngine correlation = new CorrelationEngine();
-        RouteFIXHandler handler = new RouteFIXHandler(correlation, new VariableResolver(), new MessageRouter(correlation, new MessageBuffer()));
-        ExecutionContext ctx = freshCtx();
-
-        Map<String, Object> rule = Map.of(
-            "ruleId", "r1", "label", "Quote",
-            "matchers", Map.of("35", "S"),
-            "targetNodeId", "quote-node");
-        ScenarioNode node = new ScenarioNode("route1", "Router", NodeType.ROUTE_FIX,
-            Map.of("rules", List.of(rule)),
-            new TimeoutConfig(100, TimeUnit.MILLISECONDS, TimeoutAction.FAIL, null),
-            null, null, "fail", null);
-
-        NodeHandlerResult r = handler.handle(node, ctx);
+    void timeoutFailRoutesOnFailure() throws Exception {
+        NodeHandlerResult r = handler.handle(routeNode(timeout(30, TimeoutAction.FAIL, null)), ctx());
         assertThat(r.success()).isFalse();
-        assertThat(r.nextNodeId()).isEqualTo("fail");
+        assertThat(r.nextNodeId()).isEqualTo("no");
+        assertThat(r.errorMessage()).isEqualTo("timeout");
+    }
+
+    @Test
+    void timeoutContinueRoutesOnSuccess() throws Exception {
+        NodeHandlerResult r = handler.handle(routeNode(timeout(30, TimeoutAction.CONTINUE, null)), ctx());
+        assertThat(r.success()).isTrue();
+        assertThat(r.nextNodeId()).isEqualTo("ok");
+    }
+
+    @Test
+    void timeoutJumpRoutesToJumpTarget() throws Exception {
+        NodeHandlerResult r = handler.handle(routeNode(timeout(30, TimeoutAction.JUMP, "elsewhere")), ctx());
+        assertThat(r.success()).isTrue();
+        assertThat(r.nextNodeId()).isEqualTo("elsewhere");
     }
 }

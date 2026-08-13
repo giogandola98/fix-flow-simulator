@@ -2,54 +2,71 @@ package com.fixflow.engine.fix;
 
 import com.fixflow.core.domain.scenario.CorrelationRule;
 import com.fixflow.engine.correlation.CorrelationEngine;
+import com.fixflow.engine.support.Fixtures;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class MessageRouterTest {
 
+    private CorrelationEngine correlation;
+    private MessageBuffer buffer;
+    private MessageRouter router;
+    private static final String SESSION = "sess-1";
+
+    @BeforeEach
+    void setUp() {
+        correlation = new CorrelationEngine();
+        buffer = new MessageBuffer();
+        router = new MessageRouter(correlation, buffer);
+    }
+
     @Test
-    void messageMatchingActiveWaiterIsDelivered() throws Exception {
-        CorrelationEngine engine = new CorrelationEngine();
-        MessageBuffer buffer = new MessageBuffer(10, 60_000);
-        MessageRouter router = new MessageRouter(engine, buffer);
-
+    void matchingMessageRoutedToCorrelationNotParked() {
         CompletableFuture<Map<Integer, String>> f =
-                engine.register("exec-1", "sess", new CorrelationRule(131, "n", 131, 1000), "REQ-1");
-
-        router.onMessage("sess", Map.of(131, "REQ-1"));
-
-        assertThat(f.get(200, TimeUnit.MILLISECONDS)).containsEntry(131, "REQ-1");
-        assertThat(buffer.size("sess")).isZero();
+                correlation.register("exec-1", SESSION, new CorrelationRule(11, "n", 11, 0), "ORD1");
+        router.onMessage(SESSION, Fixtures.fields(11, "ORD1"));
+        assertThat(f).isCompleted();
+        assertThat(buffer.size(SESSION)).isZero();
     }
 
     @Test
     void unmatchedMessageIsParked() {
-        CorrelationEngine engine = new CorrelationEngine();
-        MessageBuffer buffer = new MessageBuffer(10, 60_000);
-        MessageRouter router = new MessageRouter(engine, buffer);
-
-        router.onMessage("sess", Map.of(131, "REQ-XYZ"));
-
-        assertThat(buffer.size("sess")).isEqualTo(1);
+        router.onMessage(SESSION, Fixtures.fields(11, "ORD1"));
+        assertThat(buffer.size(SESSION)).isEqualTo(1);
     }
 
     @Test
-    void drainBufferDeliversParkedMessageToNewWaiter() {
-        CorrelationEngine engine = new CorrelationEngine();
-        MessageBuffer buffer = new MessageBuffer(10, 60_000);
-        MessageRouter router = new MessageRouter(engine, buffer);
+    void drainReplaysParkedMessagesToLateRegisteredWaiter() {
+        // message arrives before the waiter registers -> parked
+        router.onMessage(SESSION, Fixtures.fields(11, "ORD1"));
+        assertThat(buffer.size(SESSION)).isEqualTo(1);
 
-        router.onMessage("sess", Map.of(131, "REQ-LATE"));
         CompletableFuture<Map<Integer, String>> f =
-                engine.register("exec-2", "sess", new CorrelationRule(131, "n", 131, 1000), "REQ-LATE");
-
-        router.drain("sess");
-
+                correlation.register("exec-1", SESSION, new CorrelationRule(11, "n", 11, 0), "ORD1");
+        router.drain(SESSION);
         assertThat(f).isCompleted();
+        assertThat(buffer.size(SESSION)).isZero();
+    }
+
+    @Test
+    void drainLeavesNonMatchingMessagesParked() {
+        router.onMessage(SESSION, Fixtures.fields(11, "ORD1"));
+        correlation.register("exec-1", SESSION, new CorrelationRule(11, "n", 11, 0), "DIFFERENT");
+        router.drain(SESSION);
+        assertThat(buffer.size(SESSION)).isEqualTo(1);
+    }
+
+    @Test
+    void whenPausedMessagesAreParkedNotRouted() {
+        correlation.register("exec-1", SESSION, new CorrelationRule(11, "n", 11, 0), "ORD1");
+        buffer.pause();
+        router.onMessage(SESSION, Fixtures.fields(11, "ORD1"));
+        assertThat(buffer.size(SESSION)).isEqualTo(1);
+        assertThat(correlation.pendingCount()).isEqualTo(1); // waiter still pending
     }
 }

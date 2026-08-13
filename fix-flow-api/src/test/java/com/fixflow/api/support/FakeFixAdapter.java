@@ -7,6 +7,11 @@ import com.fixflow.core.ports.outbound.InboundMessageListener;
 import java.util.*;
 import java.util.concurrent.*;
 
+/**
+ * In-memory {@link FIXSessionPort} used by the full-wiring integration test so no
+ * real sockets/QuickFIX connectors are opened. Records sent messages and lets the
+ * test inject inbound messages to satisfy correlation waiters.
+ */
 public class FakeFixAdapter implements FIXSessionPort {
 
     private final Map<UUID, Boolean> connected = new ConcurrentHashMap<>();
