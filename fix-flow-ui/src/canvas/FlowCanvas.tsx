@@ -29,7 +29,6 @@ function InnerCanvas() {
 
   const setEdges = useScenarioStore((s) => s.setEdges);
   const addNode = useScenarioStore((s) => s.addNode);
-  const addEdge = useScenarioStore((s) => s.addEdge);
   const removeNode = useScenarioStore((s) => s.removeNode);
   const updateNode = useScenarioStore((s) => s.updateNode);
   const setSelectedNode = useScenarioStore((s) => s.setSelectedNode);
@@ -184,19 +183,23 @@ function InnerCanvas() {
             }
           }
         }
+        // Rebuild from the store's canonical edges minus the removed ids. rfEdges labels
+        // are display-mutated for ROUTE_FIX, so rebuilding from them would corrupt the
+        // surviving edges' canonical labels. rfEdge ids are derived from store edges
+        // (index + from/to/canonical label) in the sync effect, so reconstruct to match.
         setEdges(
-          rfEdges
-            .filter((e) => !removedIds.has(e.id))
+          edges
+            .filter((e, i) => !removedIds.has(`e${i}-${e.from}-${e.to}-${e.label}`))
             .map((e) => ({
-              from: e.source,
-              to: e.target,
-              label: String(e.label ?? 'success'),
+              from: e.from,
+              to: e.to,
+              label: e.label,
               ...(e.sourceHandle ? { sourceHandle: e.sourceHandle } : {}),
             })),
         );
       }
     },
-    [rfEdges, setEdges, nodes, updateNode],
+    [rfEdges, edges, setEdges, nodes, updateNode],
   );
 
   const onConnect = useCallback(
@@ -223,10 +226,17 @@ function InnerCanvas() {
           }
         }
         const edge = { from: conn.source, to: conn.target, label };
-        addEdge(conn.sourceHandle ? { ...edge, sourceHandle: conn.sourceHandle } : edge);
+        const newEdge = conn.sourceHandle ? { ...edge, sourceHandle: conn.sourceHandle } : edge;
+        // Replace-in-place: one edge per source+sourceHandle. The serializer keeps only the
+        // first on save, so a second edge from the same handle would silently diverge on reload.
+        const sh = conn.sourceHandle ?? null;
+        setEdges([
+          ...edges.filter((e) => !(e.from === conn.source && (e.sourceHandle ?? null) === sh)),
+          newEdge,
+        ]);
       }
     },
-    [addEdge, rfNodes, updateNode],
+    [edges, setEdges, rfNodes, updateNode],
   );
 
   const onDragOver = useCallback((evt: React.DragEvent) => {

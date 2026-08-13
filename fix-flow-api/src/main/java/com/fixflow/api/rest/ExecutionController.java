@@ -3,7 +3,6 @@ package com.fixflow.api.rest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fixflow.api.dto.ReportDto;
 import com.fixflow.api.rest.dto.ExecutionDto;
-import com.fixflow.api.rest.dto.ExecutionReportDto;
 import com.fixflow.api.rest.dto.StartExecutionRequest;
 import com.fixflow.api.service.ReportService;
 import com.fixflow.core.domain.execution.Execution;

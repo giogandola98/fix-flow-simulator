@@ -19,13 +19,20 @@ export function EventLog() {
   const { t } = useTranslation();
   const events = useExecutionStore((s) => s.events);
   const ref = useRef<HTMLDivElement>(null);
+  // Only auto-scroll when the user was already near the bottom, so scrolling up is not yanked.
+  const nearBottom = useRef(true);
+
+  const onScroll = () => {
+    const el = ref.current;
+    if (el) nearBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  };
 
   useEffect(() => {
-    if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
+    if (ref.current && nearBottom.current) ref.current.scrollTop = ref.current.scrollHeight;
   }, [events]);
 
   return (
-    <div ref={ref} className="h-full overflow-y-auto px-2 py-1 font-mono text-[11px]">
+    <div ref={ref} onScroll={onScroll} className="h-full overflow-y-auto px-2 py-1 font-mono text-[11px]">
       {events.length === 0 && <div className="text-gray-500 italic">{t('events.noEvents')}</div>}
       {events.map((e) => (
         <div key={e.id} className="flex gap-2 py-0.5 border-b border-[#2a2d3a]">

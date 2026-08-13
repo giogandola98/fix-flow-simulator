@@ -16,13 +16,17 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class QuickFIXApplicationAdapter implements Application {
 
-    private final InboundMessageListener listener;
+    private volatile InboundMessageListener listener;
     private final EventPublisherPort publisher;
     private final Map<SessionID, UUID> sessionUUIDs = new ConcurrentHashMap<>();
 
     public QuickFIXApplicationAdapter(InboundMessageListener listener, EventPublisherPort publisher) {
         this.listener = listener;
         this.publisher = publisher;
+    }
+
+    public void setInboundListener(InboundMessageListener listener) {
+        this.listener = listener;
     }
 
     public void registerSession(SessionID sid, UUID uuid) {

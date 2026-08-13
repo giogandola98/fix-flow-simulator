@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -81,7 +82,10 @@ public class ScenarioController {
 
     @PostMapping("/import")
     public ResponseEntity<ScenarioDto> importYaml(@RequestParam("file") MultipartFile file) throws Exception {
-        String yaml = new String(file.getBytes());
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("import file is empty");
+        }
+        String yaml = new String(file.getBytes(), StandardCharsets.UTF_8);
         Scenario s = parser.parseYaml(yaml);
         Scenario saved = repo.save(s);
         registry.register(saved);
@@ -93,9 +97,10 @@ public class ScenarioController {
         Scenario s = repo.findById(id)
             .orElseThrow(() -> new NoSuchElementException("scenario not found: " + id));
         String yaml = parser.toYaml(s);
+        String safeName = s.name() == null ? "scenario" : s.name().replaceAll("[\\r\\n\"\\\\/]+", "_");
         HttpHeaders h = new HttpHeaders();
         h.setContentType(MediaType.parseMediaType("application/x-yaml"));
-        h.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + s.name() + ".yaml");
+        h.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + safeName + ".yaml\"");
         return new ResponseEntity<>(yaml, h, 200);
     }
 }

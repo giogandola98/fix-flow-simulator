@@ -1,4 +1,5 @@
 import { Handle, Position, NodeProps } from '@xyflow/react';
+import { ringClass } from './ringClass';
 
 interface RoutingRule { ruleId: string; label: string; matchers: Array<{tag: number; value: string}>; targetNodeId: string; }
 
@@ -7,11 +8,7 @@ export function RouteFIXNode({ data, selected }: NodeProps) {
   const rules: RoutingRule[] = cfg.rules ?? [];
   const status = data.status as string | undefined;
 
-  const ringColor =
-    status === 'running' ? 'animate-pulse ring-2 ring-green-400'
-    : status === 'passed' ? 'ring-2 ring-green-500'
-    : status === 'failed' ? 'ring-2 ring-red-500'
-    : selected ? 'ring-2 ring-blue-400' : '';
+  const ringColor = ringClass(status, selected);
 
   return (
     <div

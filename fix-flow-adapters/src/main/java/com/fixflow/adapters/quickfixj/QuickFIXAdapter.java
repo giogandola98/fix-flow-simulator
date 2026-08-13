@@ -4,6 +4,7 @@ import com.fixflow.core.domain.session.FIXMode;
 import com.fixflow.core.domain.session.FIXSessionConfig;
 import com.fixflow.core.ports.outbound.FIXSessionPort;
 import com.fixflow.core.ports.outbound.InboundMessageListener;
+import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Component;
 import quickfix.*;
 import quickfix.Message;
@@ -19,7 +20,6 @@ public class QuickFIXAdapter implements FIXSessionPort {
     private final QuickFIXApplicationAdapter application;
     private final Map<UUID, Connector> connectors = new ConcurrentHashMap<>();
     private final Map<UUID, SessionID> sessions = new ConcurrentHashMap<>();
-    private volatile InboundMessageListener listener;
 
     public QuickFIXAdapter(QuickFIXApplicationAdapter application) {
         this.application = application;
@@ -27,7 +27,17 @@ public class QuickFIXAdapter implements FIXSessionPort {
 
     @Override
     public void setInboundListener(InboundMessageListener listener) {
-        this.listener = listener;
+        application.setInboundListener(listener);
+    }
+
+    @PreDestroy
+    void shutdown() {
+        for (Connector c : connectors.values()) {
+            try { c.stop(true); } catch (Exception ignored) {}
+        }
+        sessions.values().forEach(application::unregisterSession);
+        connectors.clear();
+        sessions.clear();
     }
 
     @Override
@@ -54,7 +64,14 @@ public class QuickFIXAdapter implements FIXSessionPort {
             // Register BEFORE start so onLogon callback finds the UUID mapping.
             SessionID sid = sessionIdFromConfig(config);
             application.registerSession(sid, config.id());
-            connector.start();
+            try {
+                connector.start();
+            } catch (RuntimeException | ConfigError e) {
+                // start() failed: undo the pre-start registration and stop the half-started connector.
+                application.unregisterSession(sid);
+                try { connector.stop(true); } catch (Exception ignored) {}
+                throw e;
+            }
             connectors.put(config.id(), connector);
             sessions.put(config.id(), sid);
         } catch (ConfigError e) {
@@ -106,7 +123,6 @@ public class QuickFIXAdapter implements FIXSessionPort {
         settings.setString("EndTime", "00:00:00");
         settings.setString("ResetOnLogon", cfg.resetOnLogon() ? "Y" : "N");
         settings.setString("ResetOnLogout", cfg.resetOnLogout() ? "Y" : "N");
-        settings.setString("FileStorePath", "./data/fix-store");
         settings.setString("ValidateUserDefinedFields", "N");
         settings.setString("ValidateIncomingMessage", "N");
 

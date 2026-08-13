@@ -1,6 +1,7 @@
 package com.fixflow.api.rest;
 
 import com.fixflow.adapters.persistence.FIXSessionRepositoryAdapter;
+import com.fixflow.api.exception.SessionConflictException;
 import com.fixflow.api.rest.dto.FIXSessionDto;
 import com.fixflow.api.rest.dto.FIXSessionRequest;
 import com.fixflow.core.domain.session.FIXMode;
@@ -54,19 +55,16 @@ public class SessionController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> update(@PathVariable UUID id, @RequestBody FIXSessionRequest req) {
+    public FIXSessionDto update(@PathVariable UUID id, @RequestBody FIXSessionRequest req) {
         FIXSessionConfig existing = sessionRepo.findById(id)
             .orElseThrow(() -> new NoSuchElementException("session not found: " + id));
         boolean connected = manager.isConnected(id);
         FIXVersion newVersion = FIXVersion.valueOf(req.fixVersion());
         if (connected && existing.fixVersion() != newVersion) {
-            return ResponseEntity.status(409).body(Map.of(
-                "error", "Conflict",
-                "message", "Disconnect session before changing FIX version"
-            ));
+            throw new SessionConflictException("Disconnect session before changing FIX version");
         }
         FIXSessionConfig updated = sessionRepo.save(toConfig(id, req));
-        return ResponseEntity.ok(FIXSessionDto.from(updated, connected));
+        return FIXSessionDto.from(updated, connected);
     }
 
     @DeleteMapping("/{id}")

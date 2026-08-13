@@ -8,4 +8,3 @@ export const updateSession = (id: string, req: FIXSessionCreateRequest) => putJs
 export const deleteSession = (id: string) => deleteJson(`/sessions/${id}`);
 export const connectSession = (id: string) => putJson<Record<string, never>, void>(`/sessions/${id}/connect`, {});
 export const disconnectSession = (id: string) => putJson<Record<string, never>, void>(`/sessions/${id}/disconnect`, {});
-export const getSessionStatus = (id: string) => getJson<{ sessionId: string; connected: boolean }>(`/sessions/${id}/status`);

@@ -14,8 +14,9 @@ public class ScenarioRegistry {
 
     public void register(Scenario scenario) {
         current.put(scenario.id(), scenario);
+        String version = scenario.version() == null ? "1" : scenario.version();
         versions.computeIfAbsent(scenario.id(), k -> new ConcurrentHashMap<>())
-                .put(scenario.version(), scenario);
+                .put(version, scenario);
     }
 
     public void reload(Scenario newVersion) {

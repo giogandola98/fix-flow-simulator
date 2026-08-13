@@ -1,4 +1,4 @@
-import { apiClient, getJson, postJson, putJson, deleteJson } from './client';
+import { getJson, postJson, putJson, deleteJson } from './client';
 import { Scenario, ScenarioCreateRequest, ScenarioUpdateRequest } from '../types';
 
 export const getScenarios = () => getJson<Scenario[]>('/scenarios');
@@ -16,10 +16,6 @@ export async function importScenario(file: File): Promise<Scenario> {
     throw { status: r.status, message: (err as { message?: string }).message ?? r.statusText };
   }
   return r.json();
-}
-export async function exportScenario(id: string): Promise<Blob> {
-  const r = await apiClient.get(`/scenarios/${id}/export`, { responseType: 'blob' });
-  return r.data as Blob;
 }
 export const executeScenario = (id: string, sessionId: string) =>
   postJson<{ sessionId: string }, { executionId: string }>(`/scenarios/${id}/execute`, { sessionId });
