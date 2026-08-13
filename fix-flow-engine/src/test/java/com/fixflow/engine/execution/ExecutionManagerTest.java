@@ -56,4 +56,64 @@ class ExecutionManagerTest {
         assertThat(fake.getSentMessages()).hasSize(1);
         assertThat(fake.getSentMessages().get(0)).containsEntry(11, "REQ-1");
     }
+
+    @Test
+    void decisionFalseBranchRoutesToOnFailure() {
+        // BUG-1: a false DECISION must route to its onFailure node and keep executing,
+        // not terminate the whole run as FAILED.
+        ScenarioRegistry registry = new ScenarioRegistry();
+        NodeDispatcher dispatcher = new NodeDispatcher(List.of(
+                new StartHandler(),
+                new DecisionHandler(new VariableResolver()),
+                new EndHandler(),
+                new EndFailHandler()));
+
+        UUID scenarioId = UUID.randomUUID();
+        Scenario scenario = new Scenario(scenarioId, "decide", "", "1", "sess",
+                RuntimePolicy.PARALLEL, List.of(), List.of(),
+                List.of(
+                        new ScenarioNode("n1", "start", NodeType.START, Map.of(), null, null, "d", null, null),
+                        // condition is false -> must take onFailure ("pass"), NOT onSuccess ("fail")
+                        new ScenarioNode("d", "decide", NodeType.DECISION,
+                                Map.of("condition", "1 == 2"), null, null, "fail", "pass", null),
+                        new ScenarioNode("pass", "pass", NodeType.END_PASS, Map.of(), null, null, null, null, null),
+                        new ScenarioNode("fail", "fail", NodeType.END_FAIL, Map.of(), null, null, null, null, null)),
+                List.of(), Map.of(), null);
+        registry.register(scenario);
+
+        ExecutionManager mgr = new ExecutionManager(registry, dispatcher);
+        UUID exec = mgr.start(scenarioId, UUID.randomUUID());
+
+        await().atMost(2, TimeUnit.SECONDS).until(() -> mgr.getStatus(exec) != null
+                && mgr.getStatus(exec) != ExecutionStatus.RUNNING);
+        assertThat(mgr.getStatus(exec)).isEqualTo(ExecutionStatus.PASSED);
+    }
+
+    @Test
+    void stopInterruptsBlockedNode() {
+        // #61: stop must interrupt a node blocked in a sleep/wait, not wait for it to finish.
+        ScenarioRegistry registry = new ScenarioRegistry();
+        NodeDispatcher dispatcher = new NodeDispatcher(List.of(
+                new StartHandler(), new DelayHandler(), new EndHandler(), new EndFailHandler()));
+
+        UUID scenarioId = UUID.randomUUID();
+        Scenario scenario = new Scenario(scenarioId, "delay", "", "1", "sess",
+                RuntimePolicy.PARALLEL, List.of(), List.of(),
+                List.of(
+                        new ScenarioNode("n1", "start", NodeType.START, Map.of(), null, null, "d", null, null),
+                        new ScenarioNode("d", "delay", NodeType.DELAY,
+                                Map.of("delayMs", 10_000), null, null, "n3", null, null),
+                        new ScenarioNode("n3", "done", NodeType.END_PASS, Map.of(), null, null, null, null, null)),
+                List.of(), Map.of(), null);
+        registry.register(scenario);
+
+        ExecutionManager mgr = new ExecutionManager(registry, dispatcher);
+        UUID exec = mgr.start(scenarioId, UUID.randomUUID());
+
+        await().atMost(1, TimeUnit.SECONDS).until(() -> mgr.getStatus(exec) == ExecutionStatus.RUNNING);
+        mgr.stop(exec);
+        // Without interruption this would take the full 10s; the stop must land almost immediately.
+        await().atMost(2, TimeUnit.SECONDS).until(() -> mgr.getStatus(exec) == ExecutionStatus.STOPPED);
+        assertThat(mgr.getStatus(exec)).isEqualTo(ExecutionStatus.STOPPED);
+    }
 }
