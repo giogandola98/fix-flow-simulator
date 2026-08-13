@@ -25,6 +25,7 @@ export default function TopBar() {
   const edges = useScenarioStore((s) => s.edges);
   const setNodes = useScenarioStore((s) => s.setNodes);
   const setEdges = useScenarioStore((s) => s.setEdges);
+  const applyAutoLayout = useScenarioStore((s) => s.applyAutoLayout);
   const activeSession = useSessionStore((s) => s.activeSession);
   const activeExecutionId = useExecutionStore((s) => s.activeExecutionId);
   const executionStatus = useExecutionStore((s) => s.executionStatus);
@@ -188,6 +189,13 @@ export default function TopBar() {
         disabled={!activeScenario || !isDirty}
       >
         {t('topbar.save')}{isDirty ? ' •' : ''}
+      </button>
+      <button
+        className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-sm"
+        onClick={() => applyAutoLayout()}
+        disabled={!activeScenario || nodes.length === 0}
+      >
+        {t('topbar.autoLayout')}
       </button>
       <div className="w-px h-6 bg-[#2a2d3a]" />
       <input ref={importRef} type="file" accept=".yaml,.yml" className="hidden" onChange={handleImportFile} />
