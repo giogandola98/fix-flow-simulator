@@ -1,5 +1,6 @@
 import { Handle, Position } from '@xyflow/react';
 import { ReactNode } from 'react';
+import { ringClass } from './ringClass';
 
 interface Props {
   label: string;
@@ -24,16 +25,7 @@ export function BaseNode({
   children,
   handles = { target: true, source: true },
 }: Props) {
-  const ringColor =
-    status === 'running'
-      ? 'animate-pulse ring-2 ring-green-400'
-      : status === 'passed'
-        ? 'ring-2 ring-green-500'
-        : status === 'failed'
-          ? 'ring-2 ring-red-500'
-          : selected
-            ? 'ring-2 ring-blue-400'
-            : '';
+  const ringColor = ringClass(status, selected);
 
   const bg = filled ? borderColor : '#1a1d27';
   const textColor = filled ? 'text-white' : 'text-gray-100';

@@ -20,13 +20,18 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PreDestroy;
+
 import java.time.Instant;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class ExecutionManager {
@@ -38,7 +43,14 @@ public class ExecutionManager {
     private final ExecutionRepositoryPort executionRepo;
     private final EventPublisherPort eventPublisher;
     private final Map<UUID, ExecutionContext> contexts = new ConcurrentHashMap<>();
-    private final Map<UUID, ExecutionStatus> completedStatuses = new ConcurrentHashMap<>();
+    /** Size-capped LRU so completed-status history cannot grow unbounded. */
+    private final Map<UUID, ExecutionStatus> completedStatuses = Collections.synchronizedMap(
+            new LinkedHashMap<>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<UUID, ExecutionStatus> eldest) {
+                    return size() > 1000;
+                }
+            });
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
     @Autowired
@@ -54,6 +66,20 @@ public class ExecutionManager {
     /** Convenience constructor for unit tests that don't need persistence. */
     public ExecutionManager(ScenarioRegistry registry, NodeDispatcher dispatcher) {
         this(registry, dispatcher, null, null);
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        if (executor == null) return;
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
     public UUID start(UUID scenarioId, UUID sessionId) {

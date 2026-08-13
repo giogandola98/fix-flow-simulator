@@ -7,6 +7,8 @@ import com.fixflow.adapters.persistence.entity.*;
 import com.fixflow.adapters.persistence.jpa.*;
 import com.fixflow.core.domain.execution.*;
 import com.fixflow.core.ports.outbound.ExecutionRepositoryPort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +20,8 @@ import java.util.UUID;
 
 @Component
 public class ExecutionRepositoryAdapter implements ExecutionRepositoryPort {
+
+    private static final Logger log = LoggerFactory.getLogger(ExecutionRepositoryAdapter.class);
 
     private final JpaExecutionRepository executionRepo;
     private final JpaExecutionEventRepository eventRepo;
@@ -129,7 +133,10 @@ public class ExecutionRepositoryAdapter implements ExecutionRepositoryPort {
     private Map<String, String> readStringMap(String s) {
         if (s == null || s.isBlank()) return Map.of();
         try { return json.readValue(s, new TypeReference<Map<String, String>>() {}); }
-        catch (Exception ex) { throw new RuntimeException(ex); }
+        catch (Exception ex) {
+            log.warn("Failed to parse string map from JSON [{}], returning empty map", s, ex);
+            return Map.of();
+        }
     }
 
     private Map<Integer, String> readIntMap(String s) {
@@ -139,6 +146,9 @@ public class ExecutionRepositoryAdapter implements ExecutionRepositoryPort {
             Map<Integer, String> result = new java.util.HashMap<>();
             raw.forEach((k, v) -> result.put(Integer.parseInt(k), v));
             return result;
-        } catch (Exception ex) { return Map.of(); }
+        } catch (Exception ex) {
+            log.warn("Failed to parse int map from JSON [{}], returning empty map", s, ex);
+            return Map.of();
+        }
     }
 }

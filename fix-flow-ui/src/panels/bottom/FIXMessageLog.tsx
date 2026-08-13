@@ -17,9 +17,16 @@ export function FIXMessageLog() {
   const [copied, setCopied] = useState<string | null>(null);
   const [sep, setSep] = useState<Separator>('pipe');
   const ref = useRef<HTMLDivElement>(null);
+  // Only auto-scroll when the user was already near the bottom, so scrolling up is not yanked.
+  const nearBottom = useRef(true);
+
+  const onScroll = () => {
+    const el = ref.current;
+    if (el) nearBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  };
 
   useEffect(() => {
-    if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
+    if (ref.current && nearBottom.current) ref.current.scrollTop = ref.current.scrollHeight;
   }, [messages]);
 
   const copyText = async (text: string, key: string) => {
@@ -84,7 +91,7 @@ export function FIXMessageLog() {
           )}
         </div>
       </div>
-      <div ref={ref} className="flex-1 overflow-y-auto px-2 py-1 font-mono text-[11px]">
+      <div ref={ref} onScroll={onScroll} className="flex-1 overflow-y-auto px-2 py-1 font-mono text-[11px]">
         {messages.length === 0 && <div className="text-gray-500 italic">{t('messages.noMessages')}</div>}
         {messages.map((m) => {
           const isExp = expanded[m.id];

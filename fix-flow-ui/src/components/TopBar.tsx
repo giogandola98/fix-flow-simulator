@@ -90,6 +90,8 @@ export default function TopBar() {
         executionStatus: 'RUNNING',
         events: [],
         messages: [],
+        seenEventIds: new Set<string>(),
+        seenMsgIds: new Set<string>(),
         nodeStatuses: {},
         startedAt: null,
         endedAt: null,

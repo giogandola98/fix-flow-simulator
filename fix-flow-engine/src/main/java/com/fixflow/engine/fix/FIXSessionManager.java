@@ -32,9 +32,4 @@ public class FIXSessionManager {
     }
 
     public boolean isConnected(UUID id) { return port.isConnected(id); }
-
-    public void send(UUID id, Map<Integer, String> fields) {
-        if (!known.containsKey(id)) throw new IllegalStateException("Session not registered: " + id);
-        port.sendMessage(id, fields);
-    }
 }

@@ -5,7 +5,6 @@ import com.fixflow.core.domain.session.FIXSessionConfig;
 import com.fixflow.core.domain.session.FIXVersion;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -13,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class FIXSessionManagerTest {
 
     @Test
-    void connectSendDisconnectLifecycle() {
+    void connectDisconnectLifecycle() {
         FakeFixAdapter fake = new FakeFixAdapter();
         FIXSessionManager mgr = new FIXSessionManager(fake);
 
@@ -23,10 +22,6 @@ class FIXSessionManagerTest {
 
         mgr.connect(cfg);
         assertThat(mgr.isConnected(cfg.id())).isTrue();
-
-        mgr.send(cfg.id(), Map.of(35, "D", 11, "CL-1"));
-        assertThat(fake.getSentMessages()).hasSize(1);
-        assertThat(fake.getSentMessages().get(0)).containsEntry(35, "D");
 
         mgr.disconnect(cfg.id());
         assertThat(mgr.isConnected(cfg.id())).isFalse();
