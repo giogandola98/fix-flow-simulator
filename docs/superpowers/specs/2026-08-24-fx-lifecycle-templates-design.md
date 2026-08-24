@@ -542,3 +542,32 @@ workflow flowchart and the verification results matrix.
 
 Corrected after the original design: templates live **outside** the repository,
 in `<project>/fx-templates/`, and are never committed to it.
+
+### 13.8 New order reject is verified, not just implemented
+
+The venue templates already reject an order whose `validate-new` rules fail
+(`ExecutionReport` `150=8`, `39=8`, `103` OrdRejReason, `58` free text). The gap
+was on the driver side: a Prime scenario that only sends valid orders never
+exercises that branch, so it would ship untested.
+
+Each Prime driver therefore sends one deliberately invalid order and asserts the
+rejection, with a trigger matched to its own venue template's rules:
+
+| Driver | Invalid order | Rule tripped |
+|---|---|---|
+| spot | `167=FXFWD` with `461=IFXXXP` | `167 EQUALS FXSPOT` |
+| forward | `461=JFTXFN` on a forward | `461 EQUALS JFTXFP` |
+| ndf | `38=0` | `38 NUMERIC_MIN 1` |
+| swap | `NoLegs` with a single entry | `609 groupTag 555 index 1 EQUALS FXFWD` |
+| option | `201=2` | `201 ENUM ['0','1']` |
+
+The assertion checks `150=8`, `39=8`, the presence of `103` and `58`, and the
+**absence** of `31`/`32` — a venue that rejects an order while still echoing
+LastPx and LastQty is reporting a fill on a rejected order, which asserting the
+reject code alone would not catch.
+
+The swap trigger is the significant one: a malformed repeating group caught by
+the group-aware validation is the capability the whole engine extension exists
+for. `OrdRejReason` is `11` (unsupported order characteristic) rather than `0`
+(broker/exchange option), which is what an instrument-classification mismatch
+actually is.

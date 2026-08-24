@@ -3534,7 +3534,7 @@ nodes:
         - { tag: 17,  value: '{{uuid}}' }
         - { tag: 150, value: '8' }
         - { tag: 39,  value: '8' }
-        - { tag: 103, value: '0' }
+        - { tag: 103, value: '11' }
         - { tag: 58,  value: 'Instrument or order attributes not accepted for FX spot' }
         - { tag: 55,  value: '{{node:dispatch:tag55}}' }
         - { tag: 167, value: FXSPOT }
@@ -4788,7 +4788,7 @@ corresponding client messages from the initiator side. Record for each:
 
 | Template | Must observe |
 |---|---|
-| spot | ER 150=0, 150=F; limit order expires with 150=C; cancel gives 150=4; amend gives 150=5 |
+| spot | ER 150=0, 150=F; an invalid order gives 150=8/39=8 with 103 and no 31/32; limit order expires with 150=C; cancel gives 150=4; amend gives 150=5 |
 | forward | as spot, plus 541, 194, 195 on the fill |
 | ndf | as forward, plus 35=AE with `864=1|865=13|866=` in the raw FIX |
 | swap | ER with `442=3` and `555=2` followed by two complete leg blocks |
@@ -5136,6 +5136,103 @@ edges:
   - { from: assert-canceled,  to: end-pass,         label: success }
   - { from: assert-canceled,  to: end-fail,         label: failure }
 ```
+
+- [ ] **Step 1b: Add the reject leg to the spot driver**
+
+An ack-only driver never exercises `validate-new -> reject-new`, so the reject
+path would ship unverified. Prime deliberately sends a **bad** order and asserts
+the rejection, before moving on to the resting-limit leg.
+
+Change `assert-fill`'s successor from `send-limit` to `send-bad`, and insert:
+
+```yaml
+  - id: send-bad
+    name: Prime sends a deliberately invalid order
+    type: SEND_FIX
+    config:
+      msgType: D
+      fields:
+        - { tag: 11,  value: 'PRIME-BAD-{{seq:clordid}}' }
+        - { tag: 1,   value: PRIME-ACC-1 }
+        - { tag: 55,  value: EUR/USD }
+        # wrong instrument classification for an FX spot order:
+        # SecurityType says forward, CFI says spot. Master Finance must reject.
+        - { tag: 167, value: FXFWD }
+        - { tag: 461, value: IFXXXP }
+        - { tag: 460, value: '4' }
+        - { tag: 15,  value: EUR }
+        - { tag: 120, value: USD }
+        - { tag: 54,  value: '1' }
+        - { tag: 38,  value: '1000000' }
+        - { tag: 40,  value: '1' }
+        - { tag: 59,  value: '0' }
+        - { tag: 60,  value: '{{now}}' }
+    onSuccess: expect-reject
+    position: { x: 320, y: 520 }
+
+  - id: expect-reject
+    name: Expect ER - Rejected
+    type: EXPECT_FIX
+    config:
+      msgType: '8'
+      correlation: { sourceTag: 11, fromNode: send-bad, targetTag: 11 }
+    timeout: { value: 15, unit: SECONDS, onTimeout: FAIL }
+    onSuccess: assert-reject
+    onFailure: end-fail
+    position: { x: 600, y: 520 }
+
+  - id: assert-reject
+    name: Assert reject is 150=8 / 39=8 with a reason
+    type: VALIDATE
+    config:
+      strictMode: false
+      sourceNodeId: expect-reject
+      rules:
+        - { tag: 150, rule: EQUALS, value: '8' }
+        - { tag: 39,  rule: EQUALS, value: '8' }
+        - { tag: 11,  rule: FIELD_PRESENT }
+        - { tag: 103, rule: FIELD_PRESENT }
+        - { tag: 58,  rule: FIELD_PRESENT }
+        # a rejected order must not report a fill
+        - { tag: 31,  rule: FIELD_ABSENT }
+        - { tag: 32,  rule: FIELD_ABSENT }
+    onSuccess: send-limit
+    onFailure: end-fail
+    position: { x: 880, y: 520 }
+```
+
+and the edges:
+
+```yaml
+  - { from: assert-fill,    to: send-bad,      label: success }
+  - { from: send-bad,       to: expect-reject, label: success }
+  - { from: expect-reject,  to: assert-reject, label: success }
+  - { from: expect-reject,  to: end-fail,      label: failure }
+  - { from: assert-reject,  to: send-limit,    label: success }
+  - { from: assert-reject,  to: end-fail,      label: failure }
+```
+
+removing the old `assert-fill -> send-limit` edge.
+
+The two `FIELD_ABSENT` rules matter: a venue that rejects an order but still
+echoes `LastPx`/`LastQty` is reporting a fill on a rejected order. Asserting the
+reject code alone would miss that.
+
+**Per-product reject trigger** — each driver needs an invalid order its own venue
+template will actually refuse, matched to that template's `validate-new` rules:
+
+| Driver | Invalid order sent | Rule it trips |
+|---|---|---|
+| spot | `167=FXFWD` with `461=IFXXXP` | `167 EQUALS FXSPOT` |
+| forward | `461=JFTXFN` (NDF CFI on a forward) | `461 EQUALS JFTXFP` |
+| ndf | `38=0` (zero quantity) | `38 NUMERIC_MIN 1` |
+| swap | one leg only, `609=FXSPOT`, no far leg | `609 groupTag 555 index 1 EQUALS FXFWD` |
+| option | `201=2` (neither put nor call) | `201 ENUM ['0','1']` |
+
+The swap case is the most valuable: it proves a malformed **repeating group** is
+caught by the group-aware validation from Task 8, which is exactly the capability
+the whole engine extension exists for. Build that one by sending a `NoLegs` group
+with a single entry.
 
 **Check before relying on `ref:`** — `EqualsRule` takes `(value, ref)` and
 `ValidateHandler` reads a `ref` key, but confirm `EqualsRule` resolves `ref`
@@ -5686,6 +5783,8 @@ For the sequence diagrams, the arrow set per product is exactly:
 | 3 | Master Finance | Prime | `35=8` ExecutionReport `150=F/39=2` — Trade |
 | 4 | Master Finance | Prime | *(NDF only)* `35=AE` TradeCaptureReport — fixing |
 | 5 | Prime | Master Finance | *(NDF only)* `35=AR` TradeCaptureReportAck |
+| 5a | Prime | Master Finance | `35=D` **invalid** order (wrong instrument classification) |
+| 5b | Master Finance | Prime | `35=8` ExecutionReport `150=8/39=8` with `103` OrdRejReason — **Rejected** |
 | 6 | Prime | Master Finance | `35=D` resting limit order |
 | 7 | Master Finance | Prime | `35=8` `150=0/39=0` |
 | 8 | Prime | Master Finance | `35=G` OrderCancelReplaceRequest |
