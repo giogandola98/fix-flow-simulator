@@ -89,6 +89,60 @@ export const FIX_TAGS: Record<number, string> = {
   541: 'MaturityDate',
   636: 'WorkingIndicator',
   1128: 'ApplVerID',
+
+  // Order lifecycle
+  102: 'CxlRejReason', 378: 'ExecRestatementReason', 434: 'CxlRejResponseTo',
+  442: 'MultiLegReportingType', 584: 'MassStatusReqID',
+
+  // Instrument reference block
+  460: 'Product', 762: 'SecuritySubType',
+
+  // FX settlement
+  119: 'SettlCurrAmt', 155: 'SettlCurrFxRate', 156: 'SettlCurrFxRateCalc',
+  193: 'SettlDate2',
+
+  // Options
+  231: 'ContractMultiplier', 947: 'StrikeCurrency', 1193: 'SettlMethod',
+  1194: 'ExerciseStyle', 1482: 'OptPayoutType',
+
+  // Legs (NoLegs group)
+  555: 'NoLegs', 566: 'LegPrice', 587: 'LegSettlType', 588: 'LegSettlDate',
+  600: 'LegSymbol', 608: 'LegCFICode', 609: 'LegSecurityType',
+  623: 'LegRatioQty', 624: 'LegSide', 637: 'LegLastPx', 654: 'LegRefID',
+  675: 'LegSettlCurrency', 687: 'LegQty', 1418: 'LegLastQty',
+
+  // Events (NoEvents group)
+  864: 'NoEvents', 865: 'EventType', 866: 'EventDate',
+
+  // Underlyings (NoUnderlyings group)
+  311: 'UnderlyingSymbol', 711: 'NoUnderlyings',
+
+  // Position maintenance
+  581: 'AccountType', 702: 'NoPositions', 703: 'PosType', 704: 'LongQty',
+  705: 'ShortQty', 709: 'PosTransType', 710: 'PosReqID', 712: 'PosMaintAction',
+  715: 'ClearingBusinessDate', 721: 'PosMaintRptID', 722: 'PosMaintStatus',
+  723: 'PosMaintResult',
+
+  // Trade capture
+  487: 'TradeReportTransType', 571: 'TradeReportID', 828: 'TrdType',
+  856: 'TradeReportType', 1003: 'TradeID', 1123: 'TradeReportStatus',
+
+  // Allocations
+  78: 'NoAllocs', 79: 'AllocAccount',
+};
+
+/**
+ * Repeating group counter tags offered in the SEND_FIX group editor, and used by
+ * parseFIXMessage to rebuild group structure from a pasted raw message.
+ * Every key must also exist in FIX_TAGS.
+ */
+export const GROUP_COUNTER_TAGS: Record<number, string> = {
+  78: 'NoAllocs',
+  453: 'NoPartyIDs',
+  555: 'NoLegs',
+  702: 'NoPositions',
+  711: 'NoUnderlyings',
+  864: 'NoEvents',
 };
 
 export function fixTagName(tag: number): string | undefined {
