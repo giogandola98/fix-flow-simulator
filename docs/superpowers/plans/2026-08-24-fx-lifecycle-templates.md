@@ -5047,14 +5047,53 @@ corresponding client messages from the initiator side. Record for each:
 | swap | ER with `442=3` and `555=2` followed by two complete leg blocks |
 | option | ER with 201/202/947/1194/1482; 35=AM with 722=0 for both exercise and abandon |
 
-- [ ] **Step 6: Verify the group editor in the browser**
+- [ ] **Step 6: Drive the real GUI with a browser, not by eye**
 
-Open a swap scenario, select the `fill` node, and confirm the right panel shows
-`555 — NoLegs (2 entries)` with two entry cards. Change a leg's `587` value, save,
-export the YAML, and confirm the edit survived the round trip. Add a third entry,
-confirm the header reads `(3 entries)`, then delete it again. This is the check
-the user specifically asked for: the graphical editor must be able to modify a
-FIX message containing repeating groups.
+The user asked for the simulator and its GUI to be **verified in full before the
+PR is opened**. A manual eyeball does not satisfy that. Automate it.
+
+`puppeteer-core` is referenced by `CLAUDE.md` but expects a system Chromium that
+this Windows workstation does not have, and `node_modules` at the repo root does
+not exist. Install full `puppeteer` (it downloads its own Chromium) into a
+scratch folder OUTSIDE the repository, so nothing lands in the working tree:
+
+```powershell
+cd 'C:\Users\giorgio\Desktop\fix simulator\work\gui-check'
+npm init -y
+npm i puppeteer
+```
+
+With the fat JAR running on :8080, script and RUN these checks, capturing a
+screenshot for each:
+
+1. **App loads.** Navigate to `http://localhost:8080`, wait for the canvas, assert
+   the top bar renders and that no console error was logged.
+2. **Import a template.** Drive the Import button with
+   `fx-templates/fx-swap-lifecycle.yaml`. Assert the scenario appears in the left
+   panel by name.
+3. **The group editor shows the legs.** Select the `fill` node. Assert the right
+   panel contains the text `555`, `NoLegs` and `2 entries`, and that two entry
+   cards are present.
+4. **The derived counter is not editable.** Assert the counter input has the
+   `readOnly` property set. This is the guarantee that `NoLegs=2` can never
+   disagree with the number of legs actually present.
+5. **Edit a leg from the GUI.** Change the far leg's `587` LegSettlType value,
+   click Save, then Export, and parse the exported YAML: the new value must be
+   present AND `600` must still be the FIRST field of each entry. That last
+   assertion is the one that catches the delimiter-ordering bug, and it is the
+   whole reason group entry fields are a list rather than a tag-keyed map.
+6. **Add and remove an entry.** Add a third entry, assert the header reads
+   `3 entries`, delete it, assert it reads `2 entries` again.
+7. **Paste a raw multileg message.** Open the paste panel, paste a raw `35=AB`
+   string containing `555=2` and two leg blocks, click Parse, and assert the
+   group editor reconstructed two entries rather than a flat field list.
+8. **The Shutdown button ends the process.** Click it, accept the confirm dialog,
+   then assert the JVM is gone from the process table. This verifies the feature
+   as a real behaviour, not as a green unit test.
+
+Every one of these must PASS. Save the screenshots under
+`work/gui-check/screenshots/` and reference them in the report. If any check
+fails, that is a defect to fix before the PR, not a note to file.
 
 - [ ] **Step 7: Verify the shutdown button**
 
