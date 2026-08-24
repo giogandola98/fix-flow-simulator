@@ -1,5 +1,6 @@
 package com.fixflow.engine.variable;
 
+import com.fixflow.core.domain.execution.FIXMessageData;
 import com.fixflow.engine.execution.ExecutionContext;
 import org.springframework.stereotype.Service;
 
@@ -33,6 +34,8 @@ public class VariableResolver {
             new UuidPlugin(),
             new SeqPlugin(sequences),
             new EnvPlugin(),
+            new GroupFieldOffsetPlugin(),
+            new GroupFieldPlugin(),
             new DateOffsetPlugin(),
             new NodeFieldPlugin(),
             new VarPlugin()
@@ -188,6 +191,57 @@ public class VariableResolver {
             String key = e.substring("var:".length());
             String v = c.getVariable(key);
             return v == null ? "" : v;
+        }
+    }
+
+    private static FIXMessageData requireMessage(ExecutionContext c, String nodeId) {
+        FIXMessageData data = c.getNodeMessageData(nodeId);
+        if (data == null) throw new IllegalStateException("No stored message for node: " + nodeId);
+        return data;
+    }
+
+    private static String requireGroupValue(ExecutionContext c, String nodeId,
+                                            int counterTag, int index, int tag) {
+        FIXMessageData data = requireMessage(c, nodeId);
+        if (index < 0 || index >= data.group(counterTag).size()) {
+            throw new IllegalStateException(
+                "Group " + counterTag + " on node " + nodeId + " has "
+                + data.group(counterTag).size() + " entries; index " + index + " is out of range");
+        }
+        return data.groupValue(counterTag, index, tag).orElse("");
+    }
+
+    static final class GroupFieldPlugin implements VariableResolverPlugin {
+        private static final Pattern P =
+            Pattern.compile("^node:([^:]+):g(\\d+)\\.(\\d+):tag(\\d+)$");
+        public boolean supports(String e) { return P.matcher(e).matches(); }
+        public String resolve(String e, ExecutionContext c) {
+            Matcher m = P.matcher(e);
+            if (!m.matches()) throw new IllegalArgumentException("Bad group ref: " + e);
+            return requireGroupValue(c, m.group(1),
+                Integer.parseInt(m.group(2)), Integer.parseInt(m.group(3)), Integer.parseInt(m.group(4)));
+        }
+    }
+
+    static final class GroupFieldOffsetPlugin implements VariableResolverPlugin {
+        private static final Pattern P =
+            Pattern.compile("^node:([^:]+):g(\\d+)\\.(\\d+):tag(\\d+):offset:([+\\-])(\\d+)([smhd])$");
+        public boolean supports(String e) { return P.matcher(e).matches(); }
+        public String resolve(String e, ExecutionContext c) {
+            Matcher m = P.matcher(e);
+            if (!m.matches()) throw new IllegalArgumentException("Bad group date offset: " + e);
+            String raw = requireGroupValue(c, m.group(1),
+                Integer.parseInt(m.group(2)), Integer.parseInt(m.group(3)), Integer.parseInt(m.group(4)));
+            Instant base = Instant.parse(raw);
+            long amount = Long.parseLong(m.group(6));
+            ChronoUnit cu = switch (m.group(7)) {
+                case "s" -> ChronoUnit.SECONDS;
+                case "m" -> ChronoUnit.MINUTES;
+                case "h" -> ChronoUnit.HOURS;
+                case "d" -> ChronoUnit.DAYS;
+                default  -> throw new IllegalArgumentException("Bad unit: " + m.group(7));
+            };
+            return (m.group(5).equals("+") ? base.plus(amount, cu) : base.minus(amount, cu)).toString();
         }
     }
 }
