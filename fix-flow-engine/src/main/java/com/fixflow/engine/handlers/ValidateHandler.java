@@ -1,5 +1,6 @@
 package com.fixflow.engine.handlers;
 
+import com.fixflow.core.domain.execution.FIXMessageData;
 import com.fixflow.core.domain.scenario.NodeType;
 import com.fixflow.core.domain.scenario.ScenarioNode;
 import com.fixflow.engine.execution.ExecutionContext;
@@ -26,11 +27,11 @@ public class ValidateHandler implements NodeHandler {
         // sourceNodeId points to the EXPECT_FIX node whose stored message we validate
         String sourceId = node.config().get("sourceNodeId") != null
                 ? String.valueOf(node.config().get("sourceNodeId")) : null;
-        Map<Integer, String> fields = ctx.getNodeMessage(sourceId != null ? sourceId : node.id());
-        if (fields == null) fields = Map.of();
+        FIXMessageData message = ctx.getNodeMessageData(sourceId != null ? sourceId : node.id());
+        if (message == null) message = FIXMessageData.ofFields(Map.of());
 
         ValidationConfig cfg = toConfig(node.config());
-        ValidationSummary summary = engine.validate(cfg, fields, ctx, Instant.now());
+        ValidationSummary summary = engine.validate(cfg, message, ctx, Instant.now());
 
         return summary.passed()
             ? NodeHandlerResult.success(node.onSuccess())
@@ -52,7 +53,10 @@ public class ValidateHandler implements NodeHandler {
             String dateRule = (String) rr.get("dateRule");
             String pattern = (String) rr.get("pattern");
             double num = rr.get("numericValue") == null ? 0 : ((Number) rr.get("numericValue")).doubleValue();
-            rules.add(new ValidationRuleConfig(tag, rule, value, values, ref, dateRule, pattern, num));
+            Integer groupTag = rr.get("groupTag") == null ? null : ((Number) rr.get("groupTag")).intValue();
+            String index = rr.get("index") == null ? null : String.valueOf(rr.get("index"));
+            rules.add(new ValidationRuleConfig(tag, rule, value, values, ref, dateRule, pattern, num,
+                                               groupTag, index));
         }
         boolean strict = Boolean.TRUE.equals(raw.get("strictMode"));
         Map<String, DateRule> dateRules = (Map<String, DateRule>) raw.getOrDefault("dateRules", Map.of());
