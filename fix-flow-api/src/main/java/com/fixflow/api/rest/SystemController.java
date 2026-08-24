@@ -17,6 +17,11 @@ import java.util.function.IntConsumer;
  * <p>QuickFIX/J acceptor threads are non-daemon, so closing the Spring context is not enough
  * to end the JVM — {@code System.exit} is. The response is sent first and the exit happens on
  * a separate thread after a short delay, so the browser sees 202 rather than a dropped socket.
+ *
+ * <p>The actual exit call is delegated to an injected {@link IntConsumer} ({@link ProcessExit}
+ * in production) rather than hard-coded to {@code System::exit}, so a test can supply a
+ * capturing replacement — see {@link ProcessExit} for why that makes it safe to drive this
+ * controller through a real Spring context in tests.
  */
 @RestController
 @RequestMapping("/api/v1/system")
@@ -28,10 +33,6 @@ public class SystemController {
     private final IntConsumer exit;
 
     @Autowired
-    public SystemController(ApplicationContext context) {
-        this(context, System::exit);
-    }
-
     SystemController(ApplicationContext context, IntConsumer exit) {
         this.context = context;
         this.exit = exit;
