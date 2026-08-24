@@ -227,4 +227,43 @@ describe('repeating groups', () => {
     const back = parseFromYaml(serializeToYaml(plain as never, [], meta));
     expect((back.nodes[0].config as { groups?: unknown }).groups).toBeUndefined();
   });
+
+  it('accepts a hand-authored entry written with fields as a tag-keyed map', () => {
+    // We always WRITE the list form (see the tests above). This covers the one
+    // path our new code exercises that the old pass-through never touched: parsing
+    // input we did not write ourselves, e.g. a hand-authored YAML file.
+    //
+    // Note what this test can and cannot promise: JS re-orders integer-like object
+    // keys ascending, so a map-form entry whose delimiter is not the lowest tag
+    // CANNOT round-trip with the delimiter first. Here 600 (delimiter) already sorts
+    // before 624, so this particular map happens to preserve order — that is a
+    // property of this input, not a guarantee of the map form in general. That
+    // ambiguity is exactly why we write the list form and only accept the map form
+    // as a defensive fallback on read.
+    const handAuthored = yaml.dump({
+      ...meta,
+      nodes: [{
+        id: 'send-swap',
+        name: 'Send Multileg',
+        type: 'SEND_FIX',
+        config: {
+          msgType: 'AB',
+          groups: [{
+            counterTag: 555,
+            entries: [{ fields: { 600: 'EUR/USD', 624: '1' } }],
+          }],
+        },
+      }],
+      edges: [],
+    });
+    const back = parseFromYaml(handAuthored);
+    const cfg = back.nodes[0].config as {
+      groups: { entries: { fields: { tag: number; value: string }[] }[] }[];
+    };
+    expect(Array.isArray(cfg.groups[0].entries[0].fields)).toBe(true);
+    expect(cfg.groups[0].entries[0].fields).toEqual([
+      { tag: 600, value: 'EUR/USD' },
+      { tag: 624, value: '1' },
+    ]);
+  });
 });

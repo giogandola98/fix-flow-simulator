@@ -94,8 +94,24 @@ function readGroup(
       continue;
     }
     if (current === null) break;                   // first tag was not the delimiter
-    if (entries.length === declared && !seenTags.has(tag)) break;
-    if (!seenTags.has(tag) && entries.length > 1) break;
+
+    if (entries.length === declared) {
+      // We're filling the last declared entry — there won't be another delimiter
+      // occurrence to close it. A tag repeated within THIS entry (e.g. a top-level
+      // field right after the group reuses a tag also used inside every leg) means
+      // we've run past the entry's own fields; so does a tag never seen anywhere in
+      // the group. Either way, stop here and let the caller treat it as a top-level
+      // field — do not just check entries.length, or the trailing occurrence gets
+      // silently swallowed into the last entry instead of falling through.
+      const dupInCurrentEntry = current.fields.some((f) => f.tag === tag);
+      if (dupInCurrentEntry || !seenTags.has(tag)) break;
+    } else if (!seenTags.has(tag) && entries.length > 1) {
+      // Guards declared >= 3: once a third-plus entry is under way, a tag never seen
+      // anywhere in the group would otherwise be silently accepted mid-entry. Only
+      // the delimiter tag may start a new entry; an unseen tag here ends the group
+      // early instead.
+      break;
+    }
     seenTags.add(tag);
     current.fields.push({ tag, value });
   }

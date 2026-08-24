@@ -103,4 +103,19 @@ describe('repeating groups on paste', () => {
     ]);
     expect(r.skipped).toBe(3);
   });
+
+  it('does not swallow a trailing top-level field whose tag was also used inside the group', () => {
+    // Both legs carry tag 624; a top-level 624 immediately follows the completed group.
+    // Once declared entry count is reached, the group is done regardless of which tags
+    // were seen inside it — the trailing 624 must fall through to top-level fields.
+    const r = parseFIXMessage(
+      '8=FIXT.1.1|35=AB|555=2|600=EUR/USD|624=1|600=GBP/USD|624=2|624=99|11=ORD-1|',
+    );
+    expect(r.groups[0].entries).toHaveLength(2);
+    expect(r.groups[0].entries[1].fields).toEqual([
+      { tag: 600, value: 'GBP/USD' }, { tag: 624, value: '2' },
+    ]);
+    expect(r.fields).toContainEqual({ tag: 624, value: '99' });
+    expect(r.fields.map((f) => f.tag)).toContain(11);
+  });
 });

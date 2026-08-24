@@ -129,7 +129,7 @@ function parseConfig(type: NodeType, config: Record<string, unknown>): Record<st
       out.fields = fieldsMapToArray(config.fields as Record<string, string>);
     }
     if (Array.isArray(config.groups) && config.groups.length > 0) {
-      out.groups = parseGroups(config.groups as unknown as YamlGroupSpec[]);
+      out.groups = parseGroups(config.groups as YamlGroupSpec[]);
     } else {
       delete out.groups;
     }
