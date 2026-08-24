@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '../i18n';
 import TopBar from './TopBar';
@@ -13,6 +14,7 @@ vi.mock('../api/scenarios', () => ({
   executeScenario: vi.fn(), updateScenario: vi.fn(), importScenario: vi.fn(),
 }));
 vi.mock('../api/executions', () => ({ stopExecution: vi.fn() }));
+vi.mock('../api/system', () => ({ shutdownSimulator: vi.fn() }));
 
 const scenario: Scenario = {
   id: 's1', name: 'Sc', description: '', version: '1.0', sessionRef: '', nodeCount: 0,
@@ -62,5 +64,18 @@ describe('TopBar Run/Stop button state', () => {
     setStores({ scenario, session: session(true), status: 'IDLE' });
     renderTopBar();
     expect(screen.getByRole('button', { name: 'Stop' })).toBeDisabled();
+  });
+});
+
+describe('TopBar shutdown button', () => {
+  beforeEach(() => setStores({}));
+
+  it('asks for confirmation before shutting down', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    renderTopBar();
+    await userEvent.click(screen.getByTestId('topbar-shutdown'));
+    expect(confirm).toHaveBeenCalled();
+    expect(screen.queryByTestId('shutdown-overlay')).toBeNull();
+    confirm.mockRestore();
   });
 });
