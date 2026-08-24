@@ -1,5 +1,6 @@
 package com.fixflow.adapters.quickfixj;
 
+import com.fixflow.core.domain.execution.FIXMessageData;
 import com.fixflow.core.domain.session.FIXMode;
 import com.fixflow.core.domain.session.FIXSessionConfig;
 import com.fixflow.core.ports.outbound.FIXSessionPort;
@@ -98,11 +99,13 @@ public class QuickFIXAdapter implements FIXSessionPort {
     }
 
     @Override
-    public void sendMessage(UUID sessionId, Map<Integer, String> fields) {
+    public void sendMessage(UUID sessionId, FIXMessageData message) {
+        // TODO(Task 4): serialise message.groups() into quickfix.Group instances. For now
+        // only the flat fields are sent, exactly as before this method took FIXMessageData.
         SessionID sid = sessions.get(sessionId);
         if (sid == null) throw new IllegalStateException("Unknown session: " + sessionId);
         Message msg = new Message();
-        fields.forEach((tag, value) -> {
+        message.flatFields().forEach((tag, value) -> {
             if (tag == 35) msg.getHeader().setString(35, value);
             else msg.setString(tag, value);
         });

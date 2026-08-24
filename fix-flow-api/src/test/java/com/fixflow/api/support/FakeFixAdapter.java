@@ -1,5 +1,6 @@
 package com.fixflow.api.support;
 
+import com.fixflow.core.domain.execution.FIXMessageData;
 import com.fixflow.core.domain.session.FIXSessionConfig;
 import com.fixflow.core.ports.outbound.FIXSessionPort;
 import com.fixflow.core.ports.outbound.InboundMessageListener;
@@ -34,8 +35,8 @@ public class FakeFixAdapter implements FIXSessionPort {
     }
 
     @Override
-    public void sendMessage(UUID id, Map<Integer, String> fields) {
-        sent.add(new HashMap<>(fields));
+    public void sendMessage(UUID id, FIXMessageData message) {
+        sent.add(new HashMap<>(message.flatFields()));
     }
 
     @Override

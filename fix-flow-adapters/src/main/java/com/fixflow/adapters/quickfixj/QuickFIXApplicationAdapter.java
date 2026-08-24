@@ -1,5 +1,6 @@
 package com.fixflow.adapters.quickfixj;
 
+import com.fixflow.core.domain.execution.FIXMessageData;
 import com.fixflow.core.ports.outbound.EventPublisherPort;
 import com.fixflow.core.ports.outbound.InboundMessageListener;
 import quickfix.*;
@@ -63,10 +64,11 @@ public class QuickFIXApplicationAdapter implements Application {
 
     @Override
     public void fromApp(Message message, SessionID sessionId) {
+        // extractFields is flat-only; Task 5 rewrites it to also pull repeating groups.
         Map<Integer, String> fields = extractFields(message);
         UUID uuid = sessionUUIDs.get(sessionId);
         String sessionKey = uuid != null ? uuid.toString() : sessionId.toString();
-        listener.onMessage(sessionKey, fields);
+        listener.onMessage(sessionKey, FIXMessageData.ofFields(fields));
     }
 
     private Map<Integer, String> extractFields(Message message) {
