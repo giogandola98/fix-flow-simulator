@@ -2,6 +2,7 @@ package com.fixflow.core.domain.execution;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,5 +67,55 @@ class FIXMessageDataTest {
         mutable.put(11, "LATE");
         assertNull(m.fields().get(11));
         assertThrows(UnsupportedOperationException.class, () -> m.fields().put(99, "x"));
+    }
+
+    @Test
+    void defensiveCopyPreventsExternalMutationOfGroups() {
+        FIXMessageData near = FIXMessageData.ofFields(Map.of(600, "EUR/USD"));
+        FIXMessageData far = FIXMessageData.ofFields(Map.of(600, "EUR/GBP"));
+
+        List<FIXMessageData> entries = new ArrayList<>();
+        entries.add(near);
+        entries.add(far);
+
+        Map<Integer, List<FIXMessageData>> groups = new LinkedHashMap<>();
+        groups.put(555, entries);
+
+        FIXMessageData m = new FIXMessageData(Map.of(35, "AB"), groups);
+
+        // Mutate the original map after construction: add another counter tag.
+        groups.put(864, List.of(FIXMessageData.ofFields(Map.of(865, "1"))));
+        // Mutate the original list after construction: add another entry.
+        entries.add(FIXMessageData.ofFields(Map.of(600, "EUR/JPY")));
+
+        assertEquals(1, m.groups().size());
+        assertEquals(2, m.group(555).size());
+    }
+
+    @Test
+    void groupsMapIsUnmodifiable() {
+        FIXMessageData m = new FIXMessageData(Map.of(35, "AB"),
+                Map.of(555, List.of(FIXMessageData.ofFields(Map.of(600, "EUR/USD")))));
+        assertThrows(UnsupportedOperationException.class,
+                () -> m.groups().put(864, List.of()));
+    }
+
+    @Test
+    void groupEntryListIsUnmodifiable() {
+        FIXMessageData m = new FIXMessageData(Map.of(35, "AB"),
+                Map.of(555, List.of(FIXMessageData.ofFields(Map.of(600, "EUR/USD")))));
+        assertThrows(UnsupportedOperationException.class,
+                () -> m.group(555).add(FIXMessageData.ofFields(Map.of(600, "EUR/GBP"))));
+    }
+
+    @Test
+    void groupsMapPreservesInsertionOrderAcrossMultipleCounterTags() {
+        Map<Integer, List<FIXMessageData>> groups = new LinkedHashMap<>();
+        groups.put(555, List.of(FIXMessageData.ofFields(Map.of(600, "EUR/USD"))));
+        groups.put(864, List.of(FIXMessageData.ofFields(Map.of(865, "1"))));
+
+        FIXMessageData m = new FIXMessageData(Map.of(35, "AB"), groups);
+
+        assertIterableEquals(List.of(555, 864), m.groups().keySet());
     }
 }
