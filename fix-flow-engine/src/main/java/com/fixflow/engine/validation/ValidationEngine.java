@@ -51,8 +51,12 @@ public class ValidationEngine {
                     results.add(evaluate(rc, entry.flatFields(), config, ctx, receivedAt));
                 }
             } else {
-                int i = Integer.parseInt(idx);
-                if (i < 0 || i >= entries.size()) {
+                Integer i = parseIndex(idx);
+                if (i == null) {
+                    results.add(ValidationResult.fail(rc.tag(), rc.rule(),
+                            "group " + rc.groupTag() + " numeric entry index or '*'",
+                            idx, "invalid group entry index"));
+                } else if (i < 0 || i >= entries.size()) {
                     results.add(ValidationResult.fail(rc.tag(), rc.rule(),
                             "group " + rc.groupTag() + " entry " + i,
                             entries.size() + " entries", "group entry index out of range"));
@@ -80,6 +84,15 @@ public class ValidationEngine {
     public ValidationSummary validate(ValidationConfig config, Map<Integer, String> fields,
                                       ExecutionContext ctx, Instant receivedAt) {
         return validate(config, FIXMessageData.ofFields(fields), ctx, receivedAt);
+    }
+
+    /** Parses a group entry index; returns null (rather than throwing) when it is not a valid integer. */
+    private Integer parseIndex(String idx) {
+        try {
+            return Integer.parseInt(idx);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private ValidationResult evaluate(ValidationRuleConfig rc, Map<Integer, String> fields,

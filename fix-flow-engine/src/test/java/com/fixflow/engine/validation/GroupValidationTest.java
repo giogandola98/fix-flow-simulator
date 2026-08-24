@@ -75,4 +75,12 @@ class GroupValidationTest {
         assertTrue(engine.validate(strict, swap(), null, Instant.now()).passed(),
                 "strict mode checks top-level fields only; group content is structural");
     }
+
+    @Test
+    void nonNumericIndexFailsCleanlyRatherThanThrowing() {
+        ValidationSummary s = assertDoesNotThrow(() -> engine.validate(cfg(
+                rule(609, 555, "abc", "EQUALS", "FXSPOT")), swap(), null, Instant.now()),
+                "a malformed index must produce a validation failure, not a NumberFormatException");
+        assertFalse(s.passed());
+    }
 }
