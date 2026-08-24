@@ -44,7 +44,15 @@ public class SendFIXHandler implements NodeHandler {
             outFields = withType;
         }
 
-        FIXMessageData message = new FIXMessageData(outFields, resolveGroups(cfg.get("groups"), ctx));
+        Map<Integer, List<FIXMessageData>> groups = resolveGroups(cfg.get("groups"), ctx);
+
+        // Drop any plain field that collides with a counter tag; group is authoritative.
+        // This prevents malformed FIX messages with duplicate, self-contradictory counters.
+        for (int counterTag : groups.keySet()) {
+            outFields.remove(counterTag);
+        }
+
+        FIXMessageData message = new FIXMessageData(outFields, groups);
 
         port.sendMessage(ctx.sessionId(), message);
         ctx.storeNodeMessage(node.id(), message);

@@ -68,6 +68,7 @@ class SendFIXHandlerGroupTest {
     void counterTagIsNeverWrittenAsAPlainField() {
         Map<String, Object> cfg = new LinkedHashMap<>();
         cfg.put("msgType", "AB");
+        cfg.put("fields", List.of(field(555, "2")));
         cfg.put("groups", List.of(Map.of(
                 "counterTag", 555,
                 "entries", List.of(Map.of("fields", List.of(field(600, "EUR/USD")))))));
@@ -75,6 +76,7 @@ class SendFIXHandlerGroupTest {
         new SendFIXHandler(port, new VariableResolver()).handle(node(cfg), ctx());
 
         assertNull(sent.get(0).flatFields().get(555));
+        assertEquals(1, sent.get(0).group(555).size());
     }
 
     @Test
