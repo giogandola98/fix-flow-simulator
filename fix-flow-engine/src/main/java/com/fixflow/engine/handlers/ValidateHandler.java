@@ -30,7 +30,12 @@ public class ValidateHandler implements NodeHandler {
         FIXMessageData message = ctx.getNodeMessageData(sourceId != null ? sourceId : node.id());
         if (message == null) message = FIXMessageData.ofFields(Map.of());
 
-        ValidationConfig cfg = toConfig(node.config());
+        ValidationConfig cfg;
+        try {
+            cfg = toConfig(node.config());
+        } catch (InvalidGroupTagException e) {
+            return NodeHandlerResult.failure(node.onFailure(), e.getMessage());
+        }
         ValidationSummary summary = engine.validate(cfg, message, ctx, Instant.now());
 
         return summary.passed()
@@ -53,7 +58,7 @@ public class ValidateHandler implements NodeHandler {
             String dateRule = (String) rr.get("dateRule");
             String pattern = (String) rr.get("pattern");
             double num = rr.get("numericValue") == null ? 0 : ((Number) rr.get("numericValue")).doubleValue();
-            Integer groupTag = rr.get("groupTag") == null ? null : ((Number) rr.get("groupTag")).intValue();
+            Integer groupTag = parseGroupTag(rr.get("groupTag"));
             String index = rr.get("index") == null ? null : String.valueOf(rr.get("index"));
             rules.add(new ValidationRuleConfig(tag, rule, value, values, ref, dateRule, pattern, num,
                                                groupTag, index));
@@ -61,5 +66,29 @@ public class ValidateHandler implements NodeHandler {
         boolean strict = Boolean.TRUE.equals(raw.get("strictMode"));
         Map<String, DateRule> dateRules = (Map<String, DateRule>) raw.getOrDefault("dateRules", Map.of());
         return new ValidationConfig(rules, dateRules, strict);
+    }
+
+    /**
+     * Parses a rule's {@code groupTag}, accepting a {@link Number} or a numeric {@link String}
+     * (YAML may quote it, e.g. {@code groupTag: '555'}). Anything else raises
+     * {@link InvalidGroupTagException} rather than letting a {@link ClassCastException} escape —
+     * {@code handle} turns that into a normal validation failure via the node's onFailure edge,
+     * matching how {@code index} was already hardened.
+     */
+    private Integer parseGroupTag(Object raw) {
+        if (raw == null) return null;
+        if (raw instanceof Number n) return n.intValue();
+        if (raw instanceof String s) {
+            try {
+                return Integer.parseInt(s.trim());
+            } catch (NumberFormatException e) {
+                throw new InvalidGroupTagException("Invalid groupTag: " + s);
+            }
+        }
+        throw new InvalidGroupTagException("Invalid groupTag: " + raw);
+    }
+
+    static final class InvalidGroupTagException extends RuntimeException {
+        InvalidGroupTagException(String message) { super(message); }
     }
 }
