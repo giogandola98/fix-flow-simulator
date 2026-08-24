@@ -60,9 +60,55 @@ function matcherMapToArray(matchers: Record<string, string>): Array<{ tag: numbe
   return Object.entries(matchers).map(([k, v]) => ({ tag: Number(k), value: v }));
 }
 
+interface YamlGroupEntry { fields?: Array<{ tag: number; value: string }> | Record<string, string>; groups?: YamlGroupSpec[] }
+interface YamlGroupSpec { counterTag: number; entries: YamlGroupEntry[] }
+
+function serializeGroups(groups: Array<Record<string, unknown>>): YamlGroupSpec[] {
+  return groups.map((g) => ({
+    counterTag: Number(g.counterTag),
+    entries: ((g.entries ?? []) as Array<Record<string, unknown>>).map((e) => {
+      // Entry fields stay a LIST. Converting to a tag-keyed object would let JS
+      // re-order the keys numerically, and the delimiter tag must stay first.
+      const out: YamlGroupEntry = {
+        fields: (e.fields ?? []) as Array<{ tag: number; value: string }>,
+      };
+      if (Array.isArray(e.groups) && e.groups.length > 0) {
+        out.groups = serializeGroups(e.groups as Array<Record<string, unknown>>);
+      }
+      return out;
+    }),
+  }));
+}
+
+function parseGroups(groups: YamlGroupSpec[]): Array<Record<string, unknown>> {
+  return groups.map((g) => ({
+    counterTag: Number(g.counterTag),
+    entries: (g.entries ?? []).map((e) => {
+      // Accept the list form (what we write) and the map form (hand-authored YAML),
+      // but always hand the store a list so delimiter-first order survives.
+      const out: Record<string, unknown> = {
+        fields: Array.isArray(e.fields)
+          ? (e.fields as Array<{ tag: number; value: string }>)
+          : fieldsMapToArray((e.fields ?? {}) as Record<string, string>),
+      };
+      if (Array.isArray(e.groups) && e.groups.length > 0) out.groups = parseGroups(e.groups);
+      return out;
+    }),
+  }));
+}
+
 function serializeConfig(type: NodeType, config: Record<string, unknown>): Record<string, unknown> {
-  if (type === 'SEND_FIX' && Array.isArray(config.fields)) {
-    return { ...config, fields: fieldsArrayToMap(config.fields as Array<{ tag: number; value: string }>) };
+  if (type === 'SEND_FIX') {
+    const out = { ...config };
+    if (Array.isArray(config.fields)) {
+      out.fields = fieldsArrayToMap(config.fields as Array<{ tag: number; value: string }>);
+    }
+    if (Array.isArray(config.groups) && config.groups.length > 0) {
+      out.groups = serializeGroups(config.groups as Array<Record<string, unknown>>);
+    } else {
+      delete out.groups;
+    }
+    return out;
   }
   if (type === 'ROUTE_FIX' && Array.isArray(config.rules)) {
     const rules = (config.rules as Array<Record<string, unknown>>).map((r) => ({
@@ -77,8 +123,17 @@ function serializeConfig(type: NodeType, config: Record<string, unknown>): Recor
 }
 
 function parseConfig(type: NodeType, config: Record<string, unknown>): Record<string, unknown> {
-  if (type === 'SEND_FIX' && config.fields != null && !Array.isArray(config.fields)) {
-    return { ...config, fields: fieldsMapToArray(config.fields as Record<string, string>) };
+  if (type === 'SEND_FIX') {
+    const out = { ...config };
+    if (config.fields != null && !Array.isArray(config.fields)) {
+      out.fields = fieldsMapToArray(config.fields as Record<string, string>);
+    }
+    if (Array.isArray(config.groups) && config.groups.length > 0) {
+      out.groups = parseGroups(config.groups as unknown as YamlGroupSpec[]);
+    } else {
+      delete out.groups;
+    }
+    return out;
   }
   if (type === 'ROUTE_FIX' && Array.isArray(config.rules)) {
     const rules = (config.rules as Array<Record<string, unknown>>).map((r) => ({
