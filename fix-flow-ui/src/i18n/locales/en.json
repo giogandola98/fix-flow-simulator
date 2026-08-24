@@ -8,7 +8,11 @@
     "import": "Import",
     "importing": "Importing…",
     "export": "Export",
-    "autoLayout": "Auto-layout"
+    "autoLayout": "Auto-layout",
+    "shutdown": "Shutdown",
+    "shutdownConfirm": "Stop the simulator and terminate the process?",
+    "shutdownDone": "Simulator stopped. You can close this tab.",
+    "shutdownFailed": "Shutdown request failed"
   },
   "session": {
     "noSession": "No session",
@@ -150,7 +154,13 @@
       "parseBtn": "Parse → populate fields",
       "cancelBtn": "Cancel",
       "fields": "Fields",
-      "addField": "+ Field"
+      "addField": "+ Field",
+      "groups": "Repeating groups",
+      "addGroup": "+ Group",
+      "addEntry": "+ Entry",
+      "entryFields": "Entry fields",
+      "addSubGroup": "+ Nested group",
+      "nestingLimit": "Nesting limit reached (3 levels)"
     },
     "expectFix": {
       "desc": "Waits for an inbound FIX message matching the criteria. Stores matched fields for downstream VALIDATE nodes or cross-node references.",

@@ -8,7 +8,11 @@
     "import": "Importa",
     "importing": "Importazione…",
     "export": "Esporta",
-    "autoLayout": "Auto-layout"
+    "autoLayout": "Auto-layout",
+    "shutdown": "Arresta",
+    "shutdownConfirm": "Arrestare il simulatore e terminare il processo?",
+    "shutdownDone": "Simulatore arrestato. Puoi chiudere questa scheda.",
+    "shutdownFailed": "Richiesta di arresto fallita"
   },
   "session": {
     "noSession": "Nessuna sessione",
@@ -150,7 +154,13 @@
       "parseBtn": "Analizza → popola campi",
       "cancelBtn": "Annulla",
       "fields": "Campi",
-      "addField": "+ Campo"
+      "addField": "+ Campo",
+      "groups": "Gruppi ripetuti",
+      "addGroup": "+ Gruppo",
+      "addEntry": "+ Occorrenza",
+      "entryFields": "Campi occorrenza",
+      "addSubGroup": "+ Gruppo annidato",
+      "nestingLimit": "Limite di annidamento raggiunto (3 livelli)"
     },
     "expectFix": {
       "desc": "Attende un messaggio FIX in entrata corrispondente ai criteri. Memorizza i campi per i nodi VALIDATE successivi o riferimenti incrociati.",
