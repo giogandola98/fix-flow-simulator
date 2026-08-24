@@ -580,11 +580,33 @@ Heartbeat messages are handled at the session layer (`fromAdmin`) and never reac
 
 `QuickFIXAdapter.buildMessage(FIXMessageData)` writes tag 35 to the header,
 every other top-level field via `msg.setString`, then walks `data.groups()`
-recursively: for each entry it takes the entry's **first field as the group
-delimiter tag**, builds a `quickfix.Group(counterTag, delimiterTag)`, sets the
-entry's fields on it, recurses into any nested groups, and calls
-`target.addGroup(group)`. The counter tag itself is never set directly —
-`addGroup` maintains it.
+recursively: for each entry it looks up the group's definition in the
+session's application `DataDictionary` (`dd.getGroup(msgType, counterTag)`)
+and, when that dictionary is available, builds
+`new Group(counterTag, dd.getDelimiterField(), dd.getDataDictionary().getOrderedFields())`
+— delimiter and field order both taken from the dictionary, not from
+authoring order — sets the entry's fields on it, recurses into any nested
+groups with that group's *nested* dictionary (`dd.getDataDictionary()`), and
+calls `target.addGroup(group)`. The counter tag itself is never set
+directly — `addGroup` maintains it.
+
+Only when no dictionary is available — the package-visible
+`buildMessage(FIXMessageData)` overload used by unit tests that build and
+inspect a message with no live session — does it fall back to the entry's
+**first field as the group delimiter tag** and plain
+`new Group(counterTag, delimiterTag)`, which serialises the remaining fields
+ascending by tag. Authoring convention still puts the delimiter first for
+this fallback (and as documentation of intent), but it is not sufficient on
+its own: FIX requires an entry's fields in **dictionary-defined** order, and
+QuickFIX/J's receiving parser — with `checkUnorderedGroupFields` on, the
+default — ends a group entry at the first field whose group-order index
+isn't increasing. Ascending-by-tag order only happens to match dictionary
+order for groups where the tags themselves are already ascending (e.g.
+`NoPositions`); for a group like `NoLegs`, whose dictionary order interleaves
+tags non-monotonically, ascending-by-tag serialisation truncates the entry
+and silently drops fields on receipt. The dictionary-ordered path above is
+what makes every group correct on the wire, not just the ones that pass by
+coincidence.
 
 `QuickFIXApplicationAdapter.extractMessage(Message)` is the inverse, called
 from `fromApp`. It copies header and trailer fields into the flat map, then
@@ -980,7 +1002,11 @@ actually writes the counter, never a plain field.
 
 **Entry `fields` must use the list form, not the map form.** Unlike top-level
 `fields`, a group entry's `fields` are order-sensitive — the first field is
-the FIX delimiter tag that `QuickFIXAdapter.applyGroups` reads positionally.
+the FIX delimiter tag, which `QuickFIXAdapter.applyGroups` reads positionally
+when no application `DataDictionary` is available (see §7 above); when a
+dictionary is available it looks up the real delimiter and full field order
+there instead, but authoring still puts the delimiter first as the documented
+convention and as the fallback for dictionary-less callers.
 `resolveFields` accepts a map here too, but it is not round-trip safe:
 `scenarioSerializer.ts` converts a map via `Object.entries`, and JavaScript
 iterates integer-like object keys in ascending numeric order — so a

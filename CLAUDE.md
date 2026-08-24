@@ -149,12 +149,24 @@ a top-level projection so correlation, ROUTE_FIX and DECISION are unchanged.
 Never write a counter tag as a plain field: `Message.addGroup()` maintains it —
 `SendFIXHandler` actively drops a plain field whose tag matches a declared
 `counterTag`. In the GUI the counter is read-only and derived from the entry
-count. The **first field of an entry is the delimiter tag** — the adapter reads
-it positionally, so entry field order is load-bearing. This is why entry fields
-are serialised as an ordered LIST and never as a tag-keyed map: JavaScript
-iterates integer-like object keys in ascending numeric order, so a map would
-move a lower tag ahead of the delimiter and produce a malformed multileg
-message. On the Java side, use `LinkedHashMap`, never `HashMap`.
+count. Authoring convention: the **first field of an entry is the delimiter
+tag** — this is necessary but not sufficient. `QuickFIXAdapter.buildMessage`
+looks up the session's application `DataDictionary` and, when one is available,
+builds each `Group` with `dd.getGroup(msgType, counterTag)`'s delimiter and full
+ordered-field array, so the entry is serialised in dictionary order regardless
+of authoring order; it falls back to the first-field convention and ascending-tag
+order only when no dictionary is available (e.g. `buildMessage` called directly
+from a unit test with no session). This matters because FIX requires an entry's
+fields in dictionary-defined order, and QuickFIX/J's receiving parser — with
+`checkUnorderedGroupFields` on, the default — ends an entry at the first field
+whose group-order index doesn't increase; ascending-by-tag order is only
+correct for groups whose dictionary order happens to already be ascending.
+Entry fields are still serialised as an ordered LIST and never as a tag-keyed
+map, both because the first-field-is-delimiter convention needs it and so the
+fallback path stays deterministic: JavaScript iterates integer-like object keys
+in ascending numeric order, so a map would move a lower tag ahead of the
+delimiter and produce a malformed multileg message when no dictionary is
+available. On the Java side, use `LinkedHashMap`, never `HashMap`.
 
 **Inbound group parsing needs the data dictionary** — `AppDataDictionary=FIX50SP2.xml`
 is set for FIXT.1.1 sessions in `QuickFIXAdapter.buildSettings`. Without it
