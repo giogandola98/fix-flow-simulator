@@ -571,3 +571,31 @@ the group-aware validation is the capability the whole engine extension exists
 for. `OrdRejReason` is `11` (unsupported order characteristic) rather than `0`
 (broker/exchange option), which is what an instrument-classification mismatch
 actually is.
+
+### 13.9 Business reject is a separate workflow
+
+Master Finance rejects orders for two unrelated reasons, and they must not share
+a code path:
+
+- **Technical reject** — the order is malformed or misclassified. `validate-new`
+  fails. `103` is `11`, `1` or `13`. Prime's correct reaction: fix the sending
+  application.
+- **Business reject** — the order is *entirely correct*; the trading desk will
+  not price it. Validation passes, then a pricing decision declines. `103` is `0`
+  (broker/exchange option), `3` (order exceeds limit) or `2` (exchange closed).
+  Prime's correct reaction: retry later or route elsewhere.
+
+`fx-business-reject.yaml` covers the second case, with
+`prime/prime-business-reject-driver.yaml` as its counterpart. The driver sends
+three technically valid orders — an unquoted pair, an oversized order, and a
+normal one — and asserts `103=0`, `103=3` and a clean fill respectively. The
+accepted order is sent **last**, so a template that rejects everything fails the
+run instead of passing on the reject assertions alone.
+
+Both reject nodes echo `167` and `461` from the inbound order rather than
+hardcoding them, so the workflow declines any product, not just spot. Asserting
+the exact `103` is the point: a test that only checks "was it rejected" passes
+even when the venue rejects for the wrong reason.
+
+`DECISION` supports only `==`, `!=` and `contains`, so the size test is driven by
+an explicit `ExecInst=o` marker Prime sets rather than by arithmetic on tag 38.

@@ -4556,6 +4556,230 @@ Repeat with `709=2` and expect the abandon report.
 
 ---
 
+## Task 21b: Business reject workflow — the trader declines to price
+
+**Files:**
+- Create: `<project>/fx-templates/fx-business-reject.yaml`
+- Create: `<project>/fx-templates/prime/prime-business-reject-driver.yaml`
+
+**Interfaces:**
+- Consumes: the node graph from Task 17, the group-aware `VALIDATE` from Task 8.
+- Produces: nothing later depends on it; Task 26 runs it as a sixth pair.
+
+**Why this is a separate workflow, not a branch of the product templates.**
+There are two distinct reasons Master Finance rejects an order, and conflating
+them hides real defects:
+
+| | Technical reject | Business reject |
+|---|---|---|
+| Cause | The order is malformed or misclassified | The order is **correct**; the trader will not price it |
+| Detected by | `validate-new` failing | A pricing decision *after* validation passes |
+| `103` OrdRejReason | `11` unsupported characteristic, `1` unknown symbol, `13` incorrect quantity | `0` broker/exchange option, `3` order exceeds limit, `2` exchange closed |
+| Prime's reading | "I sent a bad message — fix my application" | "My message was fine — no liquidity, retry or route elsewhere" |
+
+Tasks 17-21 and 24 cover the technical reject. This task covers the business one.
+Keeping them apart means a run can prove Master Finance rejects a valid order
+*for the right reason*, with `103` telling Prime which of the two happened.
+
+**Design:** the order passes `validate-new` unchanged, then a `DECISION` chain
+decides whether the desk prices it. The decision is driven by fields already on
+the order, so the template is deterministic and repeatable:
+
+- quantity above the desk limit (`38 > 5000000`) → `103=3` order exceeds limit
+- an instrument outside appetite (`55` not in the quoted set) → `103=0` broker/exchange option
+- otherwise → normal ack and fill
+
+`DECISION` only supports `==`, `!=` and `contains`, so express the size test as a
+`contains` check on the quantity's leading digits, or — clearer and preferred —
+put the appetite test first on `55` and drive the size case from an explicit
+`ExecInst`/`Account` marker Prime sets. Choose the `55` route: it is honest about
+what the engine can evaluate rather than smuggling arithmetic into a string test.
+
+- [ ] **Step 1: Write the venue template**
+
+Copy `fx-spot-lifecycle.yaml` to `fx-business-reject.yaml` and change:
+
+```yaml
+id: 7f1c0a10-0006-4a00-9c00-000000000006
+name: FX Business Reject
+description: Master Finance accepts a technically valid order then declines to price it
+```
+
+Header comment:
+
+```
+# Business reject, venue side, FIX 5.0 SP2.
+#
+# The order is TECHNICALLY CORRECT — it passes every validation rule. Master
+# Finance declines it anyway, because the trading desk will not price that
+# instrument or that size. This is deliberately kept apart from the technical
+# reject in the product templates: 103 OrdRejReason is what tells Prime which
+# of the two happened.
+#
+#   103=0  broker/exchange option  - no appetite for this instrument
+#   103=3  order exceeds limit     - size beyond the desk limit
+#   103=2  exchange closed         - outside quoting hours
+#
+# Appetite is expressed by tag 55 in `decide-appetite` below: edit that
+# condition to match the pairs your desk actually quotes.
+```
+
+Insert a decision chain between `validate-new` and `ack-new` — change
+`validate-new`'s `onSuccess` to `decide-appetite` and add:
+
+```yaml
+  - id: decide-appetite
+    name: Does the desk quote this pair?
+    type: DECISION
+    config:
+      condition: '{{node:dispatch:tag55}} == "EUR/USD"'
+    onSuccess: decide-size
+    onFailure: reject-no-appetite
+    position: { x: 320, y: 200 }
+
+  - id: decide-size
+    name: Is the size within the desk limit?
+    type: DECISION
+    config:
+      # Prime marks an oversized order with ExecInst=o (deliberate desk-limit probe).
+      # Arithmetic is not available in DECISION, so the size case is flagged
+      # explicitly rather than inferred from tag 38.
+      condition: '{{node:dispatch:tag18}} != "o"'
+    onSuccess: ack-new
+    onFailure: reject-exceeds-limit
+    position: { x: 320, y: 320 }
+
+  - id: reject-no-appetite
+    name: ER - Rejected, no appetite (103=0)
+    type: SEND_FIX
+    config:
+      msgType: '8'
+      fields:
+        - { tag: 37,  value: 'EX-{{seq:orderId}}' }
+        - { tag: 11,  value: '{{node:dispatch:tag11}}' }
+        - { tag: 17,  value: '{{uuid}}' }
+        - { tag: 150, value: '8' }
+        - { tag: 39,  value: '8' }
+        - { tag: 103, value: '0' }
+        - { tag: 58,  value: 'Order is valid but the desk is not quoting this instrument' }
+        - { tag: 54,  value: '{{node:dispatch:tag54}}' }
+        - { tag: 38,  value: '{{node:dispatch:tag38}}' }
+        - { tag: 14,  value: '0' }
+        - { tag: 151, value: '0' }
+        - { tag: 6,   value: '0' }
+        - { tag: 60,  value: '{{now}}' }
+        - { tag: 55,  value: '{{node:dispatch:tag55}}' }
+        - { tag: 48,  value: '{{node:dispatch:tag55}}' }
+        - { tag: 22,  value: '8' }
+        - { tag: 167, value: '{{node:dispatch:tag167}}' }
+        - { tag: 461, value: '{{node:dispatch:tag461}}' }
+        - { tag: 460, value: '4' }
+        - { tag: 15,  value: '{{node:dispatch:tag15}}' }
+        - { tag: 120, value: '{{node:dispatch:tag120}}' }
+        - { tag: 207, value: XOFF }
+    onSuccess: dispatch
+    position: { x: 40, y: 320 }
+
+  - id: reject-exceeds-limit
+    name: ER - Rejected, exceeds desk limit (103=3)
+    type: SEND_FIX
+    config:
+      msgType: '8'
+      fields:
+        - { tag: 37,  value: 'EX-{{seq:orderId}}' }
+        - { tag: 11,  value: '{{node:dispatch:tag11}}' }
+        - { tag: 17,  value: '{{uuid}}' }
+        - { tag: 150, value: '8' }
+        - { tag: 39,  value: '8' }
+        - { tag: 103, value: '3' }
+        - { tag: 58,  value: 'Order is valid but the size exceeds the desk limit' }
+        - { tag: 54,  value: '{{node:dispatch:tag54}}' }
+        - { tag: 38,  value: '{{node:dispatch:tag38}}' }
+        - { tag: 14,  value: '0' }
+        - { tag: 151, value: '0' }
+        - { tag: 6,   value: '0' }
+        - { tag: 60,  value: '{{now}}' }
+        - { tag: 55,  value: '{{node:dispatch:tag55}}' }
+        - { tag: 167, value: '{{node:dispatch:tag167}}' }
+        - { tag: 461, value: '{{node:dispatch:tag461}}' }
+        - { tag: 460, value: '4' }
+        - { tag: 207, value: XOFF }
+    onSuccess: dispatch
+    position: { x: 40, y: 440 }
+```
+
+Note both reject nodes echo `167` and `461` **from the inbound order** rather
+than hardcoding spot values: this template is product-agnostic on purpose, so it
+can decline a forward, an NDF or an option just as well.
+
+Edges to add, replacing `validate-new -> ack-new`:
+
+```yaml
+  - { from: validate-new,        to: decide-appetite,      label: success }
+  - { from: decide-appetite,     to: decide-size,          label: success }
+  - { from: decide-appetite,     to: reject-no-appetite,   label: failure }
+  - { from: decide-size,         to: ack-new,              label: success }
+  - { from: decide-size,         to: reject-exceeds-limit, label: failure }
+  - { from: reject-no-appetite,  to: dispatch,             label: success }
+  - { from: reject-exceeds-limit,to: dispatch,             label: success }
+```
+
+- [ ] **Step 2: Write the Prime driver**
+
+`prime/prime-business-reject-driver.yaml`, id
+`7f1c0a10-1006-4a00-9c00-000000001006`. It sends three orders, all technically
+valid, and asserts a different outcome for each:
+
+1. **Unquoted pair** — `55=GBP/JPY`, everything else correct. Expect `150=8`,
+   `39=8`, `103=0`. Assert `461` and `167` are echoed back unchanged: a business
+   reject must still identify the instrument it declined.
+2. **Oversized** — `55=EUR/USD`, `18=o`, `38=25000000`. Expect `150=8`, `39=8`,
+   `103=3`.
+3. **Accepted** — `55=EUR/USD`, no `18`, `38=1000000`. Expect `150=0` then
+   `150=F`. This is the control: it proves the two rejects above were decisions,
+   not the template rejecting everything.
+
+Each assertion follows the Task 24 pattern, and each reject assertion must
+include:
+
+```yaml
+        - { tag: 150, rule: EQUALS, value: '8' }
+        - { tag: 39,  rule: EQUALS, value: '8' }
+        - { tag: 103, rule: EQUALS, value: '0' }   # or '3' for the oversized case
+        - { tag: 58,  rule: FIELD_PRESENT }
+        - { tag: 167, rule: EQUALS, ref: 'node:send-unquoted:tag167' }
+        - { tag: 461, rule: EQUALS, ref: 'node:send-unquoted:tag461' }
+        - { tag: 31,  rule: FIELD_ABSENT }
+        - { tag: 32,  rule: FIELD_ABSENT }
+```
+
+The `103` equality is the point of the whole task: asserting merely that the
+order was rejected would pass even if Master Finance had rejected it for the
+wrong reason. If the `ref:` form turns out not to resolve (see the caveat in
+Task 24), fall back to hardcoding the expected values.
+
+The control order must come **last**, so a template that rejects everything fails
+the run rather than passing on the two reject assertions alone.
+
+- [ ] **Step 3: Verify both parse**
+
+```bash
+cd "<project>/fx-templates"
+for f in fx-business-reject.yaml prime/prime-business-reject-driver.yaml; do
+  node -e "const y=require('js-yaml'),fs=require('fs');const d=y.load(fs.readFileSync('$f','utf8'));const ids=new Set(d.nodes.map(n=>n.id));for(const n of d.nodes){for(const k of ['onSuccess','onFailure'])if(n[k]&&!ids.has(n[k]))throw new Error('$f '+n.id+'.'+k+' -> '+n[k]);}console.log('$f',d.nodes.length,'nodes OK');"
+done
+```
+
+- [ ] **Step 4: Add the pair to `verify.sh`**
+
+Extend the `VENUE` and `DRIVER` maps in Task 26's script with
+`[business]=7f1c0a10-0006-...0006` and `[business]=7f1c0a10-1006-...1006`, and add
+`business` to the product loop.
+
+- [ ] **Step 5: Do not commit** — outside the repository.
+
+---
+
 ## Task 22: Documentation
 
 **Files:**
