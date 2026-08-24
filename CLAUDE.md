@@ -110,7 +110,7 @@ settings.setString("ResetOnLogon", cfg.resetOnLogon() ? "Y" : "N");
 
 **ReactFlow v12 (`@xyflow/react`) — local state pattern** — `rfNodes`/`rfEdges` in `FlowCanvas.tsx` must be local `useState`, not derived from Zustand store. Recomputing from store on every `onNodesChange` strips React Flow's internal `measured` field → `visibility: hidden` forever. Use `applyNodeChanges` on local state; sync final drag positions back to store only.
 
-**YAML DSL** — `id` must be valid UUID (or omitted). `fields` in SEND_FIX `config` must be `Map<Integer, String>`. Nodes need explicit `onSuccess`/`onFailure` — edges array visual only, not used for traversal.
+**YAML DSL** — `id` must be valid UUID (or omitted). `fields` in SEND_FIX `config` accepts **both** `Map<Integer, String>` and a list of `{tag, value}` — `SendFIXHandler` has handled both forms since before repeating groups were added; the UI serialiser emits the map form for top-level fields, group entry fields use the list form. Nodes need explicit `onSuccess`/`onFailure` — edges array visual only, not used for traversal.
 
 **Timeout jump edges** — `timeout.jumpTo` in node config is canonical source. `parseFromYaml` synthesizes timeout edge if missing from `edges` array. `TimeoutConfig.tsx` auto-upserts/removes edge in Zustand store on every change. Both must stay in sync.
 
@@ -136,3 +136,31 @@ Recreate sessions + scenarios from scratch. Never UAT against DB with leftover s
 **Loopback FIX testing** — ACCEPTOR (SERVER/CLIENT, port 9001) + INITIATOR (CLIENT/SERVER, port 9001) both in same app instance. Acceptor shows `connected=false` waiting for logon — expected. Initiator shows `connected=true` once logon completes.
 
 **Browser test pattern** — puppeteer-core in root `node_modules` (not fix-flow-ui). Run tests from repo root. Color check: browser renders hex as `rgb()` — test for `rgb(245, 158, 11)` not `#f59e0b`. Click scenario by button text containing scenario name. Wait 2–3s after click for React to re-render edges.
+
+**Never `git add -A` / `git add .` / `git commit -a` while another agent may be working in the repo** — the index is shared across every process in a working tree, so a blanket stage sweeps in whoever else's half-finished files and the resulting commit is wrong for everyone but its author. Stage explicit paths only, ideally as a trailing pathspec on the commit itself:
+```bash
+git commit -m "message" -- path/one.java path/two.tsx
+```
+Run `git show --stat HEAD` after every commit and confirm the file list is exactly what you intended — this is what has caught every past incident. If a commit did sweep in someone else's files, `git reset --mixed HEAD~1` puts everything back on disk uncommitted, exactly as it was; re-commit with an explicit pathspec. Never `reset --hard`, never force-push.
+
+**Repeating groups** — `FIXMessageData` carries `fields` plus `groups`
+(`counterTag -> entries`), recursively. The flat `Map<Integer,String>` remains as
+a top-level projection so correlation, ROUTE_FIX and DECISION are unchanged.
+Never write a counter tag as a plain field: `Message.addGroup()` maintains it —
+`SendFIXHandler` actively drops a plain field whose tag matches a declared
+`counterTag`. In the GUI the counter is read-only and derived from the entry
+count. The **first field of an entry is the delimiter tag** — the adapter reads
+it positionally, so entry field order is load-bearing. This is why entry fields
+are serialised as an ordered LIST and never as a tag-keyed map: JavaScript
+iterates integer-like object keys in ascending numeric order, so a map would
+move a lower tag ahead of the delimiter and produce a malformed multileg
+message. On the Java side, use `LinkedHashMap`, never `HashMap`.
+
+**Inbound group parsing needs the data dictionary** — `AppDataDictionary=FIX50SP2.xml`
+is set for FIXT.1.1 sessions in `QuickFIXAdapter.buildSettings`. Without it
+QuickFIX/J parses repeated tags flat and `getGroups()` returns empty.
+`ValidateIncomingMessage=N` disables validation, not group parsing.
+
+**Group counter tags are stripped from the flat projection** —
+`QuickFIXApplicationAdapter.extractMessage` deliberately omits 555, 864 and the
+rest from `flatFields()`. A ROUTE_FIX matcher on a counter tag will never match.

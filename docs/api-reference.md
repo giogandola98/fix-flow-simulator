@@ -219,6 +219,18 @@ Response: `application/octet-stream` JSON file download.
 
 ---
 
+## System
+
+### Shutdown the simulator
+```
+POST /api/v1/system/shutdown
+```
+Returns `202 Accepted` and terminates the JVM shortly after. Used by the
+Shutdown button in the top bar. Repeated calls are idempotent — only the first
+starts the exit.
+
+---
+
 ## WebSocket
 
 Connect to `ws://localhost:8080/ws` using SockJS + STOMP.
