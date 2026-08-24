@@ -240,11 +240,10 @@ public class ExecutionManager {
     }
 
     /**
-     * Renders a {@link FIXMessageData} into the pipe-delimited raw form persisted/published for
-     * the FIX Messages tab, top-level fields plus every repeating group entry, recursively.
-     * Top-level fields are sorted by tag for a stable, readable record; group entry fields are
-     * emitted in their original insertion order, since the first field of an entry is the FIX
-     * delimiter tag and reordering it would misrepresent what was actually sent/received.
+     * Renders a top-level {@link FIXMessageData} into the pipe-delimited raw form
+     * persisted/published for the FIX Messages tab. Top-level fields are sorted by tag for a
+     * stable, readable record — safe here because top-level fields carry no delimiter ordering
+     * requirement. Group entries are rendered by {@link #renderEntry}, which must NOT sort.
      */
     private static String renderRawFix(FIXMessageData data) {
         List<String> parts = new java.util.ArrayList<>();
@@ -254,7 +253,26 @@ public class ExecutionManager {
         data.groups().forEach((counterTag, entries) -> {
             parts.add(counterTag + "=" + entries.size());
             for (FIXMessageData entry : entries) {
-                parts.add(renderRawFix(entry));
+                parts.add(renderEntry(entry));
+            }
+        });
+        return String.join("|", parts);
+    }
+
+    /**
+     * Renders one repeating-group entry (and any nested sub-groups) in original insertion order —
+     * deliberately UNSORTED, unlike {@link #renderRawFix}'s top-level fields. The first field of
+     * an entry is the FIX delimiter tag, read positionally by {@code QuickFIXAdapter.applyGroups};
+     * sorting by tag here would routinely move a lower-numbered field (e.g. LegSettlType 587)
+     * ahead of the delimiter (e.g. LegSymbol 600) and misrepresent what was actually sent/received.
+     */
+    private static String renderEntry(FIXMessageData entry) {
+        List<String> parts = new java.util.ArrayList<>();
+        entry.fields().forEach((tag, value) -> parts.add(tag + "=" + value));
+        entry.groups().forEach((counterTag, nested) -> {
+            parts.add(counterTag + "=" + nested.size());
+            for (FIXMessageData nestedEntry : nested) {
+                parts.add(renderEntry(nestedEntry));
             }
         });
         return String.join("|", parts);
