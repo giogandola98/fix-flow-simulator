@@ -100,6 +100,48 @@ class ExecutionManagerPersistenceTest {
     }
 
     @Test
+    void persistedRawFixIncludesRepeatingGroupEntries() {
+        FakeRepo repo = new FakeRepo();
+        FakePublisher publisher = new FakePublisher();
+        FakeFixAdapter adapter = new FakeFixAdapter();
+
+        NodeDispatcher d = new NodeDispatcher(List.of(
+                new StartHandler(), new EndHandler(),
+                new SendFIXHandler(adapter, new VariableResolver())));
+        NodeWalker walker = new NodeWalker(d);
+        ExecutionManager mgr = new ExecutionManager(registry, walker, repo, publisher);
+
+        Map<String, Object> nearLeg = Map.of("fields", List.of(
+                Map.of("tag", 600, "value", "EUR/USD"),
+                Map.of("tag", 609, "value", "FXSPOT")));
+        Map<String, Object> farLeg = Map.of("fields", List.of(
+                Map.of("tag", 600, "value", "GBP/USD"),
+                Map.of("tag", 609, "value", "FXFWD")));
+        Map<String, Object> noLegs = Map.of("counterTag", 555, "entries", List.of(nearLeg, farLeg));
+
+        Scenario s = scenario(UUID.randomUUID(), "persist-groups", List.of(),
+                start("send"),
+                node("send", NodeType.SEND_FIX).cfg("msgType", "D")
+                        .cfg("fields", Map.of("11", "ORD-1"))
+                        .cfg("groups", List.of(noLegs))
+                        .onSuccess("end").build(),
+                Fixtures.endPass("end"));
+        registry.register(s);
+
+        UUID execId = mgr.start(s.id(), UUID.randomUUID());
+        await().atMost(Duration.ofSeconds(3))
+                .until(() -> mgr.getStatus(execId) == ExecutionStatus.PASSED);
+
+        assertThat(repo.messages).isNotEmpty();
+        FIXMessage sent = repo.messages.get(0);
+        assertThat(sent.rawFix()).contains("555=2");
+        assertThat(sent.rawFix()).contains("600=EUR/USD|609=FXSPOT");
+        assertThat(sent.rawFix()).contains("600=GBP/USD|609=FXFWD");
+        // the flat fields map stays a top-level-only projection for backward compatibility
+        assertThat(sent.fields()).doesNotContainKeys(555, 600, 609);
+    }
+
+    @Test
     void persistsErrorEventAndFailedNodeResultOnFailureBranch() {
         FakeRepo repo = new FakeRepo();
         FakePublisher publisher = new FakePublisher();

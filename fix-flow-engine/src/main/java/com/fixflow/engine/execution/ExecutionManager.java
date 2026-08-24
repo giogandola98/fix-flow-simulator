@@ -6,6 +6,7 @@ import com.fixflow.core.domain.execution.ExecutionEventType;
 import com.fixflow.core.domain.execution.ExecutionStatus;
 import com.fixflow.core.domain.execution.Direction;
 import com.fixflow.core.domain.execution.FIXMessage;
+import com.fixflow.core.domain.execution.FIXMessageData;
 import com.fixflow.core.domain.execution.NodeResult;
 import com.fixflow.core.domain.scenario.NodeType;
 import com.fixflow.core.domain.scenario.Scenario;
@@ -216,16 +217,13 @@ public class ExecutionManager {
     }
 
     private void persistMessage(ExecutionContext ctx, String nodeId, Direction direction) {
-        Map<Integer, String> fields = ctx.getNodeMessage(nodeId);
-        if (fields == null || fields.isEmpty()) return;
+        FIXMessageData data = ctx.getNodeMessageData(nodeId);
+        if (data == null || (data.fields().isEmpty() && data.groups().isEmpty())) return;
         try {
-            String raw = fields.entrySet().stream()
-                    .sorted(Map.Entry.comparingByKey())
-                    .map(e -> e.getKey() + "=" + e.getValue())
-                    .collect(java.util.stream.Collectors.joining("|"));
+            String raw = renderRawFix(data);
             FIXMessage msg = new FIXMessage(
                     UUID.randomUUID(), ctx.executionId(), direction, raw,
-                    fields, Instant.now());
+                    data.fields(), Instant.now());
             if (executionRepo != null) {
                 try { executionRepo.addMessage(ctx.executionId(), msg); } catch (Throwable t) {
                     log.warn("Failed to save message for execution {}: {}", ctx.executionId(), t.getMessage());
@@ -239,6 +237,27 @@ public class ExecutionManager {
         } catch (Throwable t) {
             log.warn("Failed to persist message for execution {}: {}", ctx.executionId(), t.getMessage());
         }
+    }
+
+    /**
+     * Renders a {@link FIXMessageData} into the pipe-delimited raw form persisted/published for
+     * the FIX Messages tab, top-level fields plus every repeating group entry, recursively.
+     * Top-level fields are sorted by tag for a stable, readable record; group entry fields are
+     * emitted in their original insertion order, since the first field of an entry is the FIX
+     * delimiter tag and reordering it would misrepresent what was actually sent/received.
+     */
+    private static String renderRawFix(FIXMessageData data) {
+        List<String> parts = new java.util.ArrayList<>();
+        data.fields().entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(e -> parts.add(e.getKey() + "=" + e.getValue()));
+        data.groups().forEach((counterTag, entries) -> {
+            parts.add(counterTag + "=" + entries.size());
+            for (FIXMessageData entry : entries) {
+                parts.add(renderRawFix(entry));
+            }
+        });
+        return String.join("|", parts);
     }
 
     private void persistNodeResult(UUID executionId, String nodeId, NodeHandlerResult result,
