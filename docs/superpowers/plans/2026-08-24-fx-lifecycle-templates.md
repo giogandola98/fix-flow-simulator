@@ -2479,11 +2479,34 @@ describe('repeating groups', () => {
   }];
   const meta = { id: 'x', name: 'n', description: 'd', version: '1.0', sessionRef: 's' };
 
-  it('serialises entry fields as tag->value maps', () => {
+  it('keeps entry fields as an ordered list, never a tag-keyed map', () => {
     const yamlStr = serializeToYaml(nodes as never, [], meta);
     expect(yamlStr).toContain('counterTag: 555');
-    expect(yamlStr).toContain('600: EUR/USD');
-    expect(yamlStr).not.toContain('- tag: 600');
+    // The delimiter tag must stay FIRST in the entry. A tag-keyed object would be
+    // re-ordered numerically by JS, moving a lower tag ahead of the delimiter.
+    expect(yamlStr).toContain('- tag: 600');
+    expect(yamlStr).not.toMatch(/^\s+600: EUR\/USD$/m);
+  });
+
+  it('preserves delimiter-first order through a round trip', () => {
+    const withLowTag = [{
+      ...nodes[0],
+      config: {
+        msgType: 'AB',
+        groups: [{
+          counterTag: 555,
+          entries: [{ fields: [
+            { tag: 600, value: 'EUR/USD' },   // delimiter, must stay first
+            { tag: 587, value: '0' },          // lower number than the delimiter
+          ] }],
+        }],
+      },
+    }];
+    const back = parseFromYaml(serializeToYaml(withLowTag as never, [], meta));
+    const cfg = back.nodes[0].config as never as {
+      groups: { entries: { fields: { tag: number }[] }[] }[];
+    };
+    expect(cfg.groups[0].entries[0].fields[0].tag).toBe(600);
   });
 
   it('round-trips groups back to arrays', () => {
@@ -2539,15 +2562,17 @@ Expected: FAIL — the serialised YAML still contains `- tag: 600`.
 In `scenarioSerializer.ts`, add the two recursive helpers and call them from `serializeConfig` / `parseConfig`:
 
 ```ts
-interface YamlGroupEntry { fields?: Record<string, string>; groups?: YamlGroupSpec[] }
+interface YamlGroupEntry { fields?: Array<{ tag: number; value: string }> | Record<string, string>; groups?: YamlGroupSpec[] }
 interface YamlGroupSpec { counterTag: number; entries: YamlGroupEntry[] }
 
 function serializeGroups(groups: Array<Record<string, unknown>>): YamlGroupSpec[] {
   return groups.map((g) => ({
     counterTag: Number(g.counterTag),
     entries: ((g.entries ?? []) as Array<Record<string, unknown>>).map((e) => {
+      // Entry fields stay a LIST. Converting to a tag-keyed object would let JS
+      // re-order the keys numerically, and the delimiter tag must stay first.
       const out: YamlGroupEntry = {
-        fields: fieldsArrayToMap((e.fields ?? []) as Array<{ tag: number; value: string }>) as unknown as Record<string, string>,
+        fields: (e.fields ?? []) as Array<{ tag: number; value: string }>,
       };
       if (Array.isArray(e.groups) && e.groups.length > 0) {
         out.groups = serializeGroups(e.groups as Array<Record<string, unknown>>);
@@ -2561,8 +2586,12 @@ function parseGroups(groups: YamlGroupSpec[]): Array<Record<string, unknown>> {
   return groups.map((g) => ({
     counterTag: Number(g.counterTag),
     entries: (g.entries ?? []).map((e) => {
+      // Accept the list form (what we write) and the map form (hand-authored YAML),
+      // but always hand the store a list so delimiter-first order survives.
       const out: Record<string, unknown> = {
-        fields: fieldsMapToArray((e.fields ?? {}) as Record<string, string>),
+        fields: Array.isArray(e.fields)
+          ? (e.fields as Array<{ tag: number; value: string }>)
+          : fieldsMapToArray((e.fields ?? {}) as Record<string, string>),
       };
       if (Array.isArray(e.groups) && e.groups.length > 0) out.groups = parseGroups(e.groups);
       return out;
@@ -2613,7 +2642,7 @@ function parseConfig(type: NodeType, config: Record<string, unknown>): Record<st
 }
 ```
 
-`fieldsArrayToMap` returns `Record<number, string>`; js-yaml emits the numeric keys as `600: EUR/USD`, which Jackson deserialises into the `Map<String,Object>` node config and `SendFIXHandler.resolveFields` reads via its map branch. No Java change needed.
+Top-level `fields` still serialise to a tag-keyed map — order is irrelevant there, since QuickFIX/J orders body fields by tag itself. **Group entry fields do not.** JavaScript iterates integer-like object keys in ascending numeric order, never insertion order, so a tag-keyed entry would emit `587` before the `600` delimiter and `QuickFIXAdapter.applyGroups` would build `new Group(555, 587)` — a malformed multileg message. The swap template would work when imported from a hand-written file and break silently the first time anyone opened and saved it in the editor. `SendFIXHandler.resolveFields` already accepts both forms and preserves list order, so no Java change is needed.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -3770,7 +3799,7 @@ cd "<project>/fx-templates"
 node -e "const y=require('js-yaml'),f=require('fs');const d=y.load(f.readFileSync('fx-spot-lifecycle.yaml','utf8'));console.log('nodes',d.nodes.length,'edges',d.edges.length);const ids=new Set(d.nodes.map(n=>n.id));for(const n of d.nodes){for(const k of ['onSuccess','onFailure'])if(n[k]&&!ids.has(n[k]))throw new Error(n.id+'.'+k+' -> '+n[k]);}for(const e of d.edges){if(!ids.has(e.from)||!ids.has(e.to))throw new Error('edge '+e.from+'->'+e.to);}console.log('OK');"
 ```
 
-Expected: `nodes 15 edges 21` then `OK`. Run `npm i js-yaml` in that folder first
+Expected: `nodes 17 edges 21` then `OK`. Run `npm i js-yaml` in that folder first
 if node cannot resolve it, or point `NODE_PATH` at `fix-flow-simulator/fix-flow-ui/node_modules`.
 
 Then, with the simulator running:
@@ -3972,7 +4001,7 @@ outright forward's price decomposition.)
 node -e "const y=require('js-yaml'),f=require('fs');const d=y.load(f.readFileSync('fx-forward-deliverable-lifecycle.yaml','utf8'));const ids=new Set(d.nodes.map(n=>n.id));for(const n of d.nodes){for(const k of ['onSuccess','onFailure'])if(n[k]&&!ids.has(n[k]))throw new Error(n.id+'.'+k);}console.log('nodes',d.nodes.length,'OK');"
 ```
 
-Expected: `nodes 15 OK`.
+Expected: `nodes 17 OK`.
 
 Then confirm no spot values survived the copy:
 
@@ -4145,7 +4174,7 @@ and change the existing `fill -> dispatch` edge to `fill -> wait-fixing`.
 node -e "const y=require('js-yaml'),f=require('fs');const d=y.load(f.readFileSync('fx-ndf-lifecycle.yaml','utf8'));const ids=new Set(d.nodes.map(n=>n.id));for(const n of d.nodes){for(const k of ['onSuccess','onFailure'])if(n[k]&&!ids.has(n[k]))throw new Error(n.id+'.'+k+' -> '+n[k]);}const g=d.nodes.find(n=>n.id==='send-fixing').config.groups;if(g[0].counterTag!==864)throw new Error('NoEvents group missing');console.log('nodes',d.nodes.length,'OK');"
 ```
 
-Expected: `nodes 18 OK`.
+Expected: `nodes 20 OK`.
 
 - [ ] **Step 4: Import and smoke test**
 
@@ -4300,7 +4329,7 @@ settlement type, which is the swap analogue of "immediate or resting":
 node -e "const y=require('js-yaml'),f=require('fs');const d=y.load(f.readFileSync('fx-swap-lifecycle.yaml','utf8'));const ids=new Set(d.nodes.map(n=>n.id));for(const n of d.nodes){for(const k of ['onSuccess','onFailure'])if(n[k]&&!ids.has(n[k]))throw new Error(n.id+'.'+k+' -> '+n[k]);}for(const id of ['ack-new','fill']){const g=d.nodes.find(n=>n.id===id).config.groups;if(!g||g[0].counterTag!==555||g[0].entries.length!==2)throw new Error(id+' must carry two legs');}console.log('nodes',d.nodes.length,'OK');"
 ```
 
-Expected: `nodes 15 OK`.
+Expected: `nodes 17 OK`.
 
 - [ ] **Step 5: Import and smoke test — the decisive check**
 
@@ -4540,7 +4569,7 @@ Add the edges:
 node -e "const y=require('js-yaml'),f=require('fs');const d=y.load(f.readFileSync('fx-option-vanilla-lifecycle.yaml','utf8'));const ids=new Set(d.nodes.map(n=>n.id));for(const n of d.nodes){for(const k of ['onSuccess','onFailure'])if(n[k]&&!ids.has(n[k]))throw new Error(n.id+'.'+k+' -> '+n[k]);}const r=d.nodes.find(n=>n.id==='dispatch').config.rules;if(!r.some(x=>x.matchers['35']==='AL'))throw new Error('missing AL rule');console.log('nodes',d.nodes.length,'OK');"
 ```
 
-Expected: `nodes 19 OK`.
+Expected: `nodes 22 OK`.
 
 - [ ] **Step 4: Import and smoke test**
 
