@@ -6,8 +6,9 @@ import { TimeoutConfig } from './TimeoutConfig';
 import { parseFIXMessage } from '../../../lib/parseFIXMessage';
 import { VarRefPanel } from './VarRefPanel';
 import { FieldTable, FieldRow, FixTagDatalist } from './FieldTable';
+import { GroupEditor, GroupSpec } from './GroupEditor';
 
-interface SendCfg { msgType?: string; fields?: FieldRow[]; }
+interface SendCfg { msgType?: string; fields?: FieldRow[]; groups?: GroupSpec[]; }
 interface Props { node: ScenarioNode; }
 
 export function SendFIXConfig({ node }: Props) {
@@ -100,6 +101,12 @@ export function SendFIXConfig({ node }: Props) {
         fields={fields}
         onChange={(next) => patchConfig({ fields: next })}
         idPrefix="sendfix"
+      />
+
+      <GroupEditor
+        groups={cfg.groups ?? []}
+        onChange={(next) => patchConfig({ groups: next })}
+        idPrefix="sendfix-grp"
       />
 
       <VarRefPanel />
