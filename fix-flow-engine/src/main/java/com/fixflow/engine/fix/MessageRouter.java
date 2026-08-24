@@ -5,7 +5,6 @@ import com.fixflow.core.ports.outbound.InboundMessageListener;
 import com.fixflow.engine.correlation.CorrelationEngine;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -21,21 +20,18 @@ public class MessageRouter implements InboundMessageListener {
 
     @Override
     public void onMessage(String sessionId, FIXMessageData message) {
-        // TODO(Task 6): carry the full FIXMessageData into the buffer/correlation engine
-        // instead of projecting to flat fields here.
-        Map<Integer, String> fields = message.flatFields();
         if (buffer.isPaused()) {
-            buffer.park(sessionId, fields);
+            buffer.park(sessionId, message);
             return;
         }
-        boolean consumed = correlation.onMessage(sessionId, fields);
-        if (!consumed) buffer.park(sessionId, fields);
+        boolean consumed = correlation.onMessage(sessionId, message);
+        if (!consumed) buffer.park(sessionId, message);
     }
 
     public void drain(String sessionId) {
-        Optional<Map<Integer, String>> next;
+        Optional<FIXMessageData> next;
         do {
-            next = buffer.poll(sessionId, fields -> correlation.onMessage(sessionId, fields));
+            next = buffer.poll(sessionId, message -> correlation.onMessage(sessionId, message));
         } while (next.isPresent());
     }
 }

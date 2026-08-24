@@ -1,5 +1,6 @@
 package com.fixflow.engine.correlation;
 
+import com.fixflow.core.domain.execution.FIXMessageData;
 import com.fixflow.core.domain.scenario.CorrelationRule;
 import com.fixflow.engine.support.Fixtures;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,13 +25,13 @@ class CorrelationEngineTest {
 
     @Test
     void registerThenMatchingMessageCompletesFuture() {
-        CompletableFuture<Map<Integer, String>> f = engine.register("exec-1", SESSION, rule(11), "ORD1");
+        CompletableFuture<FIXMessageData> f = engine.register("exec-1", SESSION, rule(11), "ORD1");
         assertThat(engine.pendingCount()).isEqualTo(1);
 
         boolean consumed = engine.onMessage(SESSION, Fixtures.fields(11, "ORD1", 35, "8"));
         assertThat(consumed).isTrue();
         assertThat(f).isCompleted();
-        assertThat(f.join()).containsEntry(11, "ORD1");
+        assertThat(f.join().flatFields()).containsEntry(11, "ORD1");
         assertThat(engine.pendingCount()).isZero();
     }
 
@@ -50,7 +51,7 @@ class CorrelationEngineTest {
 
     @Test
     void cancelRemovesWaiterAndCancelsFuture() {
-        CompletableFuture<Map<Integer, String>> f = engine.register("exec-1", SESSION, rule(11), "ORD1");
+        CompletableFuture<FIXMessageData> f = engine.register("exec-1", SESSION, rule(11), "ORD1");
         engine.cancel("exec-1");
         assertThat(f).isCancelled();
         assertThat(engine.pendingCount()).isZero();

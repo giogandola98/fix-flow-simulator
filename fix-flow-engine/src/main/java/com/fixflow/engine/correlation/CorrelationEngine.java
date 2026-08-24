@@ -1,5 +1,6 @@
 package com.fixflow.engine.correlation;
 
+import com.fixflow.core.domain.execution.FIXMessageData;
 import com.fixflow.core.domain.scenario.CorrelationRule;
 import org.springframework.stereotype.Service;
 
@@ -16,11 +17,11 @@ public class CorrelationEngine {
             String sessionId,
             CorrelationRule rule,
             String expectedValue,
-            CompletableFuture<Map<Integer, String>> future) {}
+            CompletableFuture<FIXMessageData> future) {}
 
     public record RoutingRule(String ruleId, String label, Map<Integer, String> matchers, String targetNodeId) {}
 
-    public record RoutedResult(Map<Integer, String> fields, String matchedRuleId, String targetNodeId) {}
+    public record RoutedResult(FIXMessageData message, String matchedRuleId, String targetNodeId) {}
 
     public record MultiRouteWaiter(
             String executionId,
@@ -31,11 +32,11 @@ public class CorrelationEngine {
     private final ConcurrentHashMap<String, CorrelationWaiter> waiters = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, MultiRouteWaiter> multiWaiters = new ConcurrentHashMap<>();
 
-    public CompletableFuture<Map<Integer, String>> register(String executionId,
-                                                            String sessionId,
-                                                            CorrelationRule rule,
-                                                            String expectedValue) {
-        CompletableFuture<Map<Integer, String>> future = new CompletableFuture<>();
+    public CompletableFuture<FIXMessageData> register(String executionId,
+                                                      String sessionId,
+                                                      CorrelationRule rule,
+                                                      String expectedValue) {
+        CompletableFuture<FIXMessageData> future = new CompletableFuture<>();
         CorrelationWaiter waiter = new CorrelationWaiter(executionId, sessionId, rule, expectedValue, future);
         if (waiters.putIfAbsent(executionId, waiter) != null) {
             throw new IllegalStateException("duplicate executionId: " + executionId);
@@ -51,13 +52,14 @@ public class CorrelationEngine {
         return future;
     }
 
-    public boolean onMessage(String sessionId, Map<Integer, String> fields) {
+    public boolean onMessage(String sessionId, FIXMessageData message) {
+        Map<Integer, String> fields = message.flatFields();
         for (CorrelationWaiter w : waiters.values()) {
             if (!w.sessionId().equals(sessionId)) continue;
             String actual = fields.get(w.rule().sourceTag());
             if (actual != null && actual.equals(w.expectedValue())) {
                 waiters.remove(w.executionId());
-                w.future().complete(Map.copyOf(fields));
+                w.future().complete(message);
                 return true;
             }
         }
@@ -74,11 +76,16 @@ public class CorrelationEngine {
             if (matched == null) matched = defaultRule;
             if (matched != null) {
                 multiWaiters.remove(w.executionId());
-                w.future().complete(new RoutedResult(Map.copyOf(fields), matched.ruleId(), matched.targetNodeId()));
+                w.future().complete(new RoutedResult(message, matched.ruleId(), matched.targetNodeId()));
                 return true;
             }
         }
         return false;
+    }
+
+    /** Legacy flat-map entry point, kept for existing tests. */
+    public boolean onMessage(String sessionId, Map<Integer, String> fields) {
+        return onMessage(sessionId, FIXMessageData.ofFields(fields));
     }
 
     public void cancel(String executionId) {
