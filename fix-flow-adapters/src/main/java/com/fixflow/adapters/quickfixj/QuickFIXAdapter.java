@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 import quickfix.*;
 import quickfix.Message;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;

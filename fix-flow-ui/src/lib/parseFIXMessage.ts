@@ -106,7 +106,8 @@ function readGroup(
       const dupInCurrentEntry = current.fields.some((f) => f.tag === tag);
       if (dupInCurrentEntry || !seenTags.has(tag)) break;
     } else if (!seenTags.has(tag) && entries.length > 1) {
-      // Guards declared >= 3: once a third-plus entry is under way, a tag never seen
+      // Guards declared >= 3: once the second entry is under way (entries.length > 1,
+      // i.e. more than just the first entry has been started), a tag never seen
       // anywhere in the group would otherwise be silently accepted mid-entry. Only
       // the delimiter tag may start a new entry; an unseen tag here ends the group
       // early instead.

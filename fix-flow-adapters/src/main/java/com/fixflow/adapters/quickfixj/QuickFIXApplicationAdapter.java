@@ -9,10 +9,9 @@ import quickfix.Message;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -96,7 +95,7 @@ public class QuickFIXApplicationAdapter implements Application {
                                 Map<Integer, String> fields,
                                 Map<Integer, List<FIXMessageData>> groups) {
         Iterator<Integer> counterTags = map.groupKeyIterator();
-        Set<Integer> counters = new HashSet<>();
+        Set<Integer> counters = new LinkedHashSet<>();
         while (counterTags.hasNext()) counters.add(counterTags.next());
 
         Iterator<Field<?>> it = map.iterator();
