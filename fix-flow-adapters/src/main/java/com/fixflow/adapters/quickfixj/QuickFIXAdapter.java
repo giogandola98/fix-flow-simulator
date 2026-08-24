@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import quickfix.*;
 import quickfix.Message;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
@@ -100,20 +101,41 @@ public class QuickFIXAdapter implements FIXSessionPort {
 
     @Override
     public void sendMessage(UUID sessionId, FIXMessageData message) {
-        // TODO(Task 4): serialise message.groups() into quickfix.Group instances. For now
-        // only the flat fields are sent, exactly as before this method took FIXMessageData.
         SessionID sid = sessions.get(sessionId);
         if (sid == null) throw new IllegalStateException("Unknown session: " + sessionId);
-        Message msg = new Message();
-        message.flatFields().forEach((tag, value) -> {
-            if (tag == 35) msg.getHeader().setString(35, value);
-            else msg.setString(tag, value);
-        });
         try {
-            Session.sendToTarget(msg, sid);
+            Session.sendToTarget(buildMessage(message), sid);
         } catch (SessionNotFound e) {
             throw new IllegalStateException("Session not found: " + sessionId, e);
         }
+    }
+
+    /**
+     * Builds a QuickFIX/J message from engine data. Tag 35 goes to the header; every repeating
+     * group entry becomes a {@link Group} whose delimiter is the entry's first field, so entry
+     * field order matters. The counter tag is written by {@code addGroup}, never by hand.
+     */
+    static Message buildMessage(FIXMessageData data) {
+        Message msg = new Message();
+        data.fields().forEach((tag, value) -> {
+            if (tag == 35) msg.getHeader().setString(35, value);
+            else msg.setString(tag, value);
+        });
+        applyGroups(msg, data);
+        return msg;
+    }
+
+    private static void applyGroups(FieldMap target, FIXMessageData data) {
+        data.groups().forEach((counterTag, entries) -> {
+            for (FIXMessageData entry : entries) {
+                if (entry.fields().isEmpty()) continue;
+                int delimiterTag = entry.fields().keySet().iterator().next();
+                Group group = new Group(counterTag, delimiterTag);
+                entry.fields().forEach(group::setString);
+                applyGroups(group, entry);
+                target.addGroup(group);
+            }
+        });
     }
 
     private SessionSettings buildSettings(FIXSessionConfig cfg) throws ConfigError {
