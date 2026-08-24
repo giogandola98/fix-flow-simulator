@@ -7,6 +7,7 @@ import TopBar from './TopBar';
 import { useScenarioStore } from '../store/scenarioStore';
 import { useSessionStore } from '../store/sessionStore';
 import { useExecutionStore } from '../store/executionStore';
+import { shutdownSimulator } from '../api/system';
 import { FIXSessionConfig, Scenario, ExecutionStatus } from '../types';
 
 // Network is never exercised in these render-only tests, but mock to be safe.
@@ -68,14 +69,27 @@ describe('TopBar Run/Stop button state', () => {
 });
 
 describe('TopBar shutdown button', () => {
-  beforeEach(() => setStores({}));
+  beforeEach(() => {
+    setStores({});
+    vi.mocked(shutdownSimulator).mockClear();
+  });
 
-  it('asks for confirmation before shutting down', async () => {
+  it('does not shut down when the confirmation dialog is declined', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     renderTopBar();
     await userEvent.click(screen.getByTestId('topbar-shutdown'));
     expect(confirm).toHaveBeenCalled();
+    expect(shutdownSimulator).not.toHaveBeenCalled();
     expect(screen.queryByTestId('shutdown-overlay')).toBeNull();
+    confirm.mockRestore();
+  });
+
+  it('shuts down when the confirmation dialog is accepted', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderTopBar();
+    await userEvent.click(screen.getByTestId('topbar-shutdown'));
+    expect(confirm).toHaveBeenCalled();
+    expect(shutdownSimulator).toHaveBeenCalledTimes(1);
     confirm.mockRestore();
   });
 });
