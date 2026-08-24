@@ -978,6 +978,17 @@ message, the handler removes any top-level field whose tag equals a declared
 `counterTag`: the group is authoritative, and `Message.addGroup()` is what
 actually writes the counter, never a plain field.
 
+**Entry `fields` must use the list form, not the map form.** Unlike top-level
+`fields`, a group entry's `fields` are order-sensitive — the first field is
+the FIX delimiter tag that `QuickFIXAdapter.applyGroups` reads positionally.
+`resolveFields` accepts a map here too, but it is not round-trip safe:
+`scenarioSerializer.ts` converts a map via `Object.entries`, and JavaScript
+iterates integer-like object keys in ascending numeric order — so a
+hand-authored `{600: EUR/USD, 587: '0'}` (delimiter first, valid on disk)
+gets rewritten as `587` before `600` the moment the scenario is opened and
+saved in the GUI, silently producing a malformed message. Always author group
+entry `fields` as the list form shown above.
+
 ### `groupTag` / `index` in VALIDATE
 
 A validation rule may target a field inside a repeating group instead of a
@@ -994,7 +1005,10 @@ rules:
 `message.group(groupTag)` instead; `index` selects which entry — a 0-based
 integer (default `0`) validates one entry, `'*'` evaluates the rule once per
 entry. A missing group, an out-of-range index, or a non-numeric, non-`'*'`
-index all produce a failing `ValidationResult`.
+index all produce a failing `ValidationResult`. `groupTag` itself accepts a
+number or a numeric string (YAML may quote it, e.g. `groupTag: '555'`);
+anything else — from either source — fails the node cleanly via its
+`onFailure` edge instead of throwing.
 
 ---
 

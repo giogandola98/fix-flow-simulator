@@ -84,9 +84,23 @@ config:
 
 The counter tag is never written by hand — QuickFIX/J maintains it from the
 number of entries. The **first field of an entry is the group delimiter**, so
-entry field order matters. Each entry's `fields` may be either the map form
-(`{tag: value}`) or the list form shown above; `SendFIXHandler` accepts both,
-same as top-level `fields`.
+entry field order matters.
+
+For **group entry** `fields`, use the **list form** shown above — it is the
+only safe way to author them. The map form (`{tag: value}`) is accepted on
+read, but it is **not round-trip safe**: JavaScript object keys that look like
+integers are iterated in ascending numeric order, so if you hand-author a map
+with the delimiter tag anywhere but the lowest tag number (e.g.
+`{600: EUR/USD, 587: '0'}`), opening the scenario in the GUI and saving it
+re-serialises the entry with the fields reordered ascending (`587` before
+`600`), silently moving a lower-numbered tag ahead of the delimiter and
+producing a malformed message on the wire. `SendFIXHandler` itself accepts
+both forms for entry fields — the hazard is specific to the GUI's
+save round trip, not the engine.
+
+Top-level `fields` are unaffected by this: they have no delimiter-ordering
+requirement, so the map form is fully safe there and is what the UI
+serialiser emits.
 
 ## EXPECT_FIX config
 
