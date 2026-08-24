@@ -160,7 +160,9 @@
       "addEntry": "+ Occurrence",
       "entryFields": "Champs de l'occurrence",
       "addSubGroup": "+ Groupe imbriqué",
-      "nestingLimit": "Limite d'imbrication atteinte (3 niveaux)"
+      "nestingLimit": "Limite d'imbrication atteinte (3 niveaux)",
+      "delimiterHint": "Le premier champ doit être le tag délimiteur ({{delimiter}}).",
+      "delimiterWarning": "Le premier champ est le tag {{firstTag}}, mais le délimiteur de ce groupe est {{delimiter}} — déplacez-le en tête, sinon le message sera malformé."
     },
     "expectFix": {
       "desc": "Attend un message FIX entrant correspondant aux critères. Stocke les champs pour les nœuds VALIDATE en aval ou les références croisées.",

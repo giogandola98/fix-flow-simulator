@@ -160,7 +160,9 @@
       "addEntry": "+ Entry",
       "entryFields": "Entry fields",
       "addSubGroup": "+ Nested group",
-      "nestingLimit": "Nesting limit reached (3 levels)"
+      "nestingLimit": "Nesting limit reached (3 levels)",
+      "delimiterHint": "First field must be the delimiter tag ({{delimiter}}).",
+      "delimiterWarning": "First field is tag {{firstTag}}, but this group's delimiter is {{delimiter}} — reorder it to the top or the message will be malformed."
     },
     "expectFix": {
       "desc": "Waits for an inbound FIX message matching the criteria. Stores matched fields for downstream VALIDATE nodes or cross-node references.",

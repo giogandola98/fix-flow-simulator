@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FieldTable, FieldRow } from './FieldTable';
-import { GROUP_COUNTER_TAGS } from '../../../lib/fixTags';
+import { GROUP_COUNTER_TAGS, fixTagName } from '../../../lib/fixTags';
+import { GROUP_DELIMITERS } from '../../../lib/parseFIXMessage';
 
 export interface GroupEntry { fields: FieldRow[]; groups?: GroupSpec[] }
 export interface GroupSpec { counterTag: number; entries: GroupEntry[] }
@@ -67,7 +68,7 @@ export function GroupEditor({ groups, onChange, depth = 0, idPrefix = 'grp' }: G
         <label className="text-[10px] text-gray-500">
           {t('nodeConfig.sendFix.groups', 'Repeating Groups')}
           <span
-            title="FIX repeating groups. The counter tag (e.g. 555 NoLegs) is derived from the number of entries and written by the engine — never type it as a field."
+            title="FIX repeating groups. The counter tag (e.g. 555 NoLegs) is derived from the number of entries and written by the engine — never type it as a field. The FIRST field of every entry must be that group's delimiter tag (e.g. 600 LegSymbol for NoLegs) — the adapter reads it positionally to build the group, so a different first field produces a malformed message."
             className="ml-1 text-gray-600 cursor-help"
           >?</span>
         </label>
@@ -165,6 +166,32 @@ export function GroupEditor({ groups, onChange, depth = 0, idPrefix = 'grp' }: G
                         className="text-red-400 hover:text-red-300 text-xs px-1"
                         onClick={() => patchEntries(gi, g.entries.filter((_, i) => i !== ei))}>x</button>
               </div>
+
+              {(() => {
+                const expectedDelimiter = GROUP_DELIMITERS[g.counterTag];
+                if (expectedDelimiter === undefined) return null;
+                const delimiterName = fixTagName(expectedDelimiter);
+                const delimiterLabel = delimiterName ? `${expectedDelimiter} ${delimiterName}` : `${expectedDelimiter}`;
+                const firstTag = entry.fields[0]?.tag;
+                const mismatched = firstTag !== undefined && firstTag !== 0 && firstTag !== expectedDelimiter;
+                return (
+                  <>
+                    <div className="text-[9px] text-gray-600 leading-tight">
+                      {t('nodeConfig.sendFix.delimiterHint', 'First field must be the delimiter tag ({{delimiter}}).', { delimiter: delimiterLabel })}
+                    </div>
+                    {mismatched && (
+                      <div
+                        data-testid={`${idPrefix}-delimiter-warning-${gi}-${ei}`}
+                        className="text-yellow-400 text-[9px] leading-tight mt-0.5"
+                      >
+                        {t('nodeConfig.sendFix.delimiterWarning',
+                          'First field is tag {{firstTag}}, but this group\'s delimiter is {{delimiter}} — reorder it to the top or the message will be malformed.',
+                          { firstTag, delimiter: delimiterLabel })}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
 
               <FieldTable
                 fields={entry.fields}

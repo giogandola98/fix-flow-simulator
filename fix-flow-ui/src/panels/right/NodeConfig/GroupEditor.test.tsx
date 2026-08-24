@@ -86,4 +86,37 @@ describe('GroupEditor', () => {
     expect(screen.queryByTestId('g-add-subgroup-0-0')).toBeNull();
     expect(screen.getByText(/nesting limit/i)).toBeInTheDocument();
   });
+
+  it('shows delimiter helper text naming the expected first field', () => {
+    render(<GroupEditor groups={twoLegs} onChange={() => {}} idPrefix="g" />);
+    // NoLegs (555) delimiter is 600 LegSymbol; twoLegs has two entries, so expect >= 1 match
+    expect(screen.getAllByText(/delimiter tag/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/600 LegSymbol/).length).toBeGreaterThan(0);
+  });
+
+  it('warns when an entry\'s first field is not the known delimiter', () => {
+    const wrongOrder: GroupSpec[] = [{
+      counterTag: 555,
+      entries: [
+        { fields: [{ tag: 624, value: '1' }, { tag: 600, value: 'EUR/USD' }] },
+      ],
+    }];
+    render(<GroupEditor groups={wrongOrder} onChange={() => {}} idPrefix="g" />);
+    expect(screen.getByTestId('g-delimiter-warning-0-0')).toBeInTheDocument();
+  });
+
+  it('does not warn when the first field already matches the delimiter', () => {
+    render(<GroupEditor groups={twoLegs} onChange={() => {}} idPrefix="g" />);
+    expect(screen.queryByTestId('g-delimiter-warning-0-0')).toBeNull();
+  });
+
+  it('stays silent about the delimiter for a counter tag outside GROUP_DELIMITERS', () => {
+    const unknownCounter: GroupSpec[] = [{
+      counterTag: 9999,
+      entries: [{ fields: [{ tag: 1, value: 'x' }] }],
+    }];
+    render(<GroupEditor groups={unknownCounter} onChange={() => {}} idPrefix="g" />);
+    expect(screen.queryByText(/delimiter tag/i)).toBeNull();
+    expect(screen.queryByTestId('g-delimiter-warning-0-0')).toBeNull();
+  });
 });

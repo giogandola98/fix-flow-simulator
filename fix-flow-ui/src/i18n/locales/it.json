@@ -160,7 +160,9 @@
       "addEntry": "+ Occorrenza",
       "entryFields": "Campi occorrenza",
       "addSubGroup": "+ Gruppo annidato",
-      "nestingLimit": "Limite di annidamento raggiunto (3 livelli)"
+      "nestingLimit": "Limite di annidamento raggiunto (3 livelli)",
+      "delimiterHint": "Il primo campo deve essere il tag delimitatore ({{delimiter}}).",
+      "delimiterWarning": "Il primo campo è il tag {{firstTag}}, ma il delimitatore di questo gruppo è {{delimiter}} — spostalo in cima, altrimenti il messaggio sarà malformato."
     },
     "expectFix": {
       "desc": "Attende un messaggio FIX in entrata corrispondente ai criteri. Memorizza i campi per i nodi VALIDATE successivi o riferimenti incrociati.",
