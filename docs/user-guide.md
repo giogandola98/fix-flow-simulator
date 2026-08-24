@@ -205,7 +205,7 @@ Sends an outbound FIX message.
 
 **Tip:** Paste a captured FIX message from a log file using the **Paste FIX Message** button. The parser strips header/trailer tags automatically. For a recognised counter tag (`NoLegs`, `NoPartyIDs`, `NoEvents`, `NoPositions`, `NoUnderlyings`, `NoAllocs`) it reconstructs the group into the Repeating Groups panel below, or falls back to flat fields with a warning if the declared count does not match what it found. A counter tag outside that set is parsed as an ordinary field with no warning — the parser cannot tell a counter from any other numeric tag without a data dictionary. If a group matters, build it with the Repeating Groups panel instead of relying on paste.
 
-**Repeating Groups panel:** Click **+ Add group** and pick a counter tag (e.g. `555` NoLegs) from the dropdown to create a group with one empty entry. Each entry is a card with its own field table (add field, same as the top-level Fields table) plus **duplicate** (⧉), **move up** (↑), **move down** (↓) and **delete** (x) controls. The entry counter shown next to the group header is read-only — it is derived from the number of entries and is never typed by hand; the engine writes the real FIX counter tag when it builds the message. Groups can be collapsed with the ▲/▼ toggle. An entry can itself contain one nested sub-group via **+ Add sub-group**, up to three levels of nesting deep.
+**Repeating Groups panel:** Click **+ Add group** and pick a counter tag (e.g. `555` NoLegs) from the dropdown to create a group with one empty entry. Each entry is a card with its own field table (add field, same as the top-level Fields table) plus **duplicate** (⧉), **move up** (↑), **move down** (↓) and **delete** (x) controls. The entry counter shown next to the group header is read-only — it is derived from the number of entries and is never typed by hand; the engine writes the real FIX counter tag when it builds the message. Groups can be collapsed with the ▲/▼ toggle. An entry can itself contain one nested sub-group via **+ Add sub-group**, up to three levels of nesting deep. **The first field added to an entry must be that group's delimiter tag** (e.g. `600` LegSymbol for NoLegs) — the adapter reads it positionally to build the FIX group, so any other order produces a malformed message; the panel shows the expected delimiter under each entry and flags it in yellow if the first field doesn't match.
 
 ---
 
@@ -434,7 +434,15 @@ Variables let you build dynamic FIX messages that reference runtime values.
 | `{{node:id:tagN}}` | Tag N from a previous block | `{{node:send-order:tag11}}` |
 | `{{node:id:tagN:offset:+5m}}` | Tag value with date offset | `{{node:send-order:tag60:offset:+1h}}` |
 | `{{node:id:gNNN.i:tagM}}` | Tag M of entry `i` (0-based) of repeating group `NNN` on a previous block | `{{node:send-order:g555.0:tag600}}` |
-| `{{node:id:gNNN.i:tagM:offset:+2d}}` | Same, with a date offset applied | `{{node:send-order:g555.0:tag588:offset:+2d}}` |
+| `{{node:id:gNNN.i:tagM:offset:+2d}}` | Same, with a date offset applied | `{{node:send-order:g555.0:tag60:offset:+2d}}` |
+
+**Offset placeholders require an ISO-8601 instant field.** `:offset:` (on both
+the plain `{{node:id:tagN:offset:...}}` form and the group `{{node:id:gNNN.i:tagM:offset:...}}`
+form) parses the source tag's value as an `Instant`, so it only works on
+fields that actually hold a full timestamp — tag `60` TransactTime is the
+natural choice, as in the example above. A date-only field such as tag `588`
+LegSettlDate (`YYYYMMDD`, no time component) is not a valid `Instant` and
+will throw at execution time.
 
 ### Using variables in Send FIX
 
