@@ -100,6 +100,57 @@ class ExecutionManagerPersistenceTest {
     }
 
     @Test
+    void persistedRawFixIncludesRepeatingGroupEntries() {
+        FakeRepo repo = new FakeRepo();
+        FakePublisher publisher = new FakePublisher();
+        FakeFixAdapter adapter = new FakeFixAdapter();
+
+        NodeDispatcher d = new NodeDispatcher(List.of(
+                new StartHandler(), new EndHandler(),
+                new SendFIXHandler(adapter, new VariableResolver())));
+        NodeWalker walker = new NodeWalker(d);
+        ExecutionManager mgr = new ExecutionManager(registry, walker, repo, publisher);
+
+        // 587 (LegSettlType) is numerically BELOW the delimiter 600 (LegSymbol) on purpose:
+        // a renderer that sorts entry fields by tag would put 587 first, which is exactly the
+        // hazard this test guards against (mirrors the real fx-swap-lifecycle template).
+        Map<String, Object> nearLeg = Map.of("fields", List.of(
+                Map.of("tag", 600, "value", "EUR/USD"),
+                Map.of("tag", 587, "value", "0")));
+        Map<String, Object> farLeg = Map.of("fields", List.of(
+                Map.of("tag", 600, "value", "GBP/USD"),
+                Map.of("tag", 587, "value", "6")));
+        Map<String, Object> noLegs = Map.of("counterTag", 555, "entries", List.of(nearLeg, farLeg));
+
+        Scenario s = scenario(UUID.randomUUID(), "persist-groups", List.of(),
+                start("send"),
+                node("send", NodeType.SEND_FIX).cfg("msgType", "D")
+                        .cfg("fields", Map.of("11", "ORD-1"))
+                        .cfg("groups", List.of(noLegs))
+                        .onSuccess("end").build(),
+                Fixtures.endPass("end"));
+        registry.register(s);
+
+        UUID execId = mgr.start(s.id(), UUID.randomUUID());
+        await().atMost(Duration.ofSeconds(3))
+                .until(() -> mgr.getStatus(execId) == ExecutionStatus.PASSED);
+
+        assertThat(repo.messages).isNotEmpty();
+        FIXMessage sent = repo.messages.get(0);
+        String raw = sent.rawFix();
+        assertThat(raw).contains("555=2");
+        // Exact entry blocks: the delimiter (600) must be first, NOT sorted ahead of by 587.
+        assertThat(raw).contains("600=EUR/USD|587=0");
+        assertThat(raw).contains("600=GBP/USD|587=6");
+        // Belt-and-braces: explicitly assert delimiter position precedes the lower tag,
+        // so this fails loudly (not just via a missing substring) if entry fields get sorted.
+        assertThat(raw.indexOf("600=EUR/USD")).isLessThan(raw.indexOf("587=0"));
+        assertThat(raw.indexOf("600=GBP/USD")).isLessThan(raw.indexOf("587=6"));
+        // the flat fields map stays a top-level-only projection for backward compatibility
+        assertThat(sent.fields()).doesNotContainKeys(555, 600, 587);
+    }
+
+    @Test
     void persistsErrorEventAndFailedNodeResultOnFailureBranch() {
         FakeRepo repo = new FakeRepo();
         FakePublisher publisher = new FakePublisher();

@@ -31,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -155,6 +156,40 @@ class ScenarioControllerTest {
     }
 
     @Test
+    void createWithYamlReturnsYamlInResponseBody() throws Exception {
+        // Regression: create() must return the same yamlDsl the client submitted,
+        // otherwise the UI canvas renders empty right after import/create.
+        UUID id = UUID.randomUUID();
+        String yamlText = "scenario:\n  name: s1\n  nodes:\n    - id: n1\n";
+        Scenario s = new Scenario(id, "s1", "desc", "1", "sess", null, null, null, null, null, null, yamlText);
+        when(parser.parseYaml(anyString())).thenReturn(s);
+        when(repo.save(any())).thenReturn(s);
+
+        ScenarioRequest req = new ScenarioRequest("s1", "desc", "sess", yamlText);
+        mvc.perform(post("/api/v1/scenarios")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(req)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.yamlDsl").value(yamlText));
+    }
+
+    @Test
+    void createWithoutYamlStillReturnsWellFormedResponse() throws Exception {
+        // No yamlDsl supplied: controller must still respond cleanly (no 500),
+        // falling back to parser.toYaml(...) the same way get()/update() do.
+        when(repo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(parser.toYaml(any())).thenReturn("scenario: {name: manual}");
+
+        ScenarioRequest req = new ScenarioRequest("manual", "d", "sref", null);
+        mvc.perform(post("/api/v1/scenarios")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(req)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.name").value("manual"))
+            .andExpect(jsonPath("$.id").exists());
+    }
+
+    @Test
     void importUtf8FileReturns201AndDecodesUtf8() throws Exception {
         UUID id = UUID.randomUUID();
         Scenario s = scenario(id, "imported");
@@ -175,6 +210,26 @@ class ScenarioControllerTest {
         verify(parser).parseYaml(yamlCaptor.capture());
         assertThat(yamlCaptor.getValue()).isEqualTo(yamlText);
         verify(registry).register(s);
+    }
+
+    @Test
+    void importYamlReturns201AndBodyContainsYaml() throws Exception {
+        // Regression: importYaml() must return the imported yamlDsl, otherwise the
+        // canvas shows zero nodes right after a template import (server bug, not UI).
+        UUID id = UUID.randomUUID();
+        String yamlText = "scenario:\n  name: imported-tpl\n  nodes:\n    - id: start-node\n";
+        Scenario s = new Scenario(id, "imported-tpl", "desc", "1", "sess", null, null, null, null, null, null, yamlText);
+        when(parser.parseYaml(anyString())).thenReturn(s);
+        when(repo.save(any())).thenReturn(s);
+
+        MockMultipartFile file = new MockMultipartFile(
+            "file", "scenario.yaml", "application/x-yaml",
+            yamlText.getBytes(StandardCharsets.UTF_8));
+
+        mvc.perform(multipart("/api/v1/scenarios/import").file(file))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.yamlDsl").value(containsString("start-node")))
+            .andExpect(jsonPath("$.yamlDsl").value(containsString("imported-tpl")));
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.fixflow.engine.handlers;
 
+import com.fixflow.core.domain.execution.FIXMessageData;
 import com.fixflow.core.domain.scenario.NodeType;
 import com.fixflow.core.domain.scenario.ScenarioNode;
 import com.fixflow.engine.execution.ExecutionContext;
@@ -26,11 +27,16 @@ public class ValidateHandler implements NodeHandler {
         // sourceNodeId points to the EXPECT_FIX node whose stored message we validate
         String sourceId = node.config().get("sourceNodeId") != null
                 ? String.valueOf(node.config().get("sourceNodeId")) : null;
-        Map<Integer, String> fields = ctx.getNodeMessage(sourceId != null ? sourceId : node.id());
-        if (fields == null) fields = Map.of();
+        FIXMessageData message = ctx.getNodeMessageData(sourceId != null ? sourceId : node.id());
+        if (message == null) message = FIXMessageData.ofFields(Map.of());
 
-        ValidationConfig cfg = toConfig(node.config());
-        ValidationSummary summary = engine.validate(cfg, fields, ctx, Instant.now());
+        ValidationConfig cfg;
+        try {
+            cfg = toConfig(node.config());
+        } catch (InvalidGroupTagException e) {
+            return NodeHandlerResult.failure(node.onFailure(), e.getMessage());
+        }
+        ValidationSummary summary = engine.validate(cfg, message, ctx, Instant.now());
 
         return summary.passed()
             ? NodeHandlerResult.success(node.onSuccess())
@@ -52,10 +58,37 @@ public class ValidateHandler implements NodeHandler {
             String dateRule = (String) rr.get("dateRule");
             String pattern = (String) rr.get("pattern");
             double num = rr.get("numericValue") == null ? 0 : ((Number) rr.get("numericValue")).doubleValue();
-            rules.add(new ValidationRuleConfig(tag, rule, value, values, ref, dateRule, pattern, num));
+            Integer groupTag = parseGroupTag(rr.get("groupTag"));
+            String index = rr.get("index") == null ? null : String.valueOf(rr.get("index"));
+            rules.add(new ValidationRuleConfig(tag, rule, value, values, ref, dateRule, pattern, num,
+                                               groupTag, index));
         }
         boolean strict = Boolean.TRUE.equals(raw.get("strictMode"));
         Map<String, DateRule> dateRules = (Map<String, DateRule>) raw.getOrDefault("dateRules", Map.of());
         return new ValidationConfig(rules, dateRules, strict);
+    }
+
+    /**
+     * Parses a rule's {@code groupTag}, accepting a {@link Number} or a numeric {@link String}
+     * (YAML may quote it, e.g. {@code groupTag: '555'}). Anything else raises
+     * {@link InvalidGroupTagException} rather than letting a {@link ClassCastException} escape —
+     * {@code handle} turns that into a normal validation failure via the node's onFailure edge,
+     * matching how {@code index} was already hardened.
+     */
+    private Integer parseGroupTag(Object raw) {
+        if (raw == null) return null;
+        if (raw instanceof Number n) return n.intValue();
+        if (raw instanceof String s) {
+            try {
+                return Integer.parseInt(s.trim());
+            } catch (NumberFormatException e) {
+                throw new InvalidGroupTagException("Invalid groupTag: " + s);
+            }
+        }
+        throw new InvalidGroupTagException("Invalid groupTag: " + raw);
+    }
+
+    static final class InvalidGroupTagException extends RuntimeException {
+        InvalidGroupTagException(String message) { super(message); }
     }
 }

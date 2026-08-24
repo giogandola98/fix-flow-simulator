@@ -39,7 +39,9 @@ class PortsTest {
     void inboundMessageListenerReceivesCallback() {
         AtomicReference<String> session = new AtomicReference<>();
         AtomicReference<Map<Integer, String>> fields = new AtomicReference<>();
-        InboundMessageListener listener = (s, f) -> { session.set(s); fields.set(f); };
+        // Lambda target type is the SAM onMessage(String, FIXMessageData); project to
+        // flatFields() to keep this capturing exactly what it captured before Task 2.
+        InboundMessageListener listener = (s, f) -> { session.set(s); fields.set(f.flatFields()); };
 
         listener.onMessage("SESSION-1", Map.of(35, "D", 11, "order-1"));
 

@@ -1,5 +1,6 @@
 package com.fixflow.engine.fix;
 
+import com.fixflow.core.domain.execution.FIXMessageData;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -13,7 +14,7 @@ import java.util.function.Predicate;
 @Service
 public class MessageBuffer {
 
-    public record BufferedMessage(Map<Integer, String> fields, Instant parkedAt) {}
+    public record BufferedMessage(FIXMessageData message, Instant parkedAt) {}
 
     private final int capacity;
     private final long ttlMs;
@@ -29,14 +30,14 @@ public class MessageBuffer {
         this.ttlMs = ttlMs;
     }
 
-    public void park(String sessionId, Map<Integer, String> fields) {
+    public void park(String sessionId, FIXMessageData message) {
         Deque<BufferedMessage> deque =
                 buffers.computeIfAbsent(sessionId, k -> new ConcurrentLinkedDeque<>());
-        deque.addFirst(new BufferedMessage(Map.copyOf(fields), Instant.now()));
+        deque.addFirst(new BufferedMessage(message, Instant.now()));
         while (deque.size() > capacity) deque.pollLast();
     }
 
-    public Optional<Map<Integer, String>> poll(String sessionId, Predicate<Map<Integer, String>> matcher) {
+    public Optional<FIXMessageData> poll(String sessionId, Predicate<FIXMessageData> matcher) {
         Deque<BufferedMessage> deque = buffers.get(sessionId);
         if (deque == null) return Optional.empty();
 
@@ -48,9 +49,9 @@ public class MessageBuffer {
                 it.remove();
                 continue;
             }
-            if (matcher.test(m.fields())) {
+            if (matcher.test(m.message())) {
                 it.remove();
-                return Optional.of(m.fields());
+                return Optional.of(m.message());
             }
         }
         return Optional.empty();

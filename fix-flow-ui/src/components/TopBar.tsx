@@ -6,6 +6,7 @@ import { useSessionStore } from '../store/sessionStore';
 import { useExecutionStore } from '../store/executionStore';
 import { executeScenario, updateScenario, importScenario } from '../api/scenarios';
 import { stopExecution } from '../api/executions';
+import { shutdownSimulator } from '../api/system';
 import { serializeToYaml, parseFromYaml } from '../lib/scenarioSerializer';
 
 const LANGUAGES = [
@@ -31,6 +32,7 @@ export default function TopBar() {
   const executionStatus = useExecutionStore((s) => s.executionStatus);
   const updateStatus = useExecutionStore((s) => s.updateStatus);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [shutdownDone, setShutdownDone] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
 
   const handleExport = () => {
@@ -131,6 +133,12 @@ export default function TopBar() {
     onSuccess: () => markClean(),
   });
 
+  const shutdownMutation = useMutation({
+    mutationFn: shutdownSimulator,
+    onSuccess: () => setShutdownDone(true),
+    onError: () => setErrorMsg(t('topbar.shutdownFailed')),
+  });
+
   const isRunning = executionStatus === 'RUNNING';
   const currentLang = i18n.language?.slice(0, 2) ?? 'en';
 
@@ -206,6 +214,26 @@ export default function TopBar() {
       </button>
       <button className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-sm"
         disabled={!activeScenario} onClick={handleExport}>{t('topbar.export')}</button>
+      <div className="w-px h-6 bg-[#2a2d3a]" />
+      <button
+        data-testid="topbar-shutdown"
+        className="px-3 py-1 rounded bg-red-800 hover:bg-red-700 disabled:opacity-40 text-sm"
+        title={t('topbar.shutdownConfirm')}
+        disabled={shutdownMutation.isPending || shutdownDone}
+        onClick={() => {
+          if (window.confirm(t('topbar.shutdownConfirm'))) shutdownMutation.mutate();
+        }}
+      >
+        {t('topbar.shutdown')}
+      </button>
+      {shutdownDone && (
+        <div
+          data-testid="shutdown-overlay"
+          className="fixed inset-0 z-50 bg-[#0f1117]/95 flex items-center justify-center text-gray-300"
+        >
+          {t('topbar.shutdownDone')}
+        </div>
+      )}
     </div>
   );
 }

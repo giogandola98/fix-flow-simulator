@@ -63,6 +63,45 @@ config:
     - { tag: 44, value: "{{node:prev:tag31}}" }
 ```
 
+### Repeating groups
+
+```yaml
+config:
+  msgType: AB
+  fields:
+    - { tag: 11, value: "{{uuid}}" }
+  groups:
+    - counterTag: 555            # NoLegs
+      entries:
+        - fields:
+            - { tag: 600, value: EUR/USD }   # first field is the group delimiter
+            - { tag: 624, value: "1" }
+        - fields:
+            - { tag: 600, value: EUR/USD }
+            - { tag: 624, value: "2" }
+          groups: []                          # entries may nest, same shape
+```
+
+The counter tag is never written by hand — QuickFIX/J maintains it from the
+number of entries. The **first field of an entry is the group delimiter**, so
+entry field order matters.
+
+For **group entry** `fields`, use the **list form** shown above — it is the
+only safe way to author them. The map form (`{tag: value}`) is accepted on
+read, but it is **not round-trip safe**: JavaScript object keys that look like
+integers are iterated in ascending numeric order, so if you hand-author a map
+with the delimiter tag anywhere but the lowest tag number (e.g.
+`{600: EUR/USD, 587: '0'}`), opening the scenario in the GUI and saving it
+re-serialises the entry with the fields reordered ascending (`587` before
+`600`), silently moving a lower-numbered tag ahead of the delimiter and
+producing a malformed message on the wire. `SendFIXHandler` itself accepts
+both forms for entry fields — the hazard is specific to the GUI's
+save round trip, not the engine.
+
+Top-level `fields` are unaffected by this: they have no delimiter-ordering
+requirement, so the map form is fully safe there and is what the UI
+serialiser emits.
+
 ## EXPECT_FIX config
 
 ```yaml
@@ -110,6 +149,22 @@ config:
 | `NUMERIC_MIN` / `NUMERIC_MAX` | `numericValue` |
 | `FIELD_PRESENT` / `FIELD_ABSENT` | none |
 | `DATE_RULE` | `dateRuleId` |
+
+### Validating repeating groups
+
+A rule can target a field inside a group entry instead of a top-level field:
+
+```yaml
+rules:
+  - { tag: 609, groupTag: 555, index: 0,   rule: EQUALS, value: FXSPOT }
+  - { tag: 600, groupTag: 555, index: '*', rule: FIELD_PRESENT }
+```
+
+`groupTag` absent means a top-level field, evaluated against the message's flat
+fields as before. When `groupTag` is set, `tag` is looked up inside that group's
+entries instead. `index` defaults to `0`; `*` applies the rule to every entry in
+the group (one result per entry). An out-of-range numeric `index`, or a
+`groupTag` with no entries present in the message, fails the rule.
 
 ## DECISION config
 
@@ -186,6 +241,8 @@ Executes another scenario synchronously as a sub-flow. The child inherits the pa
 | `{{var:name}}` | named variable set earlier via HTTP_REQUEST response or CALL_SCENARIO output |
 | `{{node:id:tagN}}` | value of tag N from a previous node |
 | `{{node:id:tagN:offset:+5m}}` | value with date offset applied |
+| `{{node:id:gNNN.i:tagM}}` | tag M of entry `i` (0-based) of group NNN on node `id` |
+| `{{node:id:gNNN.i:tagM:offset:+2d}}` | same, with a date offset applied |
 
 Offset format: `[+-](\d+)[smhd]` (seconds, minutes, hours, days).
 

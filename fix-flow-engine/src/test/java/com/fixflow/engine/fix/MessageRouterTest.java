@@ -1,12 +1,12 @@
 package com.fixflow.engine.fix;
 
+import com.fixflow.core.domain.execution.FIXMessageData;
 import com.fixflow.core.domain.scenario.CorrelationRule;
 import com.fixflow.engine.correlation.CorrelationEngine;
 import com.fixflow.engine.support.Fixtures;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,7 +27,7 @@ class MessageRouterTest {
 
     @Test
     void matchingMessageRoutedToCorrelationNotParked() {
-        CompletableFuture<Map<Integer, String>> f =
+        CompletableFuture<FIXMessageData> f =
                 correlation.register("exec-1", SESSION, new CorrelationRule(11, "n", 11, 0), "ORD1");
         router.onMessage(SESSION, Fixtures.fields(11, "ORD1"));
         assertThat(f).isCompleted();
@@ -46,7 +46,7 @@ class MessageRouterTest {
         router.onMessage(SESSION, Fixtures.fields(11, "ORD1"));
         assertThat(buffer.size(SESSION)).isEqualTo(1);
 
-        CompletableFuture<Map<Integer, String>> f =
+        CompletableFuture<FIXMessageData> f =
                 correlation.register("exec-1", SESSION, new CorrelationRule(11, "n", 11, 0), "ORD1");
         router.drain(SESSION);
         assertThat(f).isCompleted();

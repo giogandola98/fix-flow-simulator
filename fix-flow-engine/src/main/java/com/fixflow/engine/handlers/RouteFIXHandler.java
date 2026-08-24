@@ -1,5 +1,6 @@
 package com.fixflow.engine.handlers;
 
+import com.fixflow.core.domain.execution.FIXMessageData;
 import com.fixflow.core.domain.scenario.NodeType;
 import com.fixflow.core.domain.scenario.ScenarioNode;
 import com.fixflow.core.domain.scenario.TimeoutAction;
@@ -61,7 +62,7 @@ public class RouteFIXHandler implements NodeHandler {
 
             CorrelationEngine.RoutedResult result =
                     future.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
-            ctx.storeNodeMessage(node.id(), result.fields());
+            ctx.storeNodeMessage(node.id(), result.message());
             ctx.setVariable("node:" + node.id() + ":matchedRuleId", result.matchedRuleId());
             String matchedLabel = rules.stream()
                     .filter(rl -> rl.ruleId().equals(result.matchedRuleId()))

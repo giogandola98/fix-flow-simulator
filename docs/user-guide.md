@@ -27,6 +27,10 @@
 
 FIX Flow Simulator is a graphical tool for **testing FIX protocol workflows**. You build a scenario by dragging blocks onto a canvas, connecting them with arrows, and clicking **Run**. The simulator then executes the scenario — sending FIX messages, waiting for replies, validating fields, and recording every event.
 
+**Highlights:**
+- FIX repeating groups — build and edit `NoLegs`, `NoEvents`, `NoPositions` and other groups visually, including nested groups
+- Shutdown button — stop the simulator from the toolbar, no terminal required
+
 **Typical use cases:**
 - Validate that your trading system responds correctly to a New Order Single
 - Simulate an Execution Report and verify your OMS processes it
@@ -83,7 +87,7 @@ Draw arrows: **Start → Send FIX → End Pass**. To draw an arrow, hover over a
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│  FIX Flow Simulator  [Scenario Name]   [Run] [Stop] [Save] [Import] [Export] │
+│  FIX Flow Simulator  [Scenario Name]  [Run][Stop][Save][Import][Export][Shutdown] │
 ├──────────────────┬──────────────────────────────────────────┬────────────────┤
 │                  │                                          │                │
 │   LEFT PANEL     │           CANVAS                         │  RIGHT PANEL   │
@@ -102,7 +106,7 @@ Draw arrows: **Start → Send FIX → End Pass**. To draw an arrow, hover over a
 
 | Area | Purpose |
 |---|---|
-| Top bar | Run/stop the scenario, save, import/export |
+| Top bar | Run/stop the scenario, save, import/export, shut down the simulator |
 | Left — Palette | Drag blocks onto the canvas |
 | Left — Scenarios | Create, rename, delete, search scenarios |
 | Canvas | Build your workflow visually |
@@ -111,6 +115,8 @@ Draw arrows: **Start → Send FIX → End Pass**. To draw an arrow, hover over a
 | Bottom | Live output: events, messages, errors, stats |
 
 **Language switcher:** The `EN` / `IT` / `FR` buttons in the top-right corner switch the interface language.
+
+**Shutdown button:** The red **Shutdown** button on the far right of the top bar stops the simulator process — no more killing it from a terminal or Task Manager. Clicking it asks for confirmation; confirming sends the shutdown request and the button disables itself immediately so it cannot be double-clicked. A full-screen overlay then reports that the simulator has stopped. Because the QuickFIX/J connector threads are non-daemon, this is the only clean way to end the process from the UI.
 
 ---
 
@@ -194,9 +200,12 @@ Sends an outbound FIX message.
 |---|---|
 | MsgType (tag 35) | The FIX message type. `D` = New Order Single, `G` = Order Cancel/Replace, `F` = Order Cancel, `V` = Market Data Request |
 | Fields | Tag/value pairs to include in the message. Supports [variables](#8-variables-and-placeholders). |
+| Repeating Groups | Build `NoLegs`, `NoEvents`, `NoPositions` and other repeating groups visually. See below. |
 | Paste FIX Message | Shortcut to parse a raw FIX string into the fields table |
 
-**Tip:** Paste a captured FIX message from a log file using the **Paste FIX Message** button. The parser strips header/trailer tags automatically.
+**Tip:** Paste a captured FIX message from a log file using the **Paste FIX Message** button. The parser strips header/trailer tags automatically. For a recognised counter tag (`NoLegs`, `NoPartyIDs`, `NoEvents`, `NoPositions`, `NoUnderlyings`, `NoAllocs`) it reconstructs the group into the Repeating Groups panel below, or falls back to flat fields with a warning if the declared count does not match what it found. A counter tag outside that set is parsed as an ordinary field with no warning — the parser cannot tell a counter from any other numeric tag without a data dictionary. If a group matters, build it with the Repeating Groups panel instead of relying on paste.
+
+**Repeating Groups panel:** Click **+ Add group** and pick a counter tag (e.g. `555` NoLegs) from the dropdown to create a group with one empty entry. Each entry is a card with its own field table (add field, same as the top-level Fields table) plus **duplicate** (⧉), **move up** (↑), **move down** (↓) and **delete** (x) controls. The entry counter shown next to the group header is read-only — it is derived from the number of entries and is never typed by hand; the engine writes the real FIX counter tag when it builds the message. Groups can be collapsed with the ▲/▼ toggle. An entry can itself contain one nested sub-group via **+ Add sub-group**, up to three levels of nesting deep. **The first field added to an entry must be that group's delimiter tag** (e.g. `600` LegSymbol for NoLegs) — the adapter reads it positionally to build the FIX group, so any other order produces a malformed message; the panel shows the expected delimiter under each entry and flags it in yellow if the first field doesn't match.
 
 ---
 
@@ -233,6 +242,8 @@ Checks that a stored message (captured by an Expect FIX block) meets a set of ru
 | `DATE_RULE` | Timestamp validation (business date, trading session) |
 
 **Strict Mode:** When enabled, any tag in the received message that is not covered by a rule causes a validation failure.
+
+**Validating fields inside a repeating group:** Each rule row has two extra inputs, `grp` and `idx`. Leave `grp` empty to validate a top-level field, as above. Set `grp` to a counter tag (e.g. `555`) to validate a field inside that group instead — `idx` then picks which entry: a number (`0`-based, the default) validates one entry, and `*` applies the rule to every entry in the group.
 
 ---
 
@@ -422,6 +433,16 @@ Variables let you build dynamic FIX messages that reference runtime values.
 | `{{var:name}}` | Named variable (from HTTP_REQUEST response or CALL_SCENARIO output) | `{{var:subHttpStatus}}` |
 | `{{node:id:tagN}}` | Tag N from a previous block | `{{node:send-order:tag11}}` |
 | `{{node:id:tagN:offset:+5m}}` | Tag value with date offset | `{{node:send-order:tag60:offset:+1h}}` |
+| `{{node:id:gNNN.i:tagM}}` | Tag M of entry `i` (0-based) of repeating group `NNN` on a previous block | `{{node:send-order:g555.0:tag600}}` |
+| `{{node:id:gNNN.i:tagM:offset:+2d}}` | Same, with a date offset applied | `{{node:send-order:g555.0:tag60:offset:+2d}}` |
+
+**Offset placeholders require an ISO-8601 instant field.** `:offset:` (on both
+the plain `{{node:id:tagN:offset:...}}` form and the group `{{node:id:gNNN.i:tagM:offset:...}}`
+form) parses the source tag's value as an `Instant`, so it only works on
+fields that actually hold a full timestamp — tag `60` TransactTime is the
+natural choice, as in the example above. A date-only field such as tag `588`
+LegSettlDate (`YYYYMMDD`, no time component) is not a valid `Instant` and
+will throw at execution time.
 
 ### Using variables in Send FIX
 

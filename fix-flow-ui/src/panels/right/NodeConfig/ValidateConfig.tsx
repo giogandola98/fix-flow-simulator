@@ -5,20 +5,33 @@ import { DateRulesEditor, DateRule } from './DateRulesEditor';
 import { fixTagName } from '../../../lib/fixTags';
 
 type RuleKind = 'EQUALS' | 'NOT_EQUALS' | 'ENUM' | 'REGEX' | 'NUMERIC_MIN' | 'NUMERIC_MAX' | 'FIELD_PRESENT' | 'FIELD_ABSENT' | 'DATE_RULE';
-interface ValidationRule { tag: number; rule: RuleKind; value?: string; values?: string[]; pattern?: string; numericValue?: number; ref?: string; dateRuleId?: string; }
+interface ValidationRule { tag: number; rule: RuleKind; value?: string; values?: string[]; pattern?: string; numericValue?: number; ref?: string; dateRuleId?: string; groupTag?: number; index?: string; }
 interface ValidateCfg { strictMode?: boolean; rules?: ValidationRule[]; dateRules?: DateRule[]; }
 const RULES: RuleKind[] = ['EQUALS', 'NOT_EQUALS', 'ENUM', 'REGEX', 'NUMERIC_MIN', 'NUMERIC_MAX', 'FIELD_PRESENT', 'FIELD_ABSENT', 'DATE_RULE'];
 
 export function ValidateConfig({ node }: { node: ScenarioNode }) {
   const { t } = useTranslation();
   const updateNode = useScenarioStore((s) => s.updateNode);
-  const cfg = (node.config as ValidateCfg) ?? {};
+  // Select this node live from the store (falling back to the prop for a
+  // node the store doesn't know about yet) so the panel re-renders and
+  // reflects its own writes immediately. Without this, controlled inputs
+  // stay bound to the render-time `node` prop and rapid sequential edits
+  // (e.g. typing several characters, or editing two fields back to back)
+  // each build on a stale snapshot and clobber one another in the store.
+  const storeNode = useScenarioStore((s) => s.nodes.find((n) => n.id === node.id));
+  const liveNode = storeNode ?? node;
+  const cfg = (liveNode.config as ValidateCfg) ?? {};
   const rules = cfg.rules ?? [];
   const dateRules = cfg.dateRules ?? [];
 
   const patchConfig = (patch: Partial<ValidateCfg>) => updateNode(node.id, { config: { ...cfg, ...patch } });
   const updateRule = (i: number, patch: Partial<ValidationRule>) => {
-    const next = rules.map((r, idx) => (idx === i ? { ...r, ...patch } : r));
+    const next = rules.map((r, idx) => {
+      if (idx !== i) return r;
+      const merged: Record<string, unknown> = { ...r, ...patch };
+      Object.keys(merged).forEach((k) => { if (merged[k] === undefined) delete merged[k]; });
+      return merged as unknown as ValidationRule;
+    });
     patchConfig({ rules: next });
   };
   const addRule = () => patchConfig({ rules: [...rules, { tag: 0, rule: 'EQUALS', value: '' }] });
@@ -55,6 +68,32 @@ export function ValidateConfig({ node }: { node: ScenarioNode }) {
                   value={r.tag} onChange={(e) => updateRule(i, { tag: Number(e.target.value) })} placeholder="tag" />
                 {fixTagName(r.tag) && <div className="text-[9px] text-gray-500 leading-tight mt-0.5">{fixTagName(r.tag)}</div>}
               </div>
+              <input
+                type="number"
+                data-testid={`validate-grouptag-${i}`}
+                placeholder="grp"
+                title="Repeating group counter tag (e.g. 555 NoLegs). Leave blank to validate a top-level field."
+                className="w-14 bg-[#0f1117] border border-[#2a2d3a] rounded px-1 py-0.5"
+                value={r.groupTag ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value.trim();
+                  updateRule(i, v === ''
+                    ? { groupTag: undefined }
+                    : { groupTag: Number(v) });
+                }}
+              />
+              <input
+                type="text"
+                data-testid={`validate-index-${i}`}
+                placeholder="idx"
+                title="Group entry index, 0-based. Use * to apply the rule to every entry."
+                className="w-10 bg-[#0f1117] border border-[#2a2d3a] rounded px-1 py-0.5"
+                value={r.index ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value.trim();
+                  updateRule(i, v === '' ? { index: undefined } : { index: v });
+                }}
+              />
               <select className="flex-1 bg-[#0f1117] border border-[#2a2d3a] rounded px-1 py-0.5"
                 value={r.rule} onChange={(e) => updateRule(i, { rule: e.target.value as RuleKind })}>
                 {RULES.map((rk) => <option key={rk}>{rk}</option>)}

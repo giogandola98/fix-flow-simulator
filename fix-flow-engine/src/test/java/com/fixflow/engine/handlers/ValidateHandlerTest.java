@@ -73,6 +73,32 @@ class ValidateHandlerTest {
     }
 
     @Test
+    void quotedNumericGroupTagIsAcceptedLikeANumber() {
+        ExecutionContext ctx = ctx();
+        ctx.storeNodeMessage("src", Fixtures.fields(35, "8"));
+        ScenarioNode v = node("v", NodeType.VALIDATE).cfg("sourceNodeId", "src")
+                .cfg("rules", List.of(Map.of("tag", 600, "rule", "FIELD_PRESENT", "groupTag", "555")))
+                .onSuccess("ok").onFailure("no").build();
+        NodeHandlerResult r = handler.handle(v, ctx);
+        // group 555 has no entries on this message, so the rule fails cleanly rather than throwing
+        assertThat(r.success()).isFalse();
+        assertThat(r.nextNodeId()).isEqualTo("no");
+    }
+
+    @Test
+    void nonNumericGroupTagFailsCleanlyInsteadOfThrowing() {
+        ExecutionContext ctx = ctx();
+        ctx.storeNodeMessage("src", Fixtures.fields(35, "8"));
+        ScenarioNode v = node("v", NodeType.VALIDATE).cfg("sourceNodeId", "src")
+                .cfg("rules", List.of(Map.of("tag", 600, "rule", "FIELD_PRESENT", "groupTag", "not-a-number")))
+                .onSuccess("ok").onFailure("no").build();
+        NodeHandlerResult r = handler.handle(v, ctx);
+        assertThat(r.success()).isFalse();
+        assertThat(r.nextNodeId()).isEqualTo("no");
+        assertThat(r.errorMessage()).contains("groupTag");
+    }
+
+    @Test
     void strictModeRejectsUnexpectedField() {
         ExecutionContext ctx = ctx();
         ctx.storeNodeMessage("src", Fixtures.fields(35, "8", 44, "10"));

@@ -273,6 +273,25 @@ record FIXMessage(
 )
 ```
 
+#### `FIXMessageData`
+
+```java
+record FIXMessageData(
+    Map<Integer, String> fields,               // top-level, insertion-ordered
+    Map<Integer, List<FIXMessageData>> groups  // counter tag -> ordered entries, recursive
+)
+```
+
+The engine's in-flight representation of a FIX message, carried between `FIXSessionPort`, node handlers and `VariableResolver`. `fields` and `groups` are deeply immutable — the canonical constructor copies both into `LinkedHashMap`s and wraps them unmodifiable, recursively, so entry order is preserved and callers cannot mutate a stored message after the fact.
+
+- `flatFields()` — the top-level `fields` map. This is the **backward-compatible projection**: every consumer written before repeating groups existed (correlation, `ROUTE_FIX` matchers, `DECISION` conditions, `VariableResolver`'s `node:id:tagN`) reads only this map and is unaffected by a message that happens to carry groups.
+- `group(counterTag)` — the ordered `List<FIXMessageData>` for a counter tag, or `List.of()` if the group is absent.
+- `groupValue(counterTag, index, tag)` — `Optional<String>`, the value of `tag` in a given entry.
+- `hasGroups()` — `true` if any group is present.
+- `FIXMessageData.ofFields(Map<Integer,String>)` — static factory for a flat message with no groups; used by the `default` legacy overloads below and by tests.
+
+---
+
 ### Port Interfaces
 
 #### Outbound ports (engine → infrastructure)
@@ -284,6 +303,32 @@ record FIXMessage(
 | `ScenarioRepositoryPort` | `ScenarioRepositoryAdapter` (JPA/H2) |
 | `FIXSessionPort` | `QuickFIXAdapter` (QuickFIX/J) |
 | `InboundMessageListener` | `MessageRouter` (engine internal) |
+
+`FIXSessionPort` and `InboundMessageListener` carry the message as `FIXMessageData`:
+
+```java
+public interface FIXSessionPort {
+    void sendMessage(UUID sessionId, FIXMessageData message);
+
+    /** Legacy no-group form. Kept so existing callers and fakes compile unchanged. */
+    default void sendMessage(UUID sessionId, Map<Integer, String> fields) {
+        sendMessage(sessionId, FIXMessageData.ofFields(fields));
+    }
+    // ...
+}
+
+@FunctionalInterface
+public interface InboundMessageListener {
+    void onMessage(String sessionId, FIXMessageData message);
+
+    /** Legacy no-group form, for tests and callers that only have a flat map. */
+    default void onMessage(String sessionId, Map<Integer, String> fields) {
+        onMessage(sessionId, FIXMessageData.ofFields(fields));
+    }
+}
+```
+
+The `FIXMessageData` overload is the abstract method on both interfaces; the `Map<Integer, String>` overload is a `default` that delegates through `FIXMessageData.ofFields`. `InboundMessageListener` stays a valid `@FunctionalInterface` because it has exactly one abstract method — a lambda that only needs the flat-map view still compiles against the default overload's shape via the abstract SAM's target type.
 
 ---
 
@@ -372,9 +417,9 @@ record NodeHandlerResult(
 | Handler | Behaviour |
 |---------|-----------|
 | `StartHandler` | Immediately returns `success → node.onSuccess`. |
-| `SendFIXHandler` | Resolves field variables, builds QuickFIX `Message`, sends via `FIXSessionPort`, stores fields in context. Returns `onSuccess`. |
-| `ExpectFIXHandler` | Polls `MessageBuffer` until a matching inbound message arrives or timeout. Match uses `CorrelationEngine`. Stores matched fields. Returns `onSuccess` or `onTimeout`. |
-| `ValidateHandler` | Runs `ValidationEngine` on context message fields. Returns `onSuccess` or `onFailure`. |
+| `SendFIXHandler` | Resolves field variables (top-level `fields` plus any `groups`), builds `FIXMessageData`, sends via `FIXSessionPort`, stores the message in context. Drops any plain field whose tag collides with a declared group `counterTag`. Returns `onSuccess`. |
+| `ExpectFIXHandler` | Polls `MessageBuffer` until a matching inbound message arrives or timeout. Match uses `CorrelationEngine`. Stores the matched `FIXMessageData` (fields and groups). Returns `onSuccess` or `onTimeout`. |
+| `ValidateHandler` | Runs `ValidationEngine` on the stored `FIXMessageData` — top-level fields by default, or a repeating-group entry when a rule sets `groupTag`/`index`. Returns `onSuccess` or `onFailure`. |
 | `DecisionHandler` | Evaluates condition expression against context variables. Returns `onSuccess` (true) or `onFailure` (false). |
 | `RouteFIXHandler` | Waits for inbound message; evaluates routing rules top-to-bottom; routes to matching rule's `targetNodeId`. |
 | `RetryHandler` / `LoopHandler` | Executes sub-graph `maxAttempts` times with `delayMs` between attempts. |
@@ -441,11 +486,22 @@ Resolves `{{...}}` placeholders in node config values at execution time. Uses a 
 | `{{uuid}}` | `UuidPlugin` | Random UUID string |
 | `{{seq:name}}` | `SeqPlugin` | Monotonic counter keyed by `name` (per-JVM lifecycle) |
 | `{{env:VAR}}` | `EnvPlugin` | `System.getenv("VAR")`, empty string if absent |
+| `{{node:id:gNNN.i:tagM}}` | `GroupFieldPlugin` | Value of tag `M` from entry `i` (0-based) of group `NNN` on the message stored for node `id` |
+| `{{node:id:gNNN.i:tagM:offset:+2d}}` | `GroupFieldOffsetPlugin` | Same, parsed as `Instant` plus the offset |
 | `{{node:id:tagN}}` | `NodeFieldPlugin` | Value of tag `N` from the message stored for node `id` |
 | `{{node:id:tagN:offset:+5m}}` | `DateOffsetPlugin` | Tag value parsed as `Instant`, plus `+5m` offset |
 | `{{var:key}}` | `VarPlugin` | Value from `ExecutionContext.getVariable(key)` |
 
 Offset format: `[+-](\d+)[smhd]` where `s`=seconds, `m`=minutes, `h`=hours, `d`=days.
+
+`GroupFieldPlugin` and `GroupFieldOffsetPlugin` are static nested classes
+inside `VariableResolver` (not separate top-level files), backed by
+`FIXMessageData.groupValue(counterTag, index, tag)`. In the constructor's
+plugin list they are registered **before** `DateOffsetPlugin` and
+`NodeFieldPlugin` — the dispatcher walks the list in order and returns the
+first plugin whose `supports()` matches, so the group-aware patterns are given
+first look at every `node:...` expression before the plain node-field
+patterns get a turn.
 
 To add a custom resolver, implement `VariableResolverPlugin` and register it in the constructor.
 
@@ -520,6 +576,54 @@ Heartbeat messages are handled at the session layer (`fromAdmin`) and never reac
 - The ACCEPTOR shows `connected=false` until the INITIATOR sends the logon — this is normal.
 - After logon exchange, both sessions report `connected=true`.
 
+**`buildMessage` / `extractMessage` — repeating groups at the wire boundary:**
+
+`QuickFIXAdapter.buildMessage(FIXMessageData)` writes tag 35 to the header,
+every other top-level field via `msg.setString`, then walks `data.groups()`
+recursively: for each entry it looks up the group's definition in the
+session's application `DataDictionary` (`dd.getGroup(msgType, counterTag)`)
+and, when that dictionary is available, builds
+`new Group(counterTag, dd.getDelimiterField(), dd.getDataDictionary().getOrderedFields())`
+— delimiter and field order both taken from the dictionary, not from
+authoring order — sets the entry's fields on it, recurses into any nested
+groups with that group's *nested* dictionary (`dd.getDataDictionary()`), and
+calls `target.addGroup(group)`. The counter tag itself is never set
+directly — `addGroup` maintains it.
+
+Only when no dictionary is available — the package-visible
+`buildMessage(FIXMessageData)` overload used by unit tests that build and
+inspect a message with no live session — does it fall back to the entry's
+**first field as the group delimiter tag** and plain
+`new Group(counterTag, delimiterTag)`, which serialises the remaining fields
+ascending by tag. Authoring convention still puts the delimiter first for
+this fallback (and as documentation of intent), but it is not sufficient on
+its own: FIX requires an entry's fields in **dictionary-defined** order, and
+QuickFIX/J's receiving parser — with `checkUnorderedGroupFields` on, the
+default — ends a group entry at the first field whose group-order index
+isn't increasing. Ascending-by-tag order only happens to match dictionary
+order for groups where the tags themselves are already ascending (e.g.
+`NoPositions`); for a group like `NoLegs`, whose dictionary order interleaves
+tags non-monotonically, ascending-by-tag serialisation truncates the entry
+and silently drops fields on receipt. The dictionary-ordered path above is
+what makes every group correct on the wire, not just the ones that pass by
+coincidence.
+
+`QuickFIXApplicationAdapter.extractMessage(Message)` is the inverse, called
+from `fromApp`. It copies header and trailer fields into the flat map, then
+for every counter tag reported by `message.groupKeyIterator()` collects each
+`Group` via `getGroups(counterTag)` into an ordered `FIXMessageData` list,
+recursing into nested groups the same way. Counter tags themselves are
+deliberately excluded from the flat map — they describe structure, not
+content, and scenario matchers should never depend on an implementation
+detail like a repeat count.
+
+**This only works because `AppDataDictionary=FIX50SP2.xml` is set** for
+FIXT.1.1 sessions in `QuickFIXAdapter.buildSettings`. Without a data
+dictionary, QuickFIX/J parses repeated tags as flat fields and
+`message.getGroups()` returns nothing to extract — `ValidateIncomingMessage=N`
+(also set there) disables field-level validation, not group parsing, so it
+does not substitute for the dictionary.
+
 ---
 
 ## 8. API Module — REST & WebSocket
@@ -575,6 +679,15 @@ Runs on `ApplicationReadyEvent`. Loads all scenarios from the DB and calls `Scen
 | `SessionController` | `/api/v1/sessions` | CRUD, connect, disconnect |
 | `ScenarioController` | `/api/v1/scenarios` | CRUD, execute, import, export |
 | `ExecutionController` | `/api/v1/executions` | list, get, stop, report |
+| `SystemController` | `/api/v1/system` | shutdown |
+
+**Shutdown endpoint:** `POST /api/v1/system/shutdown` returns `202 Accepted`
+immediately, then exits the JVM from a dedicated non-daemon thread after a
+400ms delay (long enough for the response to flush to the browser before the
+socket goes away). QuickFIX/J's acceptor/initiator threads are non-daemon, so
+closing the Spring context alone would not end the process — `System.exit` is
+required. An `AtomicBoolean` guards the exit so repeated calls are idempotent:
+only the first request starts the shutdown thread.
 
 **Execute endpoint** response shape:
 
@@ -617,7 +730,8 @@ fix-flow-ui/src/
 │   ├── client.ts             Base Axios instance (baseURL = /api/v1)
 │   ├── scenarios.ts          Scenario CRUD + execute + import/export
 │   ├── sessions.ts           Session CRUD + connect/disconnect
-│   └── executions.ts         Execution list/get/stop/report
+│   ├── executions.ts         Execution list/get/stop/report
+│   └── system.ts             shutdownSimulator() → POST /system/shutdown
 ├── store/                    Zustand stores (see §State Management)
 │   ├── scenarioStore.ts
 │   ├── executionStore.ts
@@ -625,15 +739,71 @@ fix-flow-ui/src/
 ├── types/index.ts            TypeScript domain types
 ├── lib/
 │   ├── scenarioSerializer.ts Nodes/edges ↔ YAML DSL (js-yaml)
-│   └── parseFIXMessage.ts    Raw FIX string → { fields, msgType, skipped }
+│   └── parseFIXMessage.ts    Raw FIX string → { fields, groups, msgType, skipped, unknownCounters }
 ├── canvas/                   ReactFlow canvas and node components
+├── panels/right/NodeConfig/  Per-node-type config forms (see §UI Components below)
+│   ├── FieldTable.tsx        Reusable tag/name/value table + shared FixTagDatalist
+│   ├── GroupEditor.tsx       Recursive repeating-group editor
+│   ├── SendFIXConfig.tsx     SEND_FIX form — msgType, paste, FieldTable, GroupEditor
+│   └── ValidateConfig.tsx    VALIDATE form — rules incl. groupTag/index
 ├── panels/                   Left / right / bottom panel components
-├── components/TopBar.tsx     Top toolbar (run, stop, save, language switcher)
+├── components/TopBar.tsx     Top toolbar (run, stop, save, language switcher, shutdown)
 ├── hooks/                    WebSocket subscription hooks
 ├── app/wsClient.ts           SockJS + STOMP client
 ├── theme/colors.ts           Node border colors keyed by NodeType
 └── i18n/                     i18next initialization + locale JSON files
 ```
+
+### UI Components — `FieldTable` and `GroupEditor`
+
+`fix-flow-ui/src/panels/right/NodeConfig/FieldTable.tsx` is the reusable
+tag/name/value table shared by the top-level SEND_FIX fields and every group
+entry's fields:
+
+```typescript
+interface FieldRow { tag: number; value: string }
+interface FieldTableProps {
+  fields: FieldRow[];
+  onChange: (next: FieldRow[]) => void;
+  label?: string;
+  idPrefix?: string;   // scopes data-testid values when multiple tables render at once
+}
+function FieldTable(props: FieldTableProps): JSX.Element
+function FixTagDatalist(): JSX.Element   // exported separately, see below
+```
+
+The same file also exports `FixTagDatalist`, which renders the single shared
+`<datalist id="fix-tag-list">` used for tag autocomplete (from `FIX_TAGS` in
+`lib/fixTags.ts`). `SendFIXConfig` renders `<FixTagDatalist />` exactly once;
+`FieldTable` itself does **not** render its own datalist — its tag `<input>`
+just references `list="fix-tag-list"` — so every `FieldTable` instance on the
+page (top-level fields, every group entry, every nesting depth) shares the one
+list in the DOM instead of duplicating it per row.
+
+`fix-flow-ui/src/panels/right/NodeConfig/GroupEditor.tsx` is the recursive,
+collapsible editor for the `groups` config:
+
+```typescript
+interface GroupEntry { fields: FieldRow[]; groups?: GroupSpec[] }
+interface GroupSpec { counterTag: number; entries: GroupEntry[] }
+interface GroupEditorProps {
+  groups: GroupSpec[];
+  onChange: (next: GroupSpec[]) => void;
+  depth?: number;      // default 0; nesting stops rendering "+ Add sub-group" at MAX_DEPTH = 3
+  idPrefix?: string;
+}
+function GroupEditor(props: GroupEditorProps): JSX.Element
+```
+
+Each group entry renders its fields via a nested `<FieldTable>`. Per-entry
+controls are add field (inherited from `FieldTable`), duplicate (deep `JSON`
+clone inserted after the source entry), move up/down (array swap), and delete.
+The entry counter shown per group is a read-only `<input>` whose value is
+`g.entries.length` — it is never user-editable, matching the engine's rule
+that the real FIX counter tag is written by `Message.addGroup()`, not typed by
+hand. Nesting recurses by rendering a child `<GroupEditor depth={depth + 1}>`
+inside an entry once that entry has a sub-group; `depth >= MAX_DEPTH` (3) hides
+the "+ Add sub-group" affordance rather than allowing a fourth level.
 
 ### State Management (Zustand)
 
@@ -799,7 +969,72 @@ config:
     - { tag: 55, value: AAPL }
 ```
 
-`scenarioSerializer.ts` converts between the two forms transparently.
+`scenarioSerializer.ts` converts between the two forms transparently. On the
+Java side, `SendFIXHandler.resolveFields` accepts **both** the map form and the
+list form — it always has, since before repeating groups were added. The UI
+serialiser happens to emit the map form for top-level fields; group entry
+fields are always emitted as the list form (see below), and `resolveFields` is
+reused for both.
+
+### Repeating groups in SEND_FIX
+
+```yaml
+config:
+  msgType: AB
+  fields:
+    11: "{{uuid}}"
+  groups:
+    - counterTag: 555            # NoLegs
+      entries:
+        - fields:
+            - { tag: 600, value: EUR/USD }   # first field is the group delimiter
+            - { tag: 624, value: "1" }
+          groups: []                          # entries may nest, same shape
+```
+
+`SendFIXHandler.resolveGroups` walks the `groups` list, resolving each entry's
+`fields` (and any nested `groups`) into a `FIXMessageData`. An entry with no
+fields, or a group with no entries, is dropped rather than sent — QuickFIX/J
+would otherwise emit a zero-length counter. Before assembling the outbound
+message, the handler removes any top-level field whose tag equals a declared
+`counterTag`: the group is authoritative, and `Message.addGroup()` is what
+actually writes the counter, never a plain field.
+
+**Entry `fields` must use the list form, not the map form.** Unlike top-level
+`fields`, a group entry's `fields` are order-sensitive — the first field is
+the FIX delimiter tag, which `QuickFIXAdapter.applyGroups` reads positionally
+when no application `DataDictionary` is available (see §7 above); when a
+dictionary is available it looks up the real delimiter and full field order
+there instead, but authoring still puts the delimiter first as the documented
+convention and as the fallback for dictionary-less callers.
+`resolveFields` accepts a map here too, but it is not round-trip safe:
+`scenarioSerializer.ts` converts a map via `Object.entries`, and JavaScript
+iterates integer-like object keys in ascending numeric order — so a
+hand-authored `{600: EUR/USD, 587: '0'}` (delimiter first, valid on disk)
+gets rewritten as `587` before `600` the moment the scenario is opened and
+saved in the GUI, silently producing a malformed message. Always author group
+entry `fields` as the list form shown above.
+
+### `groupTag` / `index` in VALIDATE
+
+A validation rule may target a field inside a repeating group instead of a
+top-level field:
+
+```yaml
+rules:
+  - { tag: 609, groupTag: 555, index: 0,   rule: EQUALS, value: FXSPOT }
+  - { tag: 600, groupTag: 555, index: '*', rule: FIELD_PRESENT }
+```
+
+`groupTag` absent (the default) validates `tag` against the message's
+`flatFields()`. When set, `ValidationEngine.validate` looks up
+`message.group(groupTag)` instead; `index` selects which entry — a 0-based
+integer (default `0`) validates one entry, `'*'` evaluates the rule once per
+entry. A missing group, an out-of-range index, or a non-numeric, non-`'*'`
+index all produce a failing `ValidationResult`. `groupTag` itself accepts a
+number or a numeric string (YAML may quote it, e.g. `groupTag: '555'`);
+anything else — from either source — fails the node cleanly via its
+`onFailure` edge instead of throwing.
 
 ---
 
@@ -817,6 +1052,8 @@ Variables are resolved by `VariableResolver` inside node handlers at execution t
 | `{{env:VAR}}` | Value of environment variable `VAR`; empty string if unset |
 | `{{node:id:tagN}}` | Value of FIX tag `N` from the last message stored for node `id` |
 | `{{node:id:tagN:offset:+5m}}` | Same, with time offset applied (see format below) |
+| `{{node:id:gNNN.i:tagM}}` | Value of tag `M` in entry `i` (0-based) of repeating group `NNN` on the message stored for node `id` |
+| `{{node:id:gNNN.i:tagM:offset:+2d}}` | Same, with time offset applied |
 | `{{var:key}}` | Value set via `ExecutionContext.setVariable(key, value)` |
 
 **Offset format:** `[+-]\d+[smhd]` — e.g. `+30s`, `-2h`, `+1d`, `+5m`.
@@ -906,11 +1143,20 @@ GET /api/v1/executions/{id}/messages
 
 Queries the `FIXMessageEntity` table directly, not the in-memory execution context. Only available after execution completes (or while running, with partial results).
 
+### Shutdown
+
+```
+POST /api/v1/system/shutdown  → 202 Accepted
+```
+
+Terminates the JVM shortly after responding. Idempotent — repeated calls after the first are no-ops.
+
 ### HTTP status codes
 
 | Status | Meaning |
 |--------|---------|
 | 200 | Success with body |
+| 202 | Accepted, action completes asynchronously (shutdown) |
 | 204 | Success, no body |
 | 400 | Validation error |
 | 404 | Resource not found |

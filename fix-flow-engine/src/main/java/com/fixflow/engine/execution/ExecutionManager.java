@@ -6,6 +6,7 @@ import com.fixflow.core.domain.execution.ExecutionEventType;
 import com.fixflow.core.domain.execution.ExecutionStatus;
 import com.fixflow.core.domain.execution.Direction;
 import com.fixflow.core.domain.execution.FIXMessage;
+import com.fixflow.core.domain.execution.FIXMessageData;
 import com.fixflow.core.domain.execution.NodeResult;
 import com.fixflow.core.domain.scenario.NodeType;
 import com.fixflow.core.domain.scenario.Scenario;
@@ -216,16 +217,13 @@ public class ExecutionManager {
     }
 
     private void persistMessage(ExecutionContext ctx, String nodeId, Direction direction) {
-        Map<Integer, String> fields = ctx.getNodeMessage(nodeId);
-        if (fields == null || fields.isEmpty()) return;
+        FIXMessageData data = ctx.getNodeMessageData(nodeId);
+        if (data == null || (data.fields().isEmpty() && data.groups().isEmpty())) return;
         try {
-            String raw = fields.entrySet().stream()
-                    .sorted(Map.Entry.comparingByKey())
-                    .map(e -> e.getKey() + "=" + e.getValue())
-                    .collect(java.util.stream.Collectors.joining("|"));
+            String raw = renderRawFix(data);
             FIXMessage msg = new FIXMessage(
                     UUID.randomUUID(), ctx.executionId(), direction, raw,
-                    fields, Instant.now());
+                    data.fields(), Instant.now());
             if (executionRepo != null) {
                 try { executionRepo.addMessage(ctx.executionId(), msg); } catch (Throwable t) {
                     log.warn("Failed to save message for execution {}: {}", ctx.executionId(), t.getMessage());
@@ -239,6 +237,45 @@ public class ExecutionManager {
         } catch (Throwable t) {
             log.warn("Failed to persist message for execution {}: {}", ctx.executionId(), t.getMessage());
         }
+    }
+
+    /**
+     * Renders a top-level {@link FIXMessageData} into the pipe-delimited raw form
+     * persisted/published for the FIX Messages tab. Top-level fields are sorted by tag for a
+     * stable, readable record — safe here because top-level fields carry no delimiter ordering
+     * requirement. Group entries are rendered by {@link #renderEntry}, which must NOT sort.
+     */
+    private static String renderRawFix(FIXMessageData data) {
+        List<String> parts = new java.util.ArrayList<>();
+        data.fields().entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(e -> parts.add(e.getKey() + "=" + e.getValue()));
+        data.groups().forEach((counterTag, entries) -> {
+            parts.add(counterTag + "=" + entries.size());
+            for (FIXMessageData entry : entries) {
+                parts.add(renderEntry(entry));
+            }
+        });
+        return String.join("|", parts);
+    }
+
+    /**
+     * Renders one repeating-group entry (and any nested sub-groups) in original insertion order —
+     * deliberately UNSORTED, unlike {@link #renderRawFix}'s top-level fields. The first field of
+     * an entry is the FIX delimiter tag, read positionally by {@code QuickFIXAdapter.applyGroups};
+     * sorting by tag here would routinely move a lower-numbered field (e.g. LegSettlType 587)
+     * ahead of the delimiter (e.g. LegSymbol 600) and misrepresent what was actually sent/received.
+     */
+    private static String renderEntry(FIXMessageData entry) {
+        List<String> parts = new java.util.ArrayList<>();
+        entry.fields().forEach((tag, value) -> parts.add(tag + "=" + value));
+        entry.groups().forEach((counterTag, nested) -> {
+            parts.add(counterTag + "=" + nested.size());
+            for (FIXMessageData nestedEntry : nested) {
+                parts.add(renderEntry(nestedEntry));
+            }
+        });
+        return String.join("|", parts);
     }
 
     private void persistNodeResult(UUID executionId, String nodeId, NodeHandlerResult result,

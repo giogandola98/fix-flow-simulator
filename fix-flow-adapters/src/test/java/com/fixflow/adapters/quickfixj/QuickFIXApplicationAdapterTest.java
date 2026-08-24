@@ -1,6 +1,7 @@
 package com.fixflow.adapters.quickfixj;
 
 import com.fixflow.core.domain.execution.ExecutionEvent;
+import com.fixflow.core.domain.execution.FIXMessageData;
 import com.fixflow.core.ports.outbound.EventPublisherPort;
 import com.fixflow.core.ports.outbound.InboundMessageListener;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,9 +38,9 @@ class QuickFIXApplicationAdapterTest {
     static class RecordingListener implements InboundMessageListener {
         final AtomicReference<String> session = new AtomicReference<>();
         final AtomicReference<Map<Integer, String>> fields = new AtomicReference<>();
-        @Override public void onMessage(String sessionId, Map<Integer, String> f) {
+        @Override public void onMessage(String sessionId, FIXMessageData message) {
             session.set(sessionId);
-            fields.set(f);
+            fields.set(message.flatFields());
         }
     }
 

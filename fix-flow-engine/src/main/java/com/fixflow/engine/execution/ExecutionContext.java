@@ -4,6 +4,7 @@ import com.fixflow.core.domain.execution.ExecutionStatus;
 import com.fixflow.core.domain.scenario.Scenario;
 
 import com.fixflow.core.domain.execution.ExecutionEventType;
+import com.fixflow.core.domain.execution.FIXMessageData;
 
 import java.time.Instant;
 import java.util.Map;
@@ -22,7 +23,7 @@ public class ExecutionContext {
     private volatile StepListener stepListener = StepListener.NOOP;
     private volatile String currentNodeId;
     private final Map<String, String> variables = new ConcurrentHashMap<>();
-    private final Map<String, Map<Integer, String>> nodeMessages = new ConcurrentHashMap<>();
+    private final Map<String, FIXMessageData> nodeMessages = new ConcurrentHashMap<>();
 
     public ExecutionContext(UUID executionId, Scenario scenario, UUID sessionId) {
         this.executionId = executionId;
@@ -48,11 +49,22 @@ public class ExecutionContext {
     public void setVariable(String k, String v) { variables.put(k, v); }
     public String getVariable(String k) { return variables.get(k); }
 
-    public void storeNodeMessage(String nodeId, Map<Integer, String> fields) {
-        nodeMessages.put(nodeId, Map.copyOf(fields));
+    public void storeNodeMessage(String nodeId, FIXMessageData message) {
+        nodeMessages.put(nodeId, message);
     }
 
+    public void storeNodeMessage(String nodeId, Map<Integer, String> fields) {
+        nodeMessages.put(nodeId, FIXMessageData.ofFields(fields));
+    }
+
+    /** Top-level fields of the message stored for {@code nodeId}, or null if none. */
     public Map<Integer, String> getNodeMessage(String nodeId) {
+        FIXMessageData m = nodeMessages.get(nodeId);
+        return m == null ? null : m.flatFields();
+    }
+
+    /** Full message including repeating groups, or null if none. */
+    public FIXMessageData getNodeMessageData(String nodeId) {
         return nodeMessages.get(nodeId);
     }
 }

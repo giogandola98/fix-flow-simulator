@@ -55,3 +55,67 @@ describe('parseFIXMessage', () => {
     expect(res.fields).toEqual([{ tag: 58, value: 'a=b=c' }]);
   });
 });
+
+describe('repeating groups on paste', () => {
+  const multileg =
+    '8=FIXT.1.1|35=AB|49=CLIENT|56=SERVER|11=ORD-1|55=EUR/USD|167=FXSWAP|' +
+    '555=2|600=EUR/USD|624=1|587=0|600=EUR/USD|624=2|587=6|60=20260824-10:00:00|';
+
+  it('rebuilds two leg entries', () => {
+    const r = parseFIXMessage(multileg);
+    expect(r.msgType).toBe('AB');
+    expect(r.groups).toHaveLength(1);
+    expect(r.groups[0].counterTag).toBe(555);
+    expect(r.groups[0].entries).toHaveLength(2);
+    expect(r.groups[0].entries[0].fields).toEqual([
+      { tag: 600, value: 'EUR/USD' }, { tag: 624, value: '1' }, { tag: 587, value: '0' },
+    ]);
+    expect(r.groups[0].entries[1].fields[1]).toEqual({ tag: 624, value: '2' });
+  });
+
+  it('keeps fields before and after the group at top level', () => {
+    const r = parseFIXMessage(multileg);
+    const tags = r.fields.map((f) => f.tag);
+    expect(tags).toContain(11);
+    expect(tags).toContain(167);
+    expect(tags).toContain(60);
+    expect(tags).not.toContain(600);
+    expect(tags).not.toContain(555);
+  });
+
+  it('reports unknown counter tags and leaves their content flat', () => {
+    const r = parseFIXMessage('8=FIXT.1.1|35=8|9999=2|8001=a|8001=b|11=ORD-1|');
+    expect(r.unknownCounters).toEqual([]);
+    expect(r.groups).toHaveLength(0);
+    expect(r.fields.map((f) => f.tag)).toContain(8001);
+  });
+
+  it('flags a known counter whose declared count does not match', () => {
+    const r = parseFIXMessage('8=FIXT.1.1|35=AB|555=3|600=EUR/USD|624=1|11=ORD-1|');
+    expect(r.unknownCounters).toContain(555);
+  });
+
+  it('leaves a message without groups exactly as before', () => {
+    const r = parseFIXMessage('8=FIX.4.4|35=D|49=C|56=S|11=ORD-1|55=AAPL|38=100|');
+    expect(r.groups).toEqual([]);
+    expect(r.fields).toEqual([
+      { tag: 11, value: 'ORD-1' }, { tag: 55, value: 'AAPL' }, { tag: 38, value: '100' },
+    ]);
+    expect(r.skipped).toBe(3);
+  });
+
+  it('does not swallow a trailing top-level field whose tag was also used inside the group', () => {
+    // Both legs carry tag 624; a top-level 624 immediately follows the completed group.
+    // Once declared entry count is reached, the group is done regardless of which tags
+    // were seen inside it — the trailing 624 must fall through to top-level fields.
+    const r = parseFIXMessage(
+      '8=FIXT.1.1|35=AB|555=2|600=EUR/USD|624=1|600=GBP/USD|624=2|624=99|11=ORD-1|',
+    );
+    expect(r.groups[0].entries).toHaveLength(2);
+    expect(r.groups[0].entries[1].fields).toEqual([
+      { tag: 600, value: 'GBP/USD' }, { tag: 624, value: '2' },
+    ]);
+    expect(r.fields).toContainEqual({ tag: 624, value: '99' });
+    expect(r.fields.map((f) => f.tag)).toContain(11);
+  });
+});

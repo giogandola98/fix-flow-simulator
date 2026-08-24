@@ -39,7 +39,8 @@ public class ScenarioController {
                            req.sessionRef(), null, null, null, null, null, null, null);
         Scenario saved = repo.save(parsed);
         registry.register(saved);
-        return ResponseEntity.status(201).body(ScenarioDto.from(saved));
+        String yaml = saved.rawYaml() != null ? saved.rawYaml() : parser.toYaml(saved);
+        return ResponseEntity.status(201).body(ScenarioDto.withYaml(saved, yaml));
     }
 
     @GetMapping
@@ -89,7 +90,8 @@ public class ScenarioController {
         Scenario s = parser.parseYaml(yaml);
         Scenario saved = repo.save(s);
         registry.register(saved);
-        return ResponseEntity.status(201).body(ScenarioDto.from(saved));
+        String responseYaml = saved.rawYaml() != null ? saved.rawYaml() : parser.toYaml(saved);
+        return ResponseEntity.status(201).body(ScenarioDto.withYaml(saved, responseYaml));
     }
 
     @GetMapping("/{id}/export")

@@ -8,7 +8,11 @@
     "import": "Importer",
     "importing": "Importation…",
     "export": "Exporter",
-    "autoLayout": "Auto-agencement"
+    "autoLayout": "Auto-agencement",
+    "shutdown": "Arrêter",
+    "shutdownConfirm": "Arrêter le simulateur et terminer le processus ?",
+    "shutdownDone": "Simulateur arrêté. Vous pouvez fermer cet onglet.",
+    "shutdownFailed": "Échec de la demande d'arrêt"
   },
   "session": {
     "noSession": "Aucune session",
@@ -150,7 +154,15 @@
       "parseBtn": "Analyser → remplir les champs",
       "cancelBtn": "Annuler",
       "fields": "Champs",
-      "addField": "+ Champ"
+      "addField": "+ Champ",
+      "groups": "Groupes répétitifs",
+      "addGroup": "+ Groupe",
+      "addEntry": "+ Occurrence",
+      "entryFields": "Champs de l'occurrence",
+      "addSubGroup": "+ Groupe imbriqué",
+      "nestingLimit": "Limite d'imbrication atteinte (3 niveaux)",
+      "delimiterHint": "Le premier champ doit être le tag délimiteur ({{delimiter}}).",
+      "delimiterWarning": "Le premier champ est le tag {{firstTag}}, mais le délimiteur de ce groupe est {{delimiter}} — déplacez-le en tête, sinon le message sera malformé."
     },
     "expectFix": {
       "desc": "Attend un message FIX entrant correspondant aux critères. Stocke les champs pour les nœuds VALIDATE en aval ou les références croisées.",

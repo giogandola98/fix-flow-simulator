@@ -36,4 +36,9 @@ describe('SendFIXConfig', () => {
     // unknown tag renders an em-dash placeholder cell
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
   });
+
+  it('shows the repeating groups section', () => {
+    render(<SendFIXConfig node={node} />);
+    expect(screen.getByTestId('sendfix-grp-add-group')).toBeInTheDocument();
+  });
 });

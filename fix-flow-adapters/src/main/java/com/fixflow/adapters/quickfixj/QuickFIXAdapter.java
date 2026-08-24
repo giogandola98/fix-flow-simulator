@@ -1,5 +1,6 @@
 package com.fixflow.adapters.quickfixj;
 
+import com.fixflow.core.domain.execution.FIXMessageData;
 import com.fixflow.core.domain.session.FIXMode;
 import com.fixflow.core.domain.session.FIXSessionConfig;
 import com.fixflow.core.ports.outbound.FIXSessionPort;
@@ -98,19 +99,83 @@ public class QuickFIXAdapter implements FIXSessionPort {
     }
 
     @Override
-    public void sendMessage(UUID sessionId, Map<Integer, String> fields) {
+    public void sendMessage(UUID sessionId, FIXMessageData message) {
         SessionID sid = sessions.get(sessionId);
         if (sid == null) throw new IllegalStateException("Unknown session: " + sessionId);
-        Message msg = new Message();
-        fields.forEach((tag, value) -> {
-            if (tag == 35) msg.getHeader().setString(35, value);
-            else msg.setString(tag, value);
-        });
         try {
-            Session.sendToTarget(msg, sid);
+            Session.sendToTarget(buildMessage(message, applicationDictionary(sid)), sid);
         } catch (SessionNotFound e) {
             throw new IllegalStateException("Session not found: " + sessionId, e);
         }
+    }
+
+    /**
+     * The application {@link DataDictionary} for a live session, or {@code null} if the session
+     * can't be resolved. Read fresh from QuickFIX/J's own session/provider on every call rather
+     * than cached on the adapter, so there is nothing to keep in sync by hand.
+     */
+    private static DataDictionary applicationDictionary(SessionID sid) {
+        Session session = Session.lookupSession(sid);
+        if (session == null) return null;
+        DataDictionaryProvider provider = session.getDataDictionaryProvider();
+        if (provider == null) return null;
+        if (sid.isFIXT()) {
+            var applVerID = session.getTargetDefaultApplicationVersionID();
+            return applVerID == null ? null : provider.getApplicationDataDictionary(applVerID);
+        }
+        return provider.getSessionDataDictionary(sid.getBeginString());
+    }
+
+    /**
+     * Builds a QuickFIX/J message from engine data with no {@link DataDictionary} available.
+     * Package-visible so unit tests can build and inspect messages without a live session; the
+     * repeating-group entries fall back to ascending-tag order (see {@link #buildMessage(FIXMessageData, DataDictionary)}).
+     */
+    static Message buildMessage(FIXMessageData data) {
+        return buildMessage(data, null);
+    }
+
+    /**
+     * Builds a QuickFIX/J message from engine data. Tag 35 goes to the header. Every repeating
+     * group entry becomes a {@link Group}; when {@code dictionary} is available its dictionary
+     * order is used, since the FIX wire format requires an entry's fields in dictionary-defined
+     * order, not ascending-tag order, and QuickFIX/J's receiving parser ends an entry at the
+     * first field whose group-order index is not increasing. Authors still write the delimiter
+     * field first in an entry as the documented convention, and that first field is the
+     * fallback delimiter when no dictionary is available; when a dictionary is available it
+     * supersedes the convention for both the delimiter and the full field order.
+     */
+    static Message buildMessage(FIXMessageData data, DataDictionary dictionary) {
+        Message msg = new Message();
+        data.fields().forEach((tag, value) -> {
+            if (tag == 35) msg.getHeader().setString(35, value);
+            else msg.setString(tag, value);
+        });
+        String msgType = data.fields().get(35);
+        applyGroups(msg, data, dictionary, msgType);
+        return msg;
+    }
+
+    private static void applyGroups(FieldMap target, FIXMessageData data, DataDictionary dictionary, String msgType) {
+        data.groups().forEach((counterTag, entries) -> {
+            DataDictionary.GroupInfo groupInfo = groupInfo(dictionary, msgType, counterTag);
+            for (FIXMessageData entry : entries) {
+                if (entry.fields().isEmpty()) continue;
+                Group group = groupInfo != null
+                        ? new Group(counterTag, groupInfo.getDelimiterField(), groupInfo.getDataDictionary().getOrderedFields())
+                        : new Group(counterTag, entry.fields().keySet().iterator().next());
+                entry.fields().forEach(group::setString);
+                DataDictionary nestedDictionary = groupInfo != null ? groupInfo.getDataDictionary() : null;
+                applyGroups(group, entry, nestedDictionary, msgType);
+                target.addGroup(group);
+            }
+        });
+    }
+
+    /** {@code null} when there is no dictionary, no message type, or the dictionary doesn't define this group. */
+    private static DataDictionary.GroupInfo groupInfo(DataDictionary dictionary, String msgType, int counterTag) {
+        if (dictionary == null || msgType == null || !dictionary.isGroup(msgType, counterTag)) return null;
+        return dictionary.getGroup(msgType, counterTag);
     }
 
     private SessionSettings buildSettings(FIXSessionConfig cfg) throws ConfigError {

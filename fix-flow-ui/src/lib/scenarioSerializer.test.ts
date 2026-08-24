@@ -136,3 +136,134 @@ describe('parseFromYaml timeout edge synthesis', () => {
     expect(parsed.nodes[0].position).toEqual({ x: 300, y: 80 });
   });
 });
+
+describe('repeating groups', () => {
+  const nodes = [{
+    id: 'send-swap',
+    name: 'Send Multileg',
+    type: 'SEND_FIX' as const,
+    config: {
+      msgType: 'AB',
+      fields: [{ tag: 11, value: 'ORD-1' }],
+      groups: [{
+        counterTag: 555,
+        entries: [
+          { fields: [{ tag: 600, value: 'EUR/USD' }, { tag: 624, value: '1' }] },
+          { fields: [{ tag: 600, value: 'EUR/USD' }, { tag: 624, value: '2' }] },
+        ],
+      }],
+    },
+    position: { x: 0, y: 0 },
+  }];
+  const meta = { id: 'x', name: 'n', description: 'd', version: '1.0', sessionRef: 's' };
+
+  it('keeps entry fields as an ordered list, never a tag-keyed map', () => {
+    const yamlStr = serializeToYaml(nodes as never, [], meta);
+    expect(yamlStr).toContain('counterTag: 555');
+    // The delimiter tag must stay FIRST in the entry. A tag-keyed object would be
+    // re-ordered numerically by JS, moving a lower tag ahead of the delimiter.
+    expect(yamlStr).toContain('- tag: 600');
+    expect(yamlStr).not.toMatch(/^\s+600: EUR\/USD$/m);
+  });
+
+  it('preserves delimiter-first order through a round trip', () => {
+    const withLowTag = [{
+      ...nodes[0],
+      config: {
+        msgType: 'AB',
+        groups: [{
+          counterTag: 555,
+          entries: [{ fields: [
+            { tag: 600, value: 'EUR/USD' },   // delimiter, must stay first
+            { tag: 587, value: '0' },          // lower number than the delimiter
+          ] }],
+        }],
+      },
+    }];
+    const back = parseFromYaml(serializeToYaml(withLowTag as never, [], meta));
+    const cfg = back.nodes[0].config as never as {
+      groups: { entries: { fields: { tag: number }[] }[] }[];
+    };
+    expect(cfg.groups[0].entries[0].fields[0].tag).toBe(600);
+  });
+
+  it('round-trips groups back to arrays', () => {
+    const back = parseFromYaml(serializeToYaml(nodes as never, [], meta));
+    const cfg = back.nodes[0].config as {
+      groups: { counterTag: number; entries: { fields: { tag: number; value: string }[] }[] }[];
+    };
+    expect(cfg.groups[0].counterTag).toBe(555);
+    expect(cfg.groups[0].entries).toHaveLength(2);
+    expect(cfg.groups[0].entries[1].fields).toEqual([
+      { tag: 600, value: 'EUR/USD' },
+      { tag: 624, value: '2' },
+    ]);
+  });
+
+  it('round-trips nested groups', () => {
+    const nested = [{
+      ...nodes[0],
+      config: {
+        msgType: 'AB',
+        groups: [{
+          counterTag: 555,
+          entries: [{
+            fields: [{ tag: 600, value: 'EUR/USD' }],
+            groups: [{ counterTag: 864, entries: [{ fields: [{ tag: 865, value: '13' }] }] }],
+          }],
+        }],
+      },
+    }];
+    const back = parseFromYaml(serializeToYaml(nested as never, [], meta));
+    const cfg = back.nodes[0].config as never as {
+      groups: { entries: { groups: { counterTag: number; entries: { fields: unknown[] }[] }[] }[] }[];
+    };
+    expect(cfg.groups[0].entries[0].groups[0].counterTag).toBe(864);
+    expect(cfg.groups[0].entries[0].groups[0].entries[0].fields).toEqual([{ tag: 865, value: '13' }]);
+  });
+
+  it('leaves a SEND_FIX config without groups untouched', () => {
+    const plain = [{ ...nodes[0], config: { msgType: 'D', fields: [{ tag: 11, value: 'ORD-1' }] } }];
+    const back = parseFromYaml(serializeToYaml(plain as never, [], meta));
+    expect((back.nodes[0].config as { groups?: unknown }).groups).toBeUndefined();
+  });
+
+  it('accepts a hand-authored entry written with fields as a tag-keyed map', () => {
+    // We always WRITE the list form (see the tests above). This covers the one
+    // path our new code exercises that the old pass-through never touched: parsing
+    // input we did not write ourselves, e.g. a hand-authored YAML file.
+    //
+    // Note what this test can and cannot promise: JS re-orders integer-like object
+    // keys ascending, so a map-form entry whose delimiter is not the lowest tag
+    // CANNOT round-trip with the delimiter first. Here 600 (delimiter) already sorts
+    // before 624, so this particular map happens to preserve order — that is a
+    // property of this input, not a guarantee of the map form in general. That
+    // ambiguity is exactly why we write the list form and only accept the map form
+    // as a defensive fallback on read.
+    const handAuthored = yaml.dump({
+      ...meta,
+      nodes: [{
+        id: 'send-swap',
+        name: 'Send Multileg',
+        type: 'SEND_FIX',
+        config: {
+          msgType: 'AB',
+          groups: [{
+            counterTag: 555,
+            entries: [{ fields: { 600: 'EUR/USD', 624: '1' } }],
+          }],
+        },
+      }],
+      edges: [],
+    });
+    const back = parseFromYaml(handAuthored);
+    const cfg = back.nodes[0].config as {
+      groups: { entries: { fields: { tag: number; value: string }[] }[] }[];
+    };
+    expect(Array.isArray(cfg.groups[0].entries[0].fields)).toBe(true);
+    expect(cfg.groups[0].entries[0].fields).toEqual([
+      { tag: 600, value: 'EUR/USD' },
+      { tag: 624, value: '1' },
+    ]);
+  });
+});

@@ -1,5 +1,6 @@
 package com.fixflow.engine.handlers;
 
+import com.fixflow.core.domain.execution.FIXMessageData;
 import com.fixflow.core.domain.scenario.*;
 import com.fixflow.engine.correlation.CorrelationEngine;
 import com.fixflow.engine.execution.ExecutionContext;
@@ -65,14 +66,14 @@ public class ExpectFIXHandler implements NodeHandler {
             }
 
             String sessionIdStr = ctx.sessionId() != null ? ctx.sessionId().toString() : "";
-            CompletableFuture<Map<Integer, String>> future =
+            CompletableFuture<FIXMessageData> future =
                     correlation.register(ctx.executionId().toString(), sessionIdStr, rule, expectedValue);
             if (ctx.sessionId() != null) router.drain(ctx.sessionId().toString());
 
             long timeoutMs = node.timeout() == null ? 5_000L : node.timeout().toMillis();
 
-            Map<Integer, String> fields = future.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
-            ctx.storeNodeMessage(node.id(), fields);
+            FIXMessageData received = future.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+            ctx.storeNodeMessage(node.id(), received);
             return NodeHandlerResult.success(node.onSuccess());
         } catch (TimeoutException timeout) {
             correlation.cancel(ctx.executionId().toString());
