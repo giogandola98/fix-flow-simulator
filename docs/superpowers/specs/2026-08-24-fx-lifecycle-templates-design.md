@@ -262,8 +262,12 @@ New keys added to `en.json`, `it.json` and `fr.json`.
 
 ## 8. Component 5 - the templates
 
-Location: `templates/fx/*.yaml` plus a `README.md`. Import via the UI Import
-button or `POST /api/v1/scenarios/import` (multipart, field `file`).
+Location: **outside this repository**, in the surrounding project folder —
+`<project>/fx-templates/*.yaml` plus a `README.md`, where `<project>` is the
+directory containing the `fix-flow-simulator` checkout. The templates are the
+user's own instrument content, not part of the simulator distribution, so they
+are never committed here. Import via the UI Import button or
+`POST /api/v1/scenarios/import` (multipart, field `file`).
 
 Each template carries a fixed UUID in `id` so re-importing updates rather than
 duplicates, and a comment header with the instrument reference table.
@@ -428,12 +432,16 @@ particularly that the swap ExecutionReport contains two well-formed leg blocks.
 fix-flow-core/src/main/java/com/fixflow/core/domain/execution/FIXMessageData.java
 fix-flow-ui/src/panels/right/NodeConfig/FieldTable.tsx
 fix-flow-ui/src/panels/right/NodeConfig/GroupEditor.tsx
-templates/fx/fx-spot-lifecycle.yaml
-templates/fx/fx-forward-deliverable-lifecycle.yaml
-templates/fx/fx-ndf-lifecycle.yaml
-templates/fx/fx-swap-lifecycle.yaml
-templates/fx/fx-option-vanilla-lifecycle.yaml
-templates/fx/README.md
+```
+
+**New, outside the repository** (in the surrounding project folder, never committed here)
+```
+../fx-templates/fx-spot-lifecycle.yaml
+../fx-templates/fx-forward-deliverable-lifecycle.yaml
+../fx-templates/fx-ndf-lifecycle.yaml
+../fx-templates/fx-swap-lifecycle.yaml
+../fx-templates/fx-option-vanilla-lifecycle.yaml
+../fx-templates/README.md
 ```
 
 **Modified**
@@ -470,3 +478,67 @@ CLAUDE.md
 
 `CLAUDE.md` gains a Gotchas entry: repeating group counter tags are derived from
 entry count and must never be written by hand in a `SEND_FIX` config.
+
+---
+
+## 13. Addendum — scope added after the design was approved
+
+Requested by the user while the plan was being written. Recorded here so the spec
+and the implementation plan stay in agreement.
+
+### 13.1 Toolbar shutdown button (unrelated to FX work)
+
+`POST /api/v1/system/shutdown` returns `202 Accepted`, then closes the Spring
+context and calls `System.exit` on a separate thread. `System.exit` is required:
+QuickFIX/J acceptor threads are non-daemon and keep the JVM alive, which is why
+the only way to stop the simulator today is Task Manager. A red **Shutdown**
+button sits at the far right of the top bar behind a confirmation dialog, and
+paints a full-screen notice once the backend is gone.
+
+### 13.2 Prime / Master Finance naming
+
+Fixed by the user and used in every counterpart template and in the PDF:
+
+| Party | Role | CompID |
+|---|---|---|
+| **Prime** | sends the order (buy-side) | `PRIME` |
+| **Master Finance** | receives the order and reports (venue) | `MASTERFIN` |
+
+### 13.3 Complementary workflow — Prime-side driver templates
+
+Five client-side scenarios under `<project>/fx-templates/prime/`, one per
+product. Each sends the order, waits for each reply, and **asserts** it with
+`VALIDATE`: wrong `ExecType`, `OrdStatus`, `SecurityType` or `CFICode` ends the
+run FAILED naming the tag. The swap driver asserts the echoed `NoLegs` entries
+and the NDF driver asserts the `NoEvents` group, so a single run exercises the
+whole repeating group chain — build, serialise, parse, validate, echo, validate.
+
+### 13.4 Two-simulator verification
+
+One JAR, two JVMs: Prime on `:8080` as FIX INITIATOR, Master Finance on `:8081`
+as FIX ACCEPTOR, joined over TCP 9001, each with its own H2 file. The Master
+Finance scenario is started first and given a moment to reach its `ROUTE_FIX`
+dispatcher. A `verify.sh` script imports all ten templates, runs the five pairs
+and exits non-zero if any Prime run is not PASSED.
+
+### 13.5 Release sequence
+
+The user's order, which the plan follows: PR to `master` **including the updated
+documentation** → build `0.5.0-beta` → verify the templates against that build.
+Documentation in scope for the PR: `docs/dsl-reference.md`,
+`docs/api-reference.md`, `docs/user-guide.md`, `docs/developer-guide.md`,
+`README.md`, `CLAUDE.md`.
+
+### 13.6 PDF reference document
+
+`FX-Lifecycle-Reference.pdf`, built from a self-contained HTML source rendered by
+headless Chromium. Contents: parties and topology, the instrument reference
+table, then one chapter per product with an inline SVG sequence diagram
+(Prime left, Master Finance right, one labelled arrow per message) and a full
+tag-by-tag message table including repeating group content; plus the venue
+workflow flowchart and the verification results matrix.
+
+### 13.7 Template location
+
+Corrected after the original design: templates live **outside** the repository,
+in `<project>/fx-templates/`, and are never committed to it.
