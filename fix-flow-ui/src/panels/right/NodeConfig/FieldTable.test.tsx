@@ -35,4 +35,14 @@ describe('FieldTable', () => {
     render(<FieldTable fields={[{ tag: 52, value: 'x' }]} onChange={() => {}} idPrefix="t" />);
     expect(screen.getByText('engine-managed')).toBeInTheDocument();
   });
+
+  it('does not render its own datalist, even with several tables on screen', () => {
+    const { container } = render(
+      <>
+        <FieldTable fields={[{ tag: 55, value: 'EUR/USD' }]} onChange={() => {}} idPrefix="a" />
+        <FieldTable fields={[{ tag: 55, value: 'GBP/USD' }]} onChange={() => {}} idPrefix="b" />
+      </>
+    );
+    expect(container.querySelectorAll('datalist').length).toBe(0);
+  });
 });

@@ -5,7 +5,7 @@ import { useScenarioStore } from '../../../store/scenarioStore';
 import { TimeoutConfig } from './TimeoutConfig';
 import { parseFIXMessage } from '../../../lib/parseFIXMessage';
 import { VarRefPanel } from './VarRefPanel';
-import { FieldTable, FieldRow } from './FieldTable';
+import { FieldTable, FieldRow, FixTagDatalist } from './FieldTable';
 
 interface SendCfg { msgType?: string; fields?: FieldRow[]; }
 interface Props { node: ScenarioNode; }
@@ -95,6 +95,7 @@ export function SendFIXConfig({ node }: Props) {
         )}
       </div>
 
+      <FixTagDatalist />
       <FieldTable
         fields={fields}
         onChange={(next) => patchConfig({ fields: next })}

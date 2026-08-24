@@ -11,6 +11,16 @@ export interface FieldTableProps {
   idPrefix?: string;
 }
 
+export function FixTagDatalist() {
+  return (
+    <datalist id="fix-tag-list">
+      {Object.entries(FIX_TAGS).map(([tag, name]) => (
+        <option key={tag} value={tag}>{`${tag} — ${name}`}</option>
+      ))}
+    </datalist>
+  );
+}
+
 export function FieldTable({ fields, onChange, label, idPrefix = 'ft' }: FieldTableProps) {
   const { t } = useTranslation();
 
@@ -25,7 +35,7 @@ export function FieldTable({ fields, onChange, label, idPrefix = 'ft' }: FieldTa
         <label className="text-[10px] text-gray-500">
           {label ?? t('nodeConfig.sendFix.fields')}
           <span
-            title="FIX tag-value pairs. Value supports placeholders: {{now}}, {{uuid}}, {{seq:name}}, {{env:VAR}}, {{node:id:tagN}}, {{node:id:gNNN.i:tagM}}."
+            title="FIX tag-value pairs. Tag is the integer field number. Value supports placeholders: {{now}}, {{uuid}}, {{seq:name}}, {{env:VAR}}, {{node:id:tagN}}, {{node:id:gNNN.i:tagM}}. See Variable Reference below."
             className="ml-1 text-gray-600 cursor-help"
           >?</span>
         </label>
@@ -38,11 +48,6 @@ export function FieldTable({ fields, onChange, label, idPrefix = 'ft' }: FieldTa
           {t('nodeConfig.sendFix.addField')}
         </button>
       </div>
-      <datalist id="fix-tag-list">
-        {Object.entries(FIX_TAGS).map(([tag, name]) => (
-          <option key={tag} value={tag}>{`${tag} — ${name}`}</option>
-        ))}
-      </datalist>
       <table className="w-full mt-1">
         <thead className="text-[10px] text-gray-500">
           <tr>
