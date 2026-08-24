@@ -26,11 +26,16 @@ export function SendFIXConfig({ node }: Props) {
   const handleParse = () => {
     if (!pasteRaw.trim()) { setParseError('Paste a FIX message first'); return; }
     const result = parseFIXMessage(pasteRaw);
-    const updates: Partial<SendCfg> = { fields: result.fields };
+    const updates: Partial<SendCfg> = { fields: result.fields, groups: result.groups };
     if (result.msgType) updates.msgType = result.msgType;
     patchConfig(updates);
     setPasteRaw('');
-    setParseError(result.skipped > 0 ? `Parsed OK — ${result.skipped} segment(s) skipped (engine-managed or malformed)` : '');
+    const notes: string[] = [];
+    if (result.skipped > 0) notes.push(`${result.skipped} segment(s) skipped (engine-managed or malformed)`);
+    if (result.unknownCounters.length > 0) {
+      notes.push(`repeating group(s) ${result.unknownCounters.join(', ')} left flat — build them by hand below`);
+    }
+    setParseError(notes.length ? `Parsed OK — ${notes.join('; ')}` : '');
     setShowPaste(false);
   };
 
