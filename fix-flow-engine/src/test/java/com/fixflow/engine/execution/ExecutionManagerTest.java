@@ -183,4 +183,21 @@ class ExecutionManagerTest {
                 .until(() -> mgr.getStatus(execId) == ExecutionStatus.PASSED);
         assertThat(mgr.getStatus(execId)).isEqualTo(ExecutionStatus.PASSED);
     }
+
+    @Test
+    void aNonUuidSessionRefRunsWithoutASessionInsteadOfThrowing() {
+        // Scenarios exported from the editor carry placeholders such as `sessionRef: default`;
+        // start() used to blow up on UUID.fromString before the run even began (issue #77).
+        NodeDispatcher d = new NodeDispatcher(List.of(new StartHandler(), new EndHandler()));
+        Scenario s = scenario("no-session", start("end"), Fixtures.endPass("end"));
+        registry.register(s);
+        ExecutionManager mgr = new ExecutionManager(registry, d);
+
+        UUID execId = mgr.start(s.id(), null);
+        await().atMost(Duration.ofSeconds(5)).until(() -> {
+            ExecutionStatus st = mgr.getStatus(execId);
+            return st != null && st != ExecutionStatus.RUNNING;
+        });
+        assertThat(mgr.getStatus(execId)).isEqualTo(ExecutionStatus.PASSED);
+    }
 }

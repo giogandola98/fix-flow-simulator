@@ -251,6 +251,10 @@ Payload:
 ```
 Event types: `EXECUTION_STARTED` | `EXECUTION_FINISHED` | `NODE_ENTERED` | `NODE_EXITED` | `MESSAGE_SENT` | `MESSAGE_RECEIVED` | `TIMEOUT` | `ERROR`
 
+`MESSAGE_RECEIVED` is emitted for **every** inbound application message on a session with a running
+execution, and its detail says whether a block was waiting for it. A message no block matched is
+buffered and reported all the same — it is not silently dropped from the log.
+
 ### Subscribe to FIX messages
 ```
 SUBSCRIBE /topic/executions/{executionId}/messages

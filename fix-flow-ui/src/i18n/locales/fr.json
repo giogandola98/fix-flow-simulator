@@ -184,7 +184,9 @@
       "rules": "Règles",
       "addRule": "+ Règle",
       "crossNodeRef": "Réf. croisée",
-      "selectDateRule": "-- sélectionner règle de date --"
+      "selectDateRule": "-- sélectionner règle de date --",
+      "sourceNode": "Bloc source",
+      "sourceNodeAuto": "-- dernier message reçu --"
     },
     "routeFix": {
       "desc": "Attend un message FIX entrant et route vers la première règle dont tous les matchers correspondent. Les règles sont évaluées de haut en bas. Une règle sans matchers agit comme défaut.",

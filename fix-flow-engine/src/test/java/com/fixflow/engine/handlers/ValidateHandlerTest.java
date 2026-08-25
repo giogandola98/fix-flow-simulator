@@ -108,4 +108,61 @@ class ValidateHandlerTest {
         // tag 44 unexpected and non-header -> strict failure
         assertThat(handler.handle(v, ctx).success()).isFalse();
     }
+
+    // ---- issue #77: VALIDATE authored in the graphical editor ----
+
+    @Test
+    void withoutSourceNodeIdValidatesTheRunsLastInboundMessage() {
+        // The editor writes no sourceNodeId, so the handler used to look the message up under the
+        // VALIDATE node's own id and validate an empty message.
+        ExecutionContext ctx = ctx();
+        ctx.storeInboundMessage("expect", Fixtures.fields(35, "D", 55, "EUR/USD", 1, "ACC-001"));
+        ScenarioNode v = node("v", NodeType.VALIDATE)
+                .cfg("rules", List.of(
+                        Map.of("tag", 55, "rule", "FIELD_PRESENT"),
+                        Map.of("tag", 1, "rule", "FIELD_PRESENT")))
+                .onSuccess("ok").onFailure("no").build();
+        NodeHandlerResult r = handler.handle(v, ctx);
+        assertThat(r.success()).isTrue();
+        assertThat(r.nextNodeId()).isEqualTo("ok");
+    }
+
+    @Test
+    void anExplicitSourceNodeIdStillWins() {
+        ExecutionContext ctx = ctx();
+        ctx.storeInboundMessage("later", Fixtures.fields(35, "8"));
+        ctx.storeNodeMessage("src", Fixtures.fields(35, "D"));
+        ScenarioNode v = node("v", NodeType.VALIDATE).cfg("sourceNodeId", "src")
+                .cfg("rules", List.of(Map.of("tag", 35, "rule", "EQUALS", "value", "D")))
+                .onSuccess("ok").onFailure("no").build();
+        assertThat(handler.handle(v, ctx).success()).isTrue();
+    }
+
+    @Test
+    void dateRulesWrittenAsAListDoNotBlowUp() {
+        // The editor writes dateRules as a list; the handler used to cast it straight to a Map,
+        // so `dateRules: []` threw ClassCastException before any rule ran.
+        ExecutionContext ctx = ctx();
+        ctx.storeInboundMessage("expect", Fixtures.fields(35, "D"));
+        ScenarioNode v = node("v", NodeType.VALIDATE)
+                .cfg("rules", List.of(Map.of("tag", 35, "rule", "EQUALS", "value", "D")))
+                .cfg("dateRules", List.of())
+                .onSuccess("ok").onFailure("no").build();
+        NodeHandlerResult r = handler.handle(v, ctx);
+        assertThat(r.success()).isTrue();
+    }
+
+    @Test
+    void aDateRuleDefinedAsAListEntryIsResolvedById() {
+        ExecutionContext ctx = ctx();
+        ctx.storeInboundMessage("expect", Fixtures.fields(60, java.time.Instant.now().toString()));
+        ScenarioNode v = node("v", NodeType.VALIDATE)
+                .cfg("rules", List.of(Map.of("tag", 60, "rule", "DATE_RULE", "dateRule", "dr-1")))
+                .cfg("dateRules", List.of(Map.of(
+                        "ruleId", "dr-1", "type", "CURRENT_TIMESTAMP",
+                        "toleranceValue", 5, "toleranceUnit", "SECONDS")))
+                .onSuccess("ok").onFailure("no").build();
+        NodeHandlerResult r = handler.handle(v, ctx);
+        assertThat(r.success()).isTrue();
+    }
 }

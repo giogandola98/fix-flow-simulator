@@ -139,4 +139,77 @@ class ExpectFIXHandlerTest {
         assertThat(r.success()).isFalse();
         assertThat(r.nextNodeId()).isEqualTo("fail");
     }
+
+    // ---- issue #77: an EXPECT_FIX authored in the graphical editor ----
+
+    @Test
+    void emptyCorrelationBlockStillMatchesOnMsgType() throws Exception {
+        // Exactly what the editor exports for "wait for a NewOrderSingle": an empty correlation
+        // map next to a msgType. Reading that map as "correlate on tag 11 == \"\"" made the node
+        // wait until its (30 minute) timeout on every GUI-authored scenario.
+        ScenarioNode exp = node("exp", NodeType.EXPECT_FIX)
+                .cfg("correlation", Map.of())
+                .cfg("msgType", "D")
+                .onSuccess("done").onFailure("fail").build();
+        NodeHandlerResult r = runAndInject(exp, ctx(scenario("s", start("exp"))),
+                Fixtures.fields(35, "D", 11, "ORD-20260824-0001"));
+        assertThat(r.success()).isTrue();
+        assertThat(r.nextNodeId()).isEqualTo("done");
+    }
+
+    @Test
+    void msgTypeAndCorrelationMustBothMatch() throws Exception {
+        Scenario s = scenario("s", start("exp"));
+        ExecutionContext ctx = ctx(s);
+        ctx.storeNodeMessage("send", Fixtures.fields(11, "ORD1"));
+        ScenarioNode exp = node("exp", NodeType.EXPECT_FIX)
+                .cfg("msgType", "8")
+                .cfg("correlation", Map.of("sourceTag", 11, "fromNode", "send", "targetTag", 11))
+                .onSuccess("done").onFailure("fail").build();
+
+        Future<NodeHandlerResult> f = pool.submit(() -> handler.handle(exp, ctx));
+        await().atMost(Duration.ofSeconds(3)).until(() -> correlation.pendingCount() > 0);
+        // right ClOrdID, wrong MsgType -> must NOT satisfy the waiter
+        assertThat(correlation.onMessage(sessionId.toString(), Fixtures.fields(35, "D", 11, "ORD1"))).isFalse();
+        // right ClOrdID and right MsgType
+        correlation.onMessage(sessionId.toString(), Fixtures.fields(35, "8", 11, "ORD1"));
+        assertThat(f.get(3, TimeUnit.SECONDS).success()).isTrue();
+    }
+
+    @Test
+    void noMsgTypeAndNoCorrelationAcceptsAnyMessage() throws Exception {
+        ScenarioNode exp = node("exp", NodeType.EXPECT_FIX)
+                .cfg("correlation", Map.of())
+                .onSuccess("done").onFailure("fail").build();
+        NodeHandlerResult r = runAndInject(exp, ctx(scenario("s", start("exp"))), Fixtures.fields(35, "W"));
+        assertThat(r.success()).isTrue();
+    }
+
+    @Test
+    void correlationPointingAtANodeWithoutTheTagFailsFastInsteadOfHanging() throws Exception {
+        ScenarioNode exp = node("exp", NodeType.EXPECT_FIX)
+                .cfg("correlation", Map.of("sourceTag", 11, "fromNode", "never-ran", "targetTag", 11))
+                .timeout(timeout(30, TimeoutAction.FAIL, null))
+                .onSuccess("done").onFailure("fail").build();
+        NodeHandlerResult r = handler.handle(exp, ctx(scenario("s", start("exp"))));
+        assertThat(r.success()).isFalse();
+        assertThat(r.nextNodeId()).isEqualTo("fail");
+        assertThat(r.errorMessage()).contains("never-ran");
+        // failed before registering: nothing left pending in the correlation engine
+        assertThat(correlation.pendingCount()).isZero();
+    }
+
+    @Test
+    void receivedMessageIsRecordedAsTheRunsLastInboundMessage() throws Exception {
+        Scenario s = scenario("s", start("exp"));
+        ExecutionContext ctx = ctx(s);
+        ScenarioNode exp = node("exp", NodeType.EXPECT_FIX).cfg("msgType", "D")
+                .onSuccess("done").build();
+        Future<NodeHandlerResult> f = pool.submit(() -> handler.handle(exp, ctx));
+        await().atMost(Duration.ofSeconds(3)).until(() -> correlation.pendingCount() > 0);
+        correlation.onMessage(sessionId.toString(), Fixtures.fields(35, "D", 55, "EUR/USD"));
+        f.get(3, TimeUnit.SECONDS);
+        assertThat(ctx.lastInboundMessage()).isNotNull();
+        assertThat(ctx.lastInboundMessage().flatFields()).containsEntry(55, "EUR/USD");
+    }
 }

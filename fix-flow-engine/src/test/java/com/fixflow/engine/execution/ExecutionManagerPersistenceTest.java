@@ -58,14 +58,17 @@ class ExecutionManagerPersistenceTest {
         FakePublisher publisher = new FakePublisher();
         FakeFixAdapter adapter = new FakeFixAdapter();
         CorrelationEngine correlation = new CorrelationEngine();
-        MessageRouter router = new MessageRouter(correlation, new MessageBuffer());
+        // The router records the inbound direction now, so it needs the same session registry the
+        // manager writes to, plus the repo/publisher it records through.
+        SessionExecutionRegistry sessions = new SessionExecutionRegistry();
+        MessageRouter router = new MessageRouter(correlation, new MessageBuffer(), sessions, publisher, repo);
 
         NodeDispatcher d = new NodeDispatcher(List.of(
                 new StartHandler(), new EndHandler(),
                 new SendFIXHandler(adapter, new VariableResolver()),
                 new ExpectFIXHandler(correlation, router)));
         NodeWalker walker = new NodeWalker(d);
-        ExecutionManager mgr = new ExecutionManager(registry, walker, repo, publisher);
+        ExecutionManager mgr = new ExecutionManager(registry, walker, repo, publisher, sessions);
 
         Scenario s = scenario(UUID.randomUUID(), "persist", List.of(),
                 start("send"),
@@ -78,13 +81,17 @@ class ExecutionManagerPersistenceTest {
         UUID session = UUID.randomUUID();
         UUID execId = mgr.start(s.id(), session);
         await().atMost(Duration.ofSeconds(3)).until(() -> correlation.pendingCount() > 0);
-        correlation.onMessage(session.toString(), Fixtures.fields(35, "8", 11, "ORD1"));
+        // Injected through the router, i.e. exactly the path a message off the wire takes.
+        router.onMessage(session.toString(), Fixtures.fields(35, "8", 11, "ORD1"));
         await().atMost(Duration.ofSeconds(3))
                 .until(() -> mgr.getStatus(execId) == ExecutionStatus.PASSED);
 
-        // outbound (SEND) + inbound (EXPECT) both persisted
+        // outbound (SEND) + inbound (router) both persisted, and the inbound message exactly once
         assertThat(repo.messages).extracting(FIXMessage::direction)
                 .contains(Direction.OUTBOUND, Direction.INBOUND);
+        assertThat(repo.messages).filteredOn(m -> m.direction() == Direction.INBOUND).hasSize(1);
+        assertThat(repo.events).extracting(ExecutionEvent::type)
+                .contains(ExecutionEventType.MESSAGE_RECEIVED);
         assertThat(publisher.publishedMessages).isNotEmpty();
         // lifecycle + node events
         assertThat(repo.events).extracting(ExecutionEvent::type)
