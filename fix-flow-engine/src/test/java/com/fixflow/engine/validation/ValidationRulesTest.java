@@ -87,4 +87,58 @@ class ValidationRulesTest {
         assertThat(fail.passed()).isFalse();
         assertThat(fail.message()).isEqualTo("msg");
     }
+
+    // ---- issue #75: substring and length rules ----
+
+    @Test
+    void containsFindsASubstringAndFailsWhenAbsent() {
+        Map<Integer, String> fields = Fixtures.fields(55, "EUR/USD", 461, "MRCXXX");
+        assertThat(new ContainsRule("/", null).validate(55, fields, null).passed()).isTrue();
+        assertThat(new ContainsRule("EUR", null).validate(55, fields, null).passed()).isTrue();
+        assertThat(new ContainsRule("GBP", null).validate(55, fields, null).passed()).isFalse();
+        // a missing field fails: absence is asserted with FIELD_ABSENT, not with a content rule
+        assertThat(new ContainsRule("EUR", null).validate(99, fields, null).passed()).isFalse();
+    }
+
+    @Test
+    void containsPrefersRefOverValue() {
+        Map<Integer, String> fields = Fixtures.fields(55, "EUR/USD");
+        assertThat(new ContainsRule("ignored", "USD").validate(55, fields, null).passed()).isTrue();
+    }
+
+    @Test
+    void containsWithNothingToSearchForFails() {
+        Map<Integer, String> fields = Fixtures.fields(55, "EUR/USD");
+        assertThat(new ContainsRule("", null).validate(55, fields, null).passed()).isFalse();
+        assertThat(new ContainsRule(null, null).validate(55, fields, null).passed()).isFalse();
+    }
+
+    @Test
+    void notContainsIsTheInverseButStillFailsOnAnAbsentField() {
+        Map<Integer, String> fields = Fixtures.fields(461, "MRCXXX");
+        assertThat(new NotContainsRule("FUT", null).validate(461, fields, null).passed()).isTrue();
+        assertThat(new NotContainsRule("XXX", null).validate(461, fields, null).passed()).isFalse();
+        assertThat(new NotContainsRule("XXX", null).validate(99, fields, null).passed()).isFalse();
+    }
+
+    @Test
+    void lengthComparesTheCharacterCount() {
+        Map<Integer, String> fields = Fixtures.fields(1, "ACC-001", 11, "ORD-20260824-0001");
+        assertThat(new LengthRule(LengthRule.Bound.EXACT, 7).validate(1, fields, null).passed()).isTrue();
+        assertThat(new LengthRule(LengthRule.Bound.EXACT, 8).validate(1, fields, null).passed()).isFalse();
+        assertThat(new LengthRule(LengthRule.Bound.MIN, 7).validate(1, fields, null).passed()).isTrue();
+        assertThat(new LengthRule(LengthRule.Bound.MIN, 8).validate(1, fields, null).passed()).isFalse();
+        assertThat(new LengthRule(LengthRule.Bound.MAX, 20).validate(11, fields, null).passed()).isTrue();
+        assertThat(new LengthRule(LengthRule.Bound.MAX, 5).validate(11, fields, null).passed()).isFalse();
+        assertThat(new LengthRule(LengthRule.Bound.EXACT, 7).validate(99, fields, null).passed()).isFalse();
+    }
+
+    @Test
+    void lengthReportsUnderTheRuleNameTheScenarioWrote() {
+        Map<Integer, String> fields = Fixtures.fields(1, "ACC-001");
+        assertThat(new LengthRule(LengthRule.Bound.MIN, 9).validate(1, fields, null).ruleName())
+                .isEqualTo("LENGTH_MIN");
+        assertThat(new LengthRule(LengthRule.Bound.MAX, 3).validate(1, fields, null).message())
+                .isEqualTo("length is 7");
+    }
 }

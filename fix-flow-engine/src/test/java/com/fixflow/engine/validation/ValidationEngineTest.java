@@ -87,4 +87,56 @@ class ValidationEngineTest {
     void emptyRuleSetPasses() {
         assertThat(engine.validate(config(false), Fixtures.fields(35, "8"), null, Instant.now()).passed()).isTrue();
     }
+
+    // ---- issue #75: the engine builds the new rule kinds from the DSL ----
+
+    private ValidationRuleConfig numeric(int tag, String rule, double n) {
+        return new ValidationRuleConfig(tag, rule, null, null, null, null, null, n);
+    }
+
+    @Test
+    void containsAndNotContainsAreBuiltFromTheDsl() {
+        ValidationSummary s = engine.validate(
+                config(false, rc(55, "CONTAINS", "/"), rc(461, "NOT_CONTAINS", "FUT")),
+                Fixtures.fields(55, "EUR/USD", 461, "MRCXXX"), null, Instant.now());
+        assertThat(s.passed()).isTrue();
+    }
+
+    @Test
+    void lengthRulesAreBuiltFromTheDsl() {
+        ValidationSummary s = engine.validate(
+                config(false,
+                        numeric(1, "LENGTH", 7),
+                        numeric(11, "LENGTH_MAX", 20),
+                        numeric(11, "LENGTH_MIN", 3)),
+                Fixtures.fields(1, "ACC-001", 11, "ORD-20260824-0001"), null, Instant.now());
+        assertThat(s.passed()).isTrue();
+    }
+
+    @Test
+    void aFailingSubstringRuleReportsWhatItWanted() {
+        ValidationSummary s = engine.validate(config(false, rc(461, "NOT_CONTAINS", "XXX")),
+                Fixtures.fields(461, "MRCXXX"), null, Instant.now());
+        assertThat(s.passed()).isFalse();
+        ValidationResult r = s.results().get(0);
+        assertThat(r.ruleName()).isEqualTo("NOT_CONTAINS");
+        assertThat(r.expected()).isEqualTo("does not contain \"XXX\"");
+        assertThat(r.actual()).isEqualTo("MRCXXX");
+    }
+
+    @Test
+    void theNewRulesWorkInsideARepeatingGroupEntry() {
+        ValidationRuleConfig inGroup = new ValidationRuleConfig(
+                600, "CONTAINS", "/", null, null, null, null, 0, 555, "*");
+        com.fixflow.core.domain.execution.FIXMessageData msg =
+                new com.fixflow.core.domain.execution.FIXMessageData(
+                        Map.of(35, "D"),
+                        Map.of(555, List.of(
+                                com.fixflow.core.domain.execution.FIXMessageData.ofFields(Map.of(600, "EUR/USD")),
+                                com.fixflow.core.domain.execution.FIXMessageData.ofFields(Map.of(600, "GBP/USD")))));
+        ValidationSummary s = engine.validate(
+                new ValidationConfig(List.of(inGroup), Map.of(), false), msg, null, Instant.now());
+        assertThat(s.passed()).isTrue();
+        assertThat(s.results()).hasSize(2);
+    }
 }

@@ -116,6 +116,11 @@ public class ValidationEngine {
             case "REGEX"         -> new RegexRule(rc.pattern() == null ? rc.value() : rc.pattern());
             case "NUMERIC_MIN"   -> new NumericMinRule(rc.numericValue());
             case "NUMERIC_MAX"   -> new NumericMaxRule(rc.numericValue());
+            case "CONTAINS"      -> new ContainsRule(rc.value(), rc.ref());
+            case "NOT_CONTAINS"  -> new NotContainsRule(rc.value(), rc.ref());
+            case "LENGTH"        -> new LengthRule(LengthRule.Bound.EXACT, rc.numericValue());
+            case "LENGTH_MIN"    -> new LengthRule(LengthRule.Bound.MIN, rc.numericValue());
+            case "LENGTH_MAX"    -> new LengthRule(LengthRule.Bound.MAX, rc.numericValue());
             case "FIELD_PRESENT" -> new FieldPresentRule();
             case "FIELD_ABSENT"  -> new FieldAbsentRule();
             case "DATE_RULE" -> {

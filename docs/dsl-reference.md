@@ -163,8 +163,28 @@ config:
 | `ENUM` | `values` (list) |
 | `REGEX` | `pattern` |
 | `NUMERIC_MIN` / `NUMERIC_MAX` | `numericValue` |
+| `CONTAINS` / `NOT_CONTAINS` | `value` (or `ref`) |
+| `LENGTH` / `LENGTH_MIN` / `LENGTH_MAX` | `numericValue` |
 | `FIELD_PRESENT` / `FIELD_ABSENT` | none |
-| `DATE_RULE` | `dateRuleId` |
+| `DATE_RULE` | `dateRuleId` (`dateRule` also accepted) |
+
+`CONTAINS` and `NOT_CONTAINS` test for a substring, so they say in one line what a `REGEX` of
+`.*XXX.*` says awkwardly and a value containing `.` or `|` says wrongly. `LENGTH`, `LENGTH_MIN`
+and `LENGTH_MAX` compare the field's character count.
+
+A **missing field fails all five**, exactly like `NUMERIC_MIN` / `NUMERIC_MAX`: absence is
+asserted with `FIELD_ABSENT`, never as a side effect of a content rule — otherwise a typo in a tag
+number would make `NOT_CONTAINS` pass. Like `EQUALS`, the two substring rules accept a `ref`
+(`{{node:send-nos:tag11}}`) in place of a literal `value`, and all five work inside a repeating
+group through `groupTag` / `index`.
+
+```yaml
+rules:
+  - { tag: 55,  rule: CONTAINS, value: "/" }            # EUR/USD is a pair
+  - { tag: 461, rule: NOT_CONTAINS, value: "XXX" }      # no placeholder CFI code
+  - { tag: 11,  rule: LENGTH_MAX, numericValue: 20 }    # ClOrdID fits the venue's limit
+  - { tag: 1,   rule: LENGTH, numericValue: 7 }         # account codes are exactly 7 chars
+```
 
 ### Validating repeating groups
 
