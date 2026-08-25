@@ -17,13 +17,31 @@ export function ExpectFIXConfig({ node }: { node: ScenarioNode }) {
   const { t } = useTranslation();
   const updateNode = useScenarioStore((s) => s.updateNode);
   const allNodes = useScenarioStore((s) => s.nodes);
-  const cfg = (node.config as ExpectCfg) ?? {};
+  // Read this node live from the store rather than from the render-time prop: the prop is a
+  // snapshot, so typing several characters into a correlation tag rebuilt the config from a stale
+  // config each time and only the last keystroke survived. Same pattern as ValidateConfig.
+  const storeNode = useScenarioStore((s) => s.nodes.find((n) => n.id === node.id));
+  const liveNode = storeNode ?? node;
+  const cfg = (liveNode.config as ExpectCfg) ?? {};
   const corr = cfg.correlation ?? {};
 
   const patchConfig = (patch: Partial<ExpectCfg>) =>
     updateNode(node.id, { config: { ...cfg, ...patch } });
-  const patchCorr = (patch: Partial<CorrelationCfg>) =>
-    patchConfig({ correlation: { ...corr, ...patch } });
+
+  // An empty correlation block must not survive into the saved config. The engine used to read
+  // `correlation: {}` as "correlate on tag 11 against an empty string", so a node configured with
+  // nothing but a MsgType waited for a message that could never arrive (issue #77).
+  const patchCorr = (patch: Partial<CorrelationCfg>) => {
+    const merged: Record<string, unknown> = { ...corr, ...patch };
+    Object.keys(merged).forEach((k) => {
+      const v = merged[k];
+      if (v === undefined || v === '') delete merged[k];
+    });
+    const next = { ...cfg } as Record<string, unknown>;
+    if (Object.keys(merged).length === 0) delete next.correlation;
+    else next.correlation = merged;
+    updateNode(node.id, { config: next });
+  };
 
   return (
     <div className="text-xs space-y-2">
@@ -33,7 +51,7 @@ export function ExpectFIXConfig({ node }: { node: ScenarioNode }) {
       <div>
         <label className="text-[10px] text-gray-500">{t('nodeConfig.nodeName')}</label>
         <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
-          value={node.name} onChange={(e) => updateNode(node.id, { name: e.target.value })} />
+          value={liveNode.name} onChange={(e) => updateNode(node.id, { name: e.target.value })} />
       </div>
       <div>
         <label className="text-[10px] text-gray-500">
@@ -85,7 +103,7 @@ export function ExpectFIXConfig({ node }: { node: ScenarioNode }) {
           <TagNameHint tag={corr.targetTag} />
         </div>
       </div>
-      <TimeoutConfig value={node.timeout} onChange={(next) => updateNode(node.id, { timeout: next })} currentNodeId={node.id} />
+      <TimeoutConfig value={liveNode.timeout} onChange={(next) => updateNode(node.id, { timeout: next })} currentNodeId={node.id} />
     </div>
   );
 }

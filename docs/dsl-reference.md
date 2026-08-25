@@ -113,10 +113,26 @@ config:
     targetTag: 11      # tag in the outbound message
 ```
 
+Both parts are optional and both are conditions: an inbound message is accepted only when it
+satisfies **every** one that is present.
+
+| config | accepts |
+|---|---|
+| `msgType` only | the first message with that tag 35 |
+| `correlation` only | the first message whose `sourceTag` equals the referenced node's `targetTag` |
+| both | a message that matches the MsgType **and** the correlated value |
+| neither | the first application message on the session |
+
+A `correlation` block that names no `fromNode` and no `expectedValue` carries no condition and is
+ignored — including the empty `correlation: {}` that older editor exports contain. A block that
+does name a `fromNode` whose message has no such tag at run time fails the node immediately, with
+the reason, rather than waiting for the timeout.
+
 ## VALIDATE config
 
 ```yaml
 config:
+  sourceNodeId: expect-ack   # optional; defaults to the last message received in the run
   strictMode: true
   rules:
     - { tag: 35, rule: EQUALS, value: "8" }

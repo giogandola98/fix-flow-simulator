@@ -13,6 +13,7 @@ import com.fixflow.core.domain.scenario.Scenario;
 import com.fixflow.core.domain.scenario.ScenarioNode;
 import com.fixflow.core.ports.outbound.EventPublisherPort;
 import com.fixflow.core.ports.outbound.ExecutionRepositoryPort;
+import com.fixflow.engine.fix.RawFixRenderer;
 import com.fixflow.engine.handlers.NodeDispatcher;
 import com.fixflow.engine.handlers.NodeHandlerResult;
 import com.fixflow.engine.scenario.ScenarioRegistry;
@@ -44,6 +45,7 @@ public class ExecutionManager {
     private final NodeWalker walker;
     private final ExecutionRepositoryPort executionRepo;
     private final EventPublisherPort eventPublisher;
+    private final SessionExecutionRegistry sessionExecutions;
     private final Map<UUID, ExecutionContext> contexts = new ConcurrentHashMap<>();
     /** Tracks the running task per execution so a stop can interrupt a blocked node. */
     private final Map<UUID, Future<?>> runningTasks = new ConcurrentHashMap<>();
@@ -60,11 +62,20 @@ public class ExecutionManager {
     @Autowired
     public ExecutionManager(ScenarioRegistry registry, NodeWalker walker,
                             ExecutionRepositoryPort executionRepo,
-                            EventPublisherPort eventPublisher) {
+                            EventPublisherPort eventPublisher,
+                            SessionExecutionRegistry sessionExecutions) {
         this.registry = registry;
         this.walker = walker;
         this.executionRepo = executionRepo;
         this.eventPublisher = eventPublisher;
+        this.sessionExecutions = sessionExecutions == null ? new SessionExecutionRegistry() : sessionExecutions;
+    }
+
+    /** Convenience constructor for unit tests that don't share a session registry with a router. */
+    public ExecutionManager(ScenarioRegistry registry, NodeWalker walker,
+                            ExecutionRepositoryPort executionRepo,
+                            EventPublisherPort eventPublisher) {
+        this(registry, walker, executionRepo, eventPublisher, new SessionExecutionRegistry());
     }
 
     /** Convenience constructor for unit tests that don't need persistence. */
@@ -90,8 +101,7 @@ public class ExecutionManager {
         Scenario scenario = registry.getById(scenarioId)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown scenario: " + scenarioId));
         UUID executionId = UUID.randomUUID();
-        UUID resolvedSession = sessionId != null ? sessionId
-                : (scenario.sessionRef() != null ? UUID.fromString(scenario.sessionRef()) : null);
+        UUID resolvedSession = sessionId != null ? sessionId : parseSessionRef(scenario);
         ExecutionContext ctx = new ExecutionContext(executionId, scenario, resolvedSession);
         contexts.put(executionId, ctx);
         if (executionRepo != null) {
@@ -101,11 +111,30 @@ public class ExecutionManager {
                     Map.of(), List.of(), List.of()));
         }
 
+        if (resolvedSession != null) sessionExecutions.register(resolvedSession.toString(), executionId);
+
         Future<?> task = executor.submit(() -> runScenario(ctx));
         runningTasks.put(executionId, task);
         // Guard the rare case where the run finished before we recorded the task.
         if (task.isDone()) runningTasks.remove(executionId);
         return executionId;
+    }
+
+    /**
+     * Resolves a scenario's {@code sessionRef} to a session id. A scenario exported from the
+     * editor can carry a non-UUID placeholder (e.g. {@code sessionRef: default}); that must read
+     * as "no session bound", not as an IllegalArgumentException thrown out of start() (issue #77).
+     */
+    private static UUID parseSessionRef(Scenario scenario) {
+        String ref = scenario.sessionRef();
+        if (ref == null || ref.isBlank()) return null;
+        try {
+            return UUID.fromString(ref.trim());
+        } catch (IllegalArgumentException e) {
+            log.warn("Scenario {} has a sessionRef that is not a session id ('{}'); "
+                    + "running without a bound session", scenario.id(), ref);
+            return null;
+        }
     }
 
     public void stop(UUID executionId) {
@@ -167,6 +196,9 @@ public class ExecutionManager {
             completedStatuses.put(ctx.executionId(), ctx.status());
             contexts.remove(ctx.executionId());
             runningTasks.remove(ctx.executionId());
+            if (ctx.sessionId() != null) {
+                sessionExecutions.unregister(ctx.sessionId().toString(), ctx.executionId());
+            }
         }
     }
 
@@ -182,10 +214,11 @@ public class ExecutionManager {
         public void completed(ScenarioNode node, NodeHandlerResult result,
                               Instant start, Instant end, ExecutionContext ctx) {
             persistNodeResult(ctx.executionId(), node.id(), result, start, end);
+            // Only the outbound direction is recorded here. Inbound messages are recorded by
+            // MessageRouter as they arrive, matched or not — recording them again on node success
+            // would duplicate every matched message in the FIX Messages tab.
             if (node.type() == NodeType.SEND_FIX) {
                 persistMessage(ctx, node.id(), Direction.OUTBOUND);
-            } else if ((node.type() == NodeType.EXPECT_FIX || node.type() == NodeType.ROUTE_FIX) && result.success()) {
-                persistMessage(ctx, node.id(), Direction.INBOUND);
             }
 
             if (result.success()) {
@@ -220,7 +253,7 @@ public class ExecutionManager {
         FIXMessageData data = ctx.getNodeMessageData(nodeId);
         if (data == null || (data.fields().isEmpty() && data.groups().isEmpty())) return;
         try {
-            String raw = renderRawFix(data);
+            String raw = RawFixRenderer.render(data);
             FIXMessage msg = new FIXMessage(
                     UUID.randomUUID(), ctx.executionId(), direction, raw,
                     data.fields(), Instant.now());
@@ -237,45 +270,6 @@ public class ExecutionManager {
         } catch (Throwable t) {
             log.warn("Failed to persist message for execution {}: {}", ctx.executionId(), t.getMessage());
         }
-    }
-
-    /**
-     * Renders a top-level {@link FIXMessageData} into the pipe-delimited raw form
-     * persisted/published for the FIX Messages tab. Top-level fields are sorted by tag for a
-     * stable, readable record — safe here because top-level fields carry no delimiter ordering
-     * requirement. Group entries are rendered by {@link #renderEntry}, which must NOT sort.
-     */
-    private static String renderRawFix(FIXMessageData data) {
-        List<String> parts = new java.util.ArrayList<>();
-        data.fields().entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .forEach(e -> parts.add(e.getKey() + "=" + e.getValue()));
-        data.groups().forEach((counterTag, entries) -> {
-            parts.add(counterTag + "=" + entries.size());
-            for (FIXMessageData entry : entries) {
-                parts.add(renderEntry(entry));
-            }
-        });
-        return String.join("|", parts);
-    }
-
-    /**
-     * Renders one repeating-group entry (and any nested sub-groups) in original insertion order —
-     * deliberately UNSORTED, unlike {@link #renderRawFix}'s top-level fields. The first field of
-     * an entry is the FIX delimiter tag, read positionally by {@code QuickFIXAdapter.applyGroups};
-     * sorting by tag here would routinely move a lower-numbered field (e.g. LegSettlType 587)
-     * ahead of the delimiter (e.g. LegSymbol 600) and misrepresent what was actually sent/received.
-     */
-    private static String renderEntry(FIXMessageData entry) {
-        List<String> parts = new java.util.ArrayList<>();
-        entry.fields().forEach((tag, value) -> parts.add(tag + "=" + value));
-        entry.groups().forEach((counterTag, nested) -> {
-            parts.add(counterTag + "=" + nested.size());
-            for (FIXMessageData nestedEntry : nested) {
-                parts.add(renderEntry(nestedEntry));
-            }
-        });
-        return String.join("|", parts);
     }
 
     private void persistNodeResult(UUID executionId, String nodeId, NodeHandlerResult result,

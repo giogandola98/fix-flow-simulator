@@ -5,14 +5,19 @@ import com.fixflow.core.domain.scenario.*;
 import com.fixflow.engine.correlation.CorrelationEngine;
 import com.fixflow.engine.execution.ExecutionContext;
 import com.fixflow.engine.fix.MessageRouter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 
 @Component
 public class ExpectFIXHandler implements NodeHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(ExpectFIXHandler.class);
 
     private final CorrelationEngine correlation;
     private final MessageRouter router;
@@ -28,52 +33,27 @@ public class ExpectFIXHandler implements NodeHandler {
     @Override
     public NodeHandlerResult handle(ScenarioNode node, ExecutionContext ctx) throws InterruptedException {
         try {
-            Map<String, Object> cfg = node.config();
+            Map<Integer, String> matchers;
+            try {
+                matchers = buildMatchers(node, ctx);
+            } catch (UnresolvableCorrelationException e) {
+                return NodeHandlerResult.failure(node.onFailure(), e.getMessage());
+            }
 
-            int sourceTag;
-            String expectedValue;
-            CorrelationRule rule;
-
-            Object corrObj = cfg.get("correlation");
-            if (corrObj instanceof Map<?, ?> corr) {
-                // Per-node correlation: { sourceTag, fromNode, targetTag }
-                int srcTag = corr.get("sourceTag") != null
-                        ? ((Number) corr.get("sourceTag")).intValue() : 11;
-                String fromNode = corr.get("fromNode") != null ? String.valueOf(corr.get("fromNode")) : null;
-                int targetTag = corr.get("targetTag") != null
-                        ? ((Number) corr.get("targetTag")).intValue() : srcTag;
-
-                String sentValue = null;
-                if (fromNode != null) {
-                    Map<Integer, String> sent = ctx.getNodeMessage(fromNode);
-                    if (sent != null) sentValue = sent.get(targetTag);
-                }
-
-                sourceTag = srcTag;
-                expectedValue = sentValue != null ? sentValue : "";
-                rule = new CorrelationRule(sourceTag, fromNode != null ? fromNode : node.id(), targetTag, 0);
-            } else if (cfg.get("correlationTag") != null) {
-                // Legacy flat format
-                sourceTag = ((Number) cfg.get("correlationTag")).intValue();
-                expectedValue = String.valueOf(cfg.get("expectedValue"));
-                rule = new CorrelationRule(sourceTag, node.id(), sourceTag, 0);
-            } else {
-                // No correlation: match any message by msgType (tag 35)
-                String msgType = cfg.get("msgType") != null ? String.valueOf(cfg.get("msgType")) : "";
-                sourceTag = 35;
-                expectedValue = msgType;
-                rule = new CorrelationRule(35, node.id(), 35, 0);
+            if (matchers.isEmpty()) {
+                log.warn("EXPECT_FIX node {} has neither a msgType nor a correlation: it will accept "
+                        + "the first application message on the session", node.id());
             }
 
             String sessionIdStr = ctx.sessionId() != null ? ctx.sessionId().toString() : "";
             CompletableFuture<FIXMessageData> future =
-                    correlation.register(ctx.executionId().toString(), sessionIdStr, rule, expectedValue);
+                    correlation.registerAll(ctx.executionId().toString(), sessionIdStr, matchers);
             if (ctx.sessionId() != null) router.drain(ctx.sessionId().toString());
 
             long timeoutMs = node.timeout() == null ? 5_000L : node.timeout().toMillis();
 
             FIXMessageData received = future.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
-            ctx.storeNodeMessage(node.id(), received);
+            ctx.storeInboundMessage(node.id(), received);
             return NodeHandlerResult.success(node.onSuccess());
         } catch (TimeoutException timeout) {
             correlation.cancel(ctx.executionId().toString());
@@ -86,6 +66,68 @@ public class ExpectFIXHandler implements NodeHandler {
             correlation.cancel(ctx.executionId().toString());
             return NodeHandlerResult.failure(node.onFailure(), other.getMessage());
         }
+    }
+
+    /**
+     * Builds the set of {@code tag -> value} conditions the inbound message must satisfy.
+     *
+     * <p>MsgType and correlation are ANDed, never mutually exclusive: an EXPECT_FIX that waits for
+     * an execution report answering a specific order must check both tag 35 and the ClOrdID.
+     *
+     * <p>A {@code correlation} block that configures nothing is treated as absent. The graphical
+     * editor always writes the key (as {@code correlation: {}}) even when the user only set a
+     * MsgType; reading that empty map as "correlate on tag 11 against the empty string" made the
+     * node wait forever on every scenario authored from the GUI (issue #77).
+     */
+    private Map<Integer, String> buildMatchers(ScenarioNode node, ExecutionContext ctx) {
+        Map<String, Object> cfg = node.config();
+        Map<Integer, String> matchers = new LinkedHashMap<>();
+
+        String msgType = cfg.get("msgType") == null ? "" : String.valueOf(cfg.get("msgType")).trim();
+        if (!msgType.isEmpty()) matchers.put(35, msgType);
+
+        Object corrObj = cfg.get("correlation");
+        if (corrObj instanceof Map<?, ?> corr && !corr.isEmpty()) {
+            // A String sourceTag is a genuine config error and must surface as a node failure,
+            // not as a silently ignored correlation — hence the unguarded Number cast.
+            int sourceTag = corr.get("sourceTag") != null
+                    ? ((Number) corr.get("sourceTag")).intValue() : 11;
+            int targetTag = corr.get("targetTag") != null
+                    ? ((Number) corr.get("targetTag")).intValue() : sourceTag;
+            String fromNode = blankToNull(corr.get("fromNode"));
+
+            if (fromNode != null) {
+                Map<Integer, String> sent = ctx.getNodeMessage(fromNode);
+                String expected = sent == null ? null : sent.get(targetTag);
+                if (expected == null) {
+                    throw new UnresolvableCorrelationException(
+                            "correlation source node '" + fromNode + "' has no tag " + targetTag
+                                    + " to correlate on");
+                }
+                matchers.put(sourceTag, expected);
+            } else if (corr.get("expectedValue") != null) {
+                matchers.put(sourceTag, String.valueOf(corr.get("expectedValue")));
+            }
+            // else: a correlation block with only tag numbers and no value to compare against
+            // carries no condition — the msgType (if any) is the whole predicate.
+        } else if (cfg.get("correlationTag") != null) {
+            // Legacy flat format: correlationTag + expectedValue.
+            int tag = ((Number) cfg.get("correlationTag")).intValue();
+            matchers.put(tag, String.valueOf(cfg.get("expectedValue")));
+        }
+
+        return matchers;
+    }
+
+    private static String blankToNull(Object raw) {
+        if (raw == null) return null;
+        String s = String.valueOf(raw).trim();
+        return s.isEmpty() ? null : s;
+    }
+
+    /** A correlation that names a source node whose value is not available at run time. */
+    static final class UnresolvableCorrelationException extends RuntimeException {
+        UnresolvableCorrelationException(String message) { super(message); }
     }
 
     private NodeHandlerResult onTimeout(ScenarioNode node) {

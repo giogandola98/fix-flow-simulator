@@ -184,7 +184,9 @@
       "rules": "Regole",
       "addRule": "+ Regola",
       "crossNodeRef": "Rif. incrociato",
-      "selectDateRule": "-- seleziona regola data --"
+      "selectDateRule": "-- seleziona regola data --",
+      "sourceNode": "Blocco di origine",
+      "sourceNodeAuto": "-- ultimo messaggio ricevuto --"
     },
     "routeFix": {
       "desc": "Attende un messaggio FIX in entrata e instrada alla prima regola con tutti i matcher corrispondenti. Le regole vengono valutate dall'alto verso il basso. Una regola senza matcher agisce come predefinita.",

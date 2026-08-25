@@ -62,7 +62,7 @@ public class RouteFIXHandler implements NodeHandler {
 
             CorrelationEngine.RoutedResult result =
                     future.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
-            ctx.storeNodeMessage(node.id(), result.message());
+            ctx.storeInboundMessage(node.id(), result.message());
             ctx.setVariable("node:" + node.id() + ":matchedRuleId", result.matchedRuleId());
             String matchedLabel = rules.stream()
                     .filter(rl -> rl.ruleId().equals(result.matchedRuleId()))

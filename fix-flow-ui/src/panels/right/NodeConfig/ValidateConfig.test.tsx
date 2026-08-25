@@ -53,3 +53,38 @@ describe('ValidateConfig group inputs', () => {
     expect(rules[0].index).toBe('*');
   });
 });
+
+describe('ValidateConfig source node', () => {
+  const expectNode = {
+    id: 'e1', name: 'NEW ORDER SINGLE', type: 'EXPECT_FIX' as const,
+    config: { msgType: 'D' }, position: { x: 0, y: 0 },
+  };
+
+  beforeEach(() => {
+    useScenarioStore.setState({ nodes: [expectNode, node], edges: [] });
+  });
+
+  it('defaults to the last received message and lists the receiving blocks', () => {
+    render(<ValidateConfig node={node} />);
+    const select = screen.getByTestId('validate-source-node') as HTMLSelectElement;
+    expect(select.value).toBe('');
+    expect(screen.getByRole('option', { name: 'NEW ORDER SINGLE' })).toBeInTheDocument();
+  });
+
+  it('writes the chosen source node into the config', async () => {
+    render(<ValidateConfig node={node} />);
+    await userEvent.selectOptions(screen.getByTestId('validate-source-node'), 'e1');
+    const cfg = useScenarioStore.getState().nodes[1].config as { sourceNodeId?: string };
+    expect(cfg.sourceNodeId).toBe('e1');
+  });
+
+  it('drops the key again when the default is re-selected', async () => {
+    useScenarioStore.setState({
+      nodes: [expectNode, { ...node, config: { ...node.config, sourceNodeId: 'e1' } }],
+      edges: [],
+    });
+    render(<ValidateConfig node={useScenarioStore.getState().nodes[1]} />);
+    await userEvent.selectOptions(screen.getByTestId('validate-source-node'), '');
+    expect(useScenarioStore.getState().nodes[1].config).not.toHaveProperty('sourceNodeId');
+  });
+});

@@ -6,7 +6,7 @@ import { fixTagName } from '../../../lib/fixTags';
 
 type RuleKind = 'EQUALS' | 'NOT_EQUALS' | 'ENUM' | 'REGEX' | 'NUMERIC_MIN' | 'NUMERIC_MAX' | 'FIELD_PRESENT' | 'FIELD_ABSENT' | 'DATE_RULE';
 interface ValidationRule { tag: number; rule: RuleKind; value?: string; values?: string[]; pattern?: string; numericValue?: number; ref?: string; dateRuleId?: string; groupTag?: number; index?: string; }
-interface ValidateCfg { strictMode?: boolean; rules?: ValidationRule[]; dateRules?: DateRule[]; }
+interface ValidateCfg { sourceNodeId?: string; strictMode?: boolean; rules?: ValidationRule[]; dateRules?: DateRule[]; }
 const RULES: RuleKind[] = ['EQUALS', 'NOT_EQUALS', 'ENUM', 'REGEX', 'NUMERIC_MIN', 'NUMERIC_MAX', 'FIELD_PRESENT', 'FIELD_ABSENT', 'DATE_RULE'];
 
 export function ValidateConfig({ node }: { node: ScenarioNode }) {
@@ -19,6 +19,7 @@ export function ValidateConfig({ node }: { node: ScenarioNode }) {
   // (e.g. typing several characters, or editing two fields back to back)
   // each build on a stale snapshot and clobber one another in the store.
   const storeNode = useScenarioStore((s) => s.nodes.find((n) => n.id === node.id));
+  const allNodes = useScenarioStore((s) => s.nodes);
   const liveNode = storeNode ?? node;
   const cfg = (liveNode.config as ValidateCfg) ?? {};
   const rules = cfg.rules ?? [];
@@ -46,6 +47,29 @@ export function ValidateConfig({ node }: { node: ScenarioNode }) {
         <label className="text-[10px] text-gray-500">{t('nodeConfig.nodeName')}</label>
         <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
           value={node.name} onChange={(e) => updateNode(node.id, { name: e.target.value })} />
+      </div>
+      <div>
+        <label className="text-[10px] text-gray-500">
+          {t('nodeConfig.validate.sourceNode')}
+          <span title="Which received message to validate. Leave on the default to validate the last message received in the run — normally the one the Expect FIX block just matched." className="ml-1 text-gray-600 cursor-help">?</span>
+        </label>
+        <select
+          data-testid="validate-source-node"
+          className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
+          value={cfg.sourceNodeId ?? ''}
+          onChange={(e) => {
+            const v = e.target.value;
+            const next = { ...cfg } as Record<string, unknown>;
+            if (v) next.sourceNodeId = v;
+            else delete next.sourceNodeId;
+            updateNode(node.id, { config: next });
+          }}
+        >
+          <option value="">{t('nodeConfig.validate.sourceNodeAuto')}</option>
+          {allNodes
+            .filter((n) => n.type === 'EXPECT_FIX' || n.type === 'ROUTE_FIX')
+            .map((n) => <option key={n.id} value={n.id}>{n.name}</option>)}
+        </select>
       </div>
       <label className="flex items-center gap-2">
         <input type="checkbox" checked={cfg.strictMode ?? false} onChange={(e) => patchConfig({ strictMode: e.target.checked })} />

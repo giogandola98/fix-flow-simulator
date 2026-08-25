@@ -184,7 +184,9 @@
       "rules": "Rules",
       "addRule": "+ Rule",
       "crossNodeRef": "Cross-node ref",
-      "selectDateRule": "-- select date rule --"
+      "selectDateRule": "-- select date rule --",
+      "sourceNode": "Source node",
+      "sourceNodeAuto": "-- last received message --"
     },
     "routeFix": {
       "desc": "Waits for an inbound FIX message and routes to the first rule whose matchers all match. Rules are evaluated top-to-bottom. A rule with no matchers acts as default/fallback.",
