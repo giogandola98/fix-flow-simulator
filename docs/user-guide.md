@@ -95,7 +95,7 @@ Draw arrows: **Start → Send FIX → End Pass**. To draw an arrow, hover over a
 │  PALETTE         │   Drag blocks here, draw arrows          │  PROPERTIES    │
 │  (block types)   │   to build your workflow                 │  (selected     │
 │                  │                                          │   block config)│
-│  SCENARIOS       │                          [+] [-] [Fit]   │                │
+│  SCENARIOS       │                    [+] [-] [Fit] [PDF]   │                │
 │  (list)          │                                          │  SESSION       │
 │                  │                                          │  (connect)     │
 ├──────────────────┴──────────────────────────────────────────┴────────────────┤
@@ -185,6 +185,7 @@ You cannot delete Start, End Pass, or End Fail.
 - **Zoom**: use `+` / `-` buttons or scroll wheel
 - **Fit**: click **Fit** to center all blocks in view
 - **Pan**: click and drag on empty canvas space
+- **PDF**: click **PDF** to download the flowchart as a one-page PDF
 
 ---
 
@@ -563,6 +564,16 @@ If a Validate block fails, the offending rules appear here with:
 1. Open the scenario you want to export
 2. Click **Export** in the top bar
 3. A YAML file is downloaded — this contains the complete scenario definition
+
+### Export the flowchart as a PDF
+
+1. Open the scenario you want a picture of
+2. Click **PDF** in the canvas toolbar, top right
+3. A one-page PDF is downloaded, named after the scenario
+
+The whole graph is exported regardless of where the canvas is panned or zoomed, and the page is
+portrait or landscape depending on the shape of the flow. Exporting after a run captures the
+pass/fail colouring of the blocks, which makes it usable as a run report.
 
 ### Import a scenario
 
