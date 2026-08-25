@@ -44,15 +44,34 @@ public class ScenarioRepositoryAdapter implements ScenarioRepositoryPort {
     @Override
     @Transactional(readOnly = true)
     public Optional<Scenario> findById(UUID id) {
-        return scenarioRepo.findById(id).map(e -> parser.parseYaml(e.getYamlDsl()));
+        return scenarioRepo.findById(id).map(this::toDomain);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Scenario> findAll() {
         return scenarioRepo.findAll().stream()
-                .map(e -> parser.parseYaml(e.getYamlDsl()))
+                .map(this::toDomain)
                 .toList();
+    }
+
+    /**
+     * Reads a row back, keeping the ROW's id as the scenario's identity.
+     *
+     * <p>The content is stored as raw YAML and re-parsed here, and {@code ScenarioDslParser} mints
+     * a fresh UUID for a document that carries no {@code id:} — which the graphical editor always
+     * writes but hand-authored or imported YAML often does not. Trusting the document therefore
+     * handed out a different identity on every read, unrelated to the row it came from, so the
+     * scenario could not be fetched, updated, executed or deleted by the id the API had just
+     * listed (issue #94). The row id is the only stable one; it wins.
+     */
+    private Scenario toDomain(ScenarioEntity e) {
+        Scenario parsed = parser.parseYaml(e.getYamlDsl());
+        if (e.getId() == null || e.getId().equals(parsed.id())) return parsed;
+        return new Scenario(
+                e.getId(), parsed.name(), parsed.description(), parsed.version(), parsed.sessionRef(),
+                parsed.runtimePolicy(), parsed.routingRules(), parsed.correlationRules(),
+                parsed.nodes(), parsed.edges(), parsed.variables(), parsed.rawYaml());
     }
 
     @Override
