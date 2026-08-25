@@ -6,3 +6,36 @@ html, body, #root { width: 100%; height: 100%; margin: 0; padding: 0; font-famil
 * { box-sizing: border-box; }
 .react-flow__node { font-family: inherit; }
 .react-flow__background { background: #0f1117; }
+
+/* ---------------------------------------------------------------------------
+   Print rendering for the PDF export (issue #97).
+
+   The editor is dark on purpose; a sheet of paper is not. This class is put on
+   the viewport only while html-to-image takes the picture, then removed. The
+   overrides need !important because the node components set their colours
+   inline, and they are deliberately narrow: surfaces and low-contrast greys are
+   repainted, while the border colours that carry the meaning of each block type
+   are left exactly as they are.
+   --------------------------------------------------------------------------- */
+.fixflow-pdf-light .react-flow__node > div {
+  background: #ffffff !important;
+  color: #1f2937 !important;
+}
+.fixflow-pdf-light .react-flow__node [class*="text-gray"],
+.fixflow-pdf-light .react-flow__node [class*="text-white"] {
+  color: #374151 !important;
+}
+/* Accents keep their hue but move to a shade that reads on white. */
+.fixflow-pdf-light .react-flow__node [class*="text-yellow"],
+.fixflow-pdf-light .react-flow__node [class*="text-amber"] { color: #b45309 !important; }
+.fixflow-pdf-light .react-flow__node [class*="text-purple"] { color: #6d28d9 !important; }
+.fixflow-pdf-light .react-flow__node [class*="text-pink"] { color: #be185d !important; }
+.fixflow-pdf-light .react-flow__node [class*="text-blue"] { color: #1d4ed8 !important; }
+.fixflow-pdf-light .react-flow__node [class*="text-green"] { color: #15803d !important; }
+.fixflow-pdf-light .react-flow__node [class*="text-red"] { color: #b91c1c !important; }
+.fixflow-pdf-light .react-flow__node [class*="text-orange"] { color: #c2410c !important; }
+/* Edge labels are HTML, not SVG text. */
+.fixflow-pdf-light .react-flow__edgelabel-renderer > div {
+  background: #ffffff !important;
+  border-color: #d1d5db !important;
+}

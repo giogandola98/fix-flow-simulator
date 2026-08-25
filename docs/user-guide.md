@@ -571,9 +571,11 @@ If a Validate block fails, the offending rules appear here with:
 2. Click **PDF** in the canvas toolbar, top right
 3. A one-page PDF is downloaded, named after the scenario
 
-The whole graph is exported regardless of where the canvas is panned or zoomed, and the page is
-portrait or landscape depending on the shape of the flow. Exporting after a run captures the
-pass/fail colouring of the blocks, which makes it usable as a run report.
+The whole graph is exported regardless of where the canvas is panned or zoomed, and it fills the
+page: portrait or landscape is chosen from the shape of the flow. The PDF is rendered **for print**
+— white background, dark text, block colours kept — rather than as a screenshot of the dark editor.
+Exporting after a run captures the pass/fail colouring of the blocks, which makes it usable as a
+run report.
 
 ### Import a scenario
 
