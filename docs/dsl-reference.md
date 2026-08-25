@@ -204,6 +204,8 @@ the group (one result per entry). An out-of-range numeric `index`, or a
 
 ## DECISION config
 
+Two forms. A single condition routes success/failure:
+
 ```yaml
 config:
   condition: '{{node:expect-er:tag39}} == "2"'
@@ -212,6 +214,39 @@ config:
   # True  → onSuccess path
   # False → onFailure path
 ```
+
+Or several branches, each with its own conditions and its own target — the same contract
+`ROUTE_FIX` rules have, over conditions instead of tag matchers:
+
+```yaml
+config:
+  branches:
+    - branchId: b1
+      label: Filled
+      conditions:                                   # ALL must hold
+        - '{{node:expect-er:tag39}} == "2"'
+        - '{{node:expect-er:tag151}} == "0"'
+      targetNodeId: send-confirm
+    - branchId: b2
+      label: Partially filled
+      conditions: ['{{node:expect-er:tag39}} == "1"']
+      targetNodeId: wait-more
+    - branchId: b3
+      label: Anything else
+      conditions: []                                # no conditions → catch-all default
+      targetNodeId: end-fail
+```
+
+- Branches are evaluated **in order**; the first whose conditions **all** hold is taken.
+- A branch with no conditions (or only blank ones) is the **default**. A later branch after the
+  first default is still evaluated first — the default is only used when nothing matched.
+- With no match and no default, the node fails down `onFailure`, which is what a false `condition`
+  has always done.
+- A branch with no `targetNodeId` falls back to the node's `onSuccess`.
+- `branches` wins when both forms are present; an empty `branches` list falls back to `condition`.
+
+In the editor each branch gets its own handle on the diamond, and the matched branch label is
+shown on the node's event in the execution log.
 
 ## ROUTE_FIX config
 

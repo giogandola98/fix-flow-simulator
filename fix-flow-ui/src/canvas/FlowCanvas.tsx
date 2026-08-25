@@ -20,6 +20,7 @@ import { CanvasToolbar } from './CanvasToolbar';
 import { FlowEdge } from './edges/FlowEdge';
 import { nodeTypes } from './nodes/nodeTypes';
 import { NodeType } from '../types';
+import { handleRoutesOf, withRouteTarget } from '../lib/handleRoutes';
 
 const edgeTypes = { default: FlowEdge };
 
@@ -152,12 +153,9 @@ function InnerCanvas() {
     setRfEdges(
       edges.map((e, i) => {
         const srcNode = nodes.find((n) => n.id === e.from);
-        const ruleCfg = srcNode?.type === 'ROUTE_FIX'
-          ? (srcNode.config as { rules?: Array<{ ruleId: string; label: string }> }).rules?.find(
-              (r) => r.ruleId === e.sourceHandle,
-            )
-          : undefined;
-        const derivedLabel = ruleCfg?.label ?? e.label;
+        const route = handleRoutesOf(srcNode?.type, srcNode?.config as Record<string, unknown>)
+          .find((r) => r.id === e.sourceHandle);
+        const derivedLabel = route?.label || e.label;
         return {
           id: `e${i}-${e.from}-${e.to}-${e.label}`,
           source: e.from,
@@ -198,14 +196,12 @@ function InnerCanvas() {
         const removedIds = new Set(removals.map((c) => c.id));
         for (const re of rfEdges.filter((e) => removedIds.has(e.id))) {
           const srcNode = nodes.find((n) => n.id === re.source);
-          if (srcNode?.type === 'ROUTE_FIX' && re.sourceHandle) {
-            const cfg = srcNode.config as { rules?: Array<{ ruleId: string; targetNodeId?: string }> };
-            if (cfg.rules) {
-              updateNode(srcNode.id, {
-                config: { ...cfg, rules: cfg.rules.map((r) => r.ruleId === re.sourceHandle ? { ...r, targetNodeId: '' } : r) },
-              });
-            }
-          }
+          // Deleting the line must also clear the route it stood for, or the engine keeps
+          // following a branch the canvas no longer shows.
+          const cleared = withRouteTarget(
+            srcNode?.type, srcNode?.config as Record<string, unknown>, re.sourceHandle, '',
+          );
+          if (srcNode && cleared) updateNode(srcNode.id, { config: cleared });
         }
         // Rebuild from the store's canonical edges minus the removed ids. rfEdges labels
         // are display-mutated for ROUTE_FIX, so rebuilding from them would corrupt the
@@ -237,19 +233,14 @@ function InnerCanvas() {
           // silently produced a 'success' edge (issue #76).
           if (conn.sourceHandle === 'success' || conn.sourceHandle === 'failure') {
             label = conn.sourceHandle;
-          } else if (sourceRfNode?.type === 'ROUTE_FIX') {
-            const cfg = sourceRfNode.data?.config as { rules?: Array<{ ruleId: string; label: string; targetNodeId?: string }> } | undefined;
-            const rule = cfg?.rules?.find((r) => r.ruleId === conn.sourceHandle);
-            if (rule?.label) label = rule.label;
-            if (cfg?.rules) {
-              updateNode(conn.source, {
-                config: { ...cfg, rules: cfg.rules.map((r) => r.ruleId === conn.sourceHandle ? { ...r, targetNodeId: conn.target } : r) },
-              });
-            }
           } else {
-            const cfg = sourceRfNode?.data?.config as { rules?: Array<{ ruleId: string; label: string }> } | undefined;
-            const rule = cfg?.rules?.find((r) => r.ruleId === conn.sourceHandle);
-            if (rule?.label) label = rule.label;
+            // A ROUTE_FIX rule handle or a DECISION branch handle: the drawn target has to land
+            // in the node config, because that is what the engine traverses.
+            const cfg = sourceRfNode?.data?.config as Record<string, unknown> | undefined;
+            const route = handleRoutesOf(sourceRfNode?.type, cfg).find((r) => r.id === conn.sourceHandle);
+            if (route?.label) label = route.label;
+            const patched = withRouteTarget(sourceRfNode?.type, cfg, conn.sourceHandle, conn.target);
+            if (patched) updateNode(conn.source, { config: patched });
           }
         }
         const edge = { from: conn.source, to: conn.target, label };
