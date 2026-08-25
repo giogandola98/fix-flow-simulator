@@ -6,6 +6,7 @@ import com.fixflow.api.rest.dto.ScenarioRequest;
 import com.fixflow.core.domain.scenario.Scenario;
 import com.fixflow.core.ports.outbound.ScenarioRepositoryPort;
 import com.fixflow.engine.scenario.ScenarioDslParser;
+import com.fixflow.engine.scenario.ScenarioDuplicator;
 import com.fixflow.engine.scenario.ScenarioRegistry;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -51,6 +52,7 @@ class ScenarioControllerTest {
     @MockBean ScenarioRepositoryPort repo;
     @MockBean ScenarioDslParser parser;
     @MockBean ScenarioRegistry registry;
+    @MockBean ScenarioDuplicator duplicator;
 
     private Scenario scenario(UUID id, String name) {
         return new Scenario(id, name, "desc", "1", "sess", null, null, null, null, null, null, null);
@@ -262,6 +264,77 @@ class ScenarioControllerTest {
         UUID id = UUID.randomUUID();
         when(repo.findById(id)).thenReturn(Optional.empty());
         mvc.perform(get("/api/v1/scenarios/" + id + "/export"))
+            .andExpect(status().isNotFound());
+    }
+
+    // ---- issue #79: duplicating a scenario ----
+
+    private Scenario scenarioWithYaml(UUID id, String name, String yaml) {
+        return new Scenario(id, name, "desc", "1", "sess", null, null, null, null, null, null, yaml);
+    }
+
+    @Test
+    void duplicateReturns201WithTheCopyAndRegistersIt() throws Exception {
+        UUID sourceId = UUID.randomUUID();
+        UUID copyId = UUID.randomUUID();
+        Scenario source = scenarioWithYaml(sourceId, "NOrder", "id: " + sourceId);
+        Scenario copy = scenarioWithYaml(copyId, "NOrder (copy)", "id: " + copyId + " # NOrder (copy)");
+        when(repo.findById(sourceId)).thenReturn(Optional.of(source));
+        when(duplicator.duplicate(anyString(), anyString())).thenReturn(copy.rawYaml());
+        when(parser.parseYaml(anyString())).thenReturn(copy);
+        when(repo.save(any())).thenReturn(copy);
+
+        mvc.perform(post("/api/v1/scenarios/" + sourceId + "/duplicate"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.id").value(copyId.toString()))
+            .andExpect(jsonPath("$.name").value("NOrder (copy)"))
+            .andExpect(jsonPath("$.yamlDsl", containsString("NOrder (copy)")));
+
+        verify(registry).register(copy);
+    }
+
+    @Test
+    void duplicateDefaultsTheCopysName() throws Exception {
+        UUID sourceId = UUID.randomUUID();
+        Scenario source = scenarioWithYaml(sourceId, "NOrder", "id: " + sourceId);
+        when(repo.findById(sourceId)).thenReturn(Optional.of(source));
+        when(duplicator.duplicate(anyString(), anyString())).thenReturn("id: x");
+        when(parser.parseYaml(anyString())).thenReturn(source);
+        when(repo.save(any())).thenReturn(source);
+
+        mvc.perform(post("/api/v1/scenarios/" + sourceId + "/duplicate"))
+            .andExpect(status().isCreated());
+
+        ArgumentCaptor<String> name = ArgumentCaptor.forClass(String.class);
+        verify(duplicator).duplicate(anyString(), name.capture());
+        assertThat(name.getValue()).isEqualTo("NOrder (copy)");
+    }
+
+    @Test
+    void duplicateHonoursAnExplicitName() throws Exception {
+        UUID sourceId = UUID.randomUUID();
+        Scenario source = scenarioWithYaml(sourceId, "NOrder", "id: " + sourceId);
+        when(repo.findById(sourceId)).thenReturn(Optional.of(source));
+        when(duplicator.duplicate(anyString(), anyString())).thenReturn("id: x");
+        when(parser.parseYaml(anyString())).thenReturn(source);
+        when(repo.save(any())).thenReturn(source);
+
+        ScenarioRequest req = new ScenarioRequest("  My copy  ", null, null, null);
+        mvc.perform(post("/api/v1/scenarios/" + sourceId + "/duplicate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(req)))
+            .andExpect(status().isCreated());
+
+        ArgumentCaptor<String> name = ArgumentCaptor.forClass(String.class);
+        verify(duplicator).duplicate(anyString(), name.capture());
+        assertThat(name.getValue()).isEqualTo("My copy");
+    }
+
+    @Test
+    void duplicateOfAnUnknownScenarioIs404() throws Exception {
+        UUID missing = UUID.randomUUID();
+        when(repo.findById(missing)).thenReturn(Optional.empty());
+        mvc.perform(post("/api/v1/scenarios/" + missing + "/duplicate"))
             .andExpect(status().isNotFound());
     }
 }
