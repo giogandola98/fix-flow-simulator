@@ -1,4 +1,4 @@
-import { getNodesBounds, getViewportForBounds, type Node } from '@xyflow/react';
+import { getNodesBounds, type Node } from '@xyflow/react';
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 
@@ -10,15 +10,22 @@ export const MAX_IMAGE_SIDE = 2400;
 export const PIXEL_RATIO = 2;
 /** Page margin, in millimetres. */
 export const PAGE_MARGIN_MM = 10;
-/** Canvas background, so the PNG is not transparent — a transparent PNG in a PDF
- *  renders white, and these nodes carry light text. */
-export const CANVAS_BACKGROUND = '#0f1117';
+/** A printed page is white: the dark canvas would flood the sheet with ink. */
+export const PAGE_BACKGROUND = '#ffffff';
+/** Class that repaints the flowchart for print; see `index.css`. */
+export const PRINT_CLASS = 'fixflow-pdf-light';
 
 export interface Placement {
   x: number;
   y: number;
   width: number;
   height: number;
+}
+
+export interface CaptureGeometry {
+  width: number;
+  height: number;
+  transform: { x: number; y: number; zoom: number };
 }
 
 /**
@@ -41,16 +48,30 @@ export function fitToPage(
 }
 
 /**
- * Bitmap size for a graph of the given bounds: the graph plus its padding, scaled down only when
- * a side would exceed {@link MAX_IMAGE_SIDE}. Deriving it from the bounds — rather than rendering
- * into a fixed-size frame — is what keeps a tall lifecycle flow from being letterboxed into a
- * landscape image with empty bands on either side.
+ * Bitmap size for a graph, and the viewport transform that puts the graph in it.
+ *
+ * <p>The image is the graph plus its padding, at zoom 1, scaled down only when a side would exceed
+ * {@link MAX_IMAGE_SIDE}. The transform then simply moves the graph's top-left corner to the
+ * padding offset — so the graph fills the picture.
+ *
+ * <p>This used to delegate to React Flow's `getViewportForBounds`, whose `padding` argument is a
+ * <em>ratio</em> (0.1 = 10%), not pixels. Passing the pixel padding meant asking for 4800% padding,
+ * which left about 2% of the width for the graph: the exported PDF came out zoomed far out with
+ * the flowchart tiny in the middle (issue #97).
  */
-export function imageSizeFor(boundsWidth: number, boundsHeight: number): { width: number; height: number } {
+export function captureGeometry(boundsX: number, boundsY: number, boundsWidth: number, boundsHeight: number): CaptureGeometry {
   const rawWidth = Math.max(boundsWidth, 1) + GRAPH_PADDING * 2;
   const rawHeight = Math.max(boundsHeight, 1) + GRAPH_PADDING * 2;
-  const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(rawWidth, rawHeight));
-  return { width: Math.round(rawWidth * scale), height: Math.round(rawHeight * scale) };
+  const zoom = Math.min(1, MAX_IMAGE_SIDE / Math.max(rawWidth, rawHeight));
+  return {
+    width: Math.round(rawWidth * zoom),
+    height: Math.round(rawHeight * zoom),
+    transform: {
+      x: (GRAPH_PADDING - boundsX) * zoom,
+      y: (GRAPH_PADDING - boundsY) * zoom,
+      zoom,
+    },
+  };
 }
 
 /** Mirrors the server's sanitising in `GET /scenarios/{id}/export`. */
@@ -88,32 +109,44 @@ export interface ExportFlowchartOptions {
  * <p>The capture is taken at a transform that fits the entire graph, not at the transform the user
  * left the canvas on: `.react-flow__viewport` is translated and scaled by the current pan/zoom, so
  * capturing it as-is would export whatever happens to be on screen, cropped at the window edge.
+ *
+ * <p>It is also repainted for print while the picture is taken — the editor is dark, a sheet of
+ * paper is not.
  */
 export async function exportFlowchartToPdf({
   viewport,
   nodes,
   scenarioName,
   toImage = toPng,
-  createPdf = (orientation) => new jsPDF({ orientation, unit: 'mm', format: 'a4' }),
+  // compress: a full-page bitmap goes in uncompressed otherwise, which turns a flowchart into
+  // an ~8 MB attachment
+  createPdf = (orientation) => new jsPDF({ orientation, unit: 'mm', format: 'a4', compress: true }),
 }: ExportFlowchartOptions): Promise<string> {
   if (nodes.length === 0) throw new Error('nothing to export: the canvas has no nodes');
 
   const bounds = getNodesBounds(nodes);
-  const { width: imageWidth, height: imageHeight } = imageSizeFor(bounds.width, bounds.height);
-  const transform = getViewportForBounds(bounds, imageWidth, imageHeight, 0.1, 4, GRAPH_PADDING);
+  const { width: imageWidth, height: imageHeight, transform } =
+    captureGeometry(bounds.x, bounds.y, bounds.width, bounds.height);
 
-  const dataUrl = await toImage(viewport, {
-    backgroundColor: CANVAS_BACKGROUND,
-    width: imageWidth,
-    height: imageHeight,
-    pixelRatio: PIXEL_RATIO,
-    filter: (node) => !(node instanceof HTMLElement) || !isChrome(node),
-    style: {
-      width: `${imageWidth}px`,
-      height: `${imageHeight}px`,
-      transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`,
-    },
-  });
+  viewport.classList.add(PRINT_CLASS);
+  let dataUrl: string;
+  try {
+    dataUrl = await toImage(viewport, {
+      backgroundColor: PAGE_BACKGROUND,
+      width: imageWidth,
+      height: imageHeight,
+      pixelRatio: PIXEL_RATIO,
+      filter: (node) => !(node instanceof HTMLElement) || !isChrome(node),
+      style: {
+        width: `${imageWidth}px`,
+        height: `${imageHeight}px`,
+        transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`,
+      },
+    });
+  } finally {
+    // Never leave the editor repainted, whatever the capture did.
+    viewport.classList.remove(PRINT_CLASS);
+  }
 
   const pdf = createPdf(imageWidth >= imageHeight ? 'landscape' : 'portrait');
   const pageWidth = pdf.internal.pageSize.getWidth();
