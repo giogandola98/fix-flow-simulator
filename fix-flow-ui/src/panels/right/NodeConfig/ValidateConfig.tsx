@@ -4,10 +4,18 @@ import { useScenarioStore } from '../../../store/scenarioStore';
 import { DateRulesEditor, DateRule } from './DateRulesEditor';
 import { fixTagName } from '../../../lib/fixTags';
 
-type RuleKind = 'EQUALS' | 'NOT_EQUALS' | 'ENUM' | 'REGEX' | 'NUMERIC_MIN' | 'NUMERIC_MAX' | 'FIELD_PRESENT' | 'FIELD_ABSENT' | 'DATE_RULE';
+type RuleKind = 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'NOT_CONTAINS' | 'ENUM' | 'REGEX' | 'NUMERIC_MIN' | 'NUMERIC_MAX' | 'LENGTH' | 'LENGTH_MIN' | 'LENGTH_MAX' | 'FIELD_PRESENT' | 'FIELD_ABSENT' | 'DATE_RULE';
 interface ValidationRule { tag: number; rule: RuleKind; value?: string; values?: string[]; pattern?: string; numericValue?: number; ref?: string; dateRuleId?: string; groupTag?: number; index?: string; }
 interface ValidateCfg { sourceNodeId?: string; strictMode?: boolean; rules?: ValidationRule[]; dateRules?: DateRule[]; }
-const RULES: RuleKind[] = ['EQUALS', 'NOT_EQUALS', 'ENUM', 'REGEX', 'NUMERIC_MIN', 'NUMERIC_MAX', 'FIELD_PRESENT', 'FIELD_ABSENT', 'DATE_RULE'];
+const RULES: RuleKind[] = ['EQUALS', 'NOT_EQUALS', 'CONTAINS', 'NOT_CONTAINS', 'ENUM', 'REGEX', 'NUMERIC_MIN', 'NUMERIC_MAX', 'LENGTH', 'LENGTH_MIN', 'LENGTH_MAX', 'FIELD_PRESENT', 'FIELD_ABSENT', 'DATE_RULE'];
+/** Rules whose parameter is a free-text value (and which also accept a cross-node ref). */
+const VALUE_RULES: RuleKind[] = ['EQUALS', 'NOT_EQUALS', 'CONTAINS', 'NOT_CONTAINS'];
+/** Rules whose parameter is a number. */
+const NUMERIC_RULES: RuleKind[] = ['NUMERIC_MIN', 'NUMERIC_MAX', 'LENGTH', 'LENGTH_MIN', 'LENGTH_MAX'];
+const VALUE_PLACEHOLDER: Partial<Record<RuleKind, string>> = {
+  CONTAINS: 'substring, e.g. /',
+  NOT_CONTAINS: 'substring, e.g. XXX',
+};
 
 export function ValidateConfig({ node }: { node: ScenarioNode }) {
   const { t } = useTranslation();
@@ -124,9 +132,11 @@ export function ValidateConfig({ node }: { node: ScenarioNode }) {
               </select>
               <button className="text-red-400 hover:text-red-300" onClick={() => removeRule(i)}>x</button>
             </div>
-            {(r.rule === 'EQUALS' || r.rule === 'NOT_EQUALS') && (
+            {VALUE_RULES.includes(r.rule) && (
               <input type="text" className="w-full mt-1 bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
-                value={r.value ?? ''} onChange={(e) => updateRule(i, { value: e.target.value })} placeholder="value" />
+                data-testid={`validate-value-${i}`}
+                value={r.value ?? ''} onChange={(e) => updateRule(i, { value: e.target.value })}
+                placeholder={VALUE_PLACEHOLDER[r.rule] ?? 'value'} />
             )}
             {r.rule === 'ENUM' && (
               <input type="text" className="w-full mt-1 bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
@@ -136,8 +146,10 @@ export function ValidateConfig({ node }: { node: ScenarioNode }) {
               <input type="text" className="w-full mt-1 bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
                 value={r.pattern ?? ''} onChange={(e) => updateRule(i, { pattern: e.target.value })} placeholder="regex pattern" />
             )}
-            {(r.rule === 'NUMERIC_MIN' || r.rule === 'NUMERIC_MAX') && (
+            {NUMERIC_RULES.includes(r.rule) && (
               <input type="number" className="w-full mt-1 bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1"
+                data-testid={`validate-numeric-${i}`}
+                min={r.rule.startsWith('LENGTH') ? 0 : undefined}
                 value={r.numericValue ?? 0} onChange={(e) => updateRule(i, { numericValue: Number(e.target.value) })} />
             )}
             {r.rule === 'DATE_RULE' && (

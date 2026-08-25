@@ -107,7 +107,12 @@ public class ValidateHandler implements NodeHandler {
             String value = (String) rr.get("value");
             List<String> values = (List<String>) rr.get("values");
             String ref = (String) rr.get("ref");
-            String dateRule = (String) rr.get("dateRule");
+            // The editor and docs/dsl-reference.md both write `dateRuleId`; the handler only ever
+            // read `dateRule`, so a DATE_RULE chosen in the GUI arrived with a null id and failed
+            // with "Unknown dateRule id: null". Both spellings are accepted now.
+            String dateRule = rr.get("dateRule") != null
+                    ? String.valueOf(rr.get("dateRule"))
+                    : (String) rr.get("dateRuleId");
             String pattern = (String) rr.get("pattern");
             double num = rr.get("numericValue") == null ? 0 : ((Number) rr.get("numericValue")).doubleValue();
             Integer groupTag = parseGroupTag(rr.get("groupTag"));

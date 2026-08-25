@@ -88,3 +88,54 @@ describe('ValidateConfig source node', () => {
     expect(useScenarioStore.getState().nodes[1].config).not.toHaveProperty('sourceNodeId');
   });
 });
+
+describe('ValidateConfig substring and length rules', () => {
+  beforeEach(() => {
+    useScenarioStore.setState({ nodes: [node], edges: [] });
+  });
+
+  const ruleAt = (i: number) =>
+    (useScenarioStore.getState().nodes[0].config as { rules: Array<Record<string, unknown>> }).rules[i];
+
+  it('offers the new rule kinds in the dropdown', () => {
+    render(<ValidateConfig node={node} />);
+    ['CONTAINS', 'NOT_CONTAINS', 'LENGTH', 'LENGTH_MIN', 'LENGTH_MAX'].forEach((kind) => {
+      expect(screen.getByRole('option', { name: kind })).toBeInTheDocument();
+    });
+  });
+
+  it('shows a text input for CONTAINS and stores the substring', async () => {
+    useScenarioStore.setState({
+      nodes: [{ ...node, config: { rules: [{ tag: 55, rule: 'CONTAINS', value: '' }] } }],
+      edges: [],
+    });
+    render(<ValidateConfig node={useScenarioStore.getState().nodes[0]} />);
+    await userEvent.type(screen.getByTestId('validate-value-0'), '/');
+    expect(ruleAt(0).rule).toBe('CONTAINS');
+    expect(ruleAt(0).value).toBe('/');
+    expect(screen.queryByTestId('validate-numeric-0')).toBeNull();
+  });
+
+  it('switches the rule kind through the dropdown', async () => {
+    render(<ValidateConfig node={node} />);
+    const ruleSelect = screen.getAllByRole('combobox').find(
+      (el) => (el as HTMLSelectElement).value === 'EQUALS',
+    ) as HTMLSelectElement;
+    await userEvent.selectOptions(ruleSelect, 'NOT_CONTAINS');
+    expect(ruleAt(0).rule).toBe('NOT_CONTAINS');
+  });
+
+  it('shows a numeric input for LENGTH and stores the count', async () => {
+    useScenarioStore.setState({
+      nodes: [{ ...node, config: { rules: [{ tag: 1, rule: 'LENGTH', numericValue: 0 }] } }],
+      edges: [],
+    });
+    render(<ValidateConfig node={useScenarioStore.getState().nodes[0]} />);
+    const input = screen.getByTestId('validate-numeric-0');
+    await userEvent.clear(input);
+    await userEvent.type(input, '7');
+    expect(ruleAt(0).numericValue).toBe(7);
+    // and no free-text value input is offered for a length rule
+    expect(screen.queryByTestId('validate-value-0')).toBeNull();
+  });
+});
