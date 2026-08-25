@@ -110,4 +110,67 @@ class ScenarioRepositoryAdapterTest {
     void findVersionsEmptyWhenNone() {
         assertThat(adapter.findVersions(UUID.randomUUID())).isEmpty();
     }
+
+    // ---- issue #94: the row id is the scenario's identity ----
+
+    /** A scenario whose raw YAML carries no `id:` — hand-authored, or imported from another tool. */
+    private Scenario withIdlessYaml(UUID id, String name) {
+        String yaml = """
+                name: %s
+                version: '1'
+                sessionRef: sess
+                nodes:
+                  - id: n1
+                    name: Start
+                    type: START
+                    onSuccess: n2
+                  - id: n2
+                    name: End
+                    type: END_PASS
+                """.formatted(name);
+        return new Scenario(id, name, "desc", "1", "sess",
+                RuntimePolicy.SEQUENTIAL, List.of(), List.of(),
+                List.of(), List.of(), Map.of(), yaml);
+    }
+
+    @Test
+    void aScenarioWhoseYamlHasNoIdIsStillFoundByItsRowId() {
+        UUID id = UUID.randomUUID();
+        adapter.save(withIdlessYaml(id, "idless"));
+
+        Scenario loaded = adapter.findById(id).orElseThrow();
+        assertThat(loaded.id()).isEqualTo(id);
+        assertThat(loaded.name()).isEqualTo("idless");
+        assertThat(loaded.nodes()).hasSize(2);
+    }
+
+    @Test
+    void itsIdIsStableAcrossReads() {
+        UUID id = UUID.randomUUID();
+        adapter.save(withIdlessYaml(id, "idless"));
+
+        assertThat(adapter.findById(id).orElseThrow().id())
+                .isEqualTo(adapter.findById(id).orElseThrow().id())
+                .isEqualTo(id);
+    }
+
+    @Test
+    void findAllReportsTheIdThatCanBeFetchedBack() {
+        UUID id = UUID.randomUUID();
+        adapter.save(withIdlessYaml(id, "idless"));
+
+        Scenario listed = adapter.findAll().stream()
+                .filter(s -> s.name().equals("idless")).findFirst().orElseThrow();
+
+        assertThat(listed.id()).isEqualTo(id);
+        // the id the list hands out must open the scenario, which is what the GUI does on click
+        assertThat(adapter.findById(listed.id())).isPresent();
+    }
+
+    @Test
+    void anIdInTheYamlIsUnaffected() {
+        UUID id = UUID.randomUUID();
+        adapter.save(scenario(id, "with-id", "1.0"));
+        assertThat(adapter.findById(id).orElseThrow().id()).isEqualTo(id);
+    }
 }
