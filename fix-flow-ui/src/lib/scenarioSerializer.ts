@@ -155,9 +155,20 @@ export function serializeToYaml(
   const doc: YamlDoc = {
     ...meta,
     nodes: nodes.map((n) => {
-      const successEdge = edges.find((e) => e.from === n.id && e.label === 'success' && !e.sourceHandle);
-      const failureEdge = edges.find((e) => e.from === n.id && e.label === 'failure' && !e.sourceHandle);
-      const timeoutEdge = edges.find((e) => e.from === n.id && e.label === 'timeout' && !e.sourceHandle);
+      // A branch edge counts whether it was drawn from an anonymous handle (older nodes, whose
+      // single source handle has no id) or from one named after the branch. Requiring NO handle
+      // dropped every DECISION failure edge on the floor — it round-tripped in the visual `edges`
+      // array but never reached `onFailure`, which is the only thing the engine traverses (#76).
+      const branchEdge = (label: string) =>
+        edges.find(
+          (e) =>
+            e.from === n.id &&
+            e.label === label &&
+            (!e.sourceHandle || e.sourceHandle === label),
+        );
+      const successEdge = branchEdge('success');
+      const failureEdge = branchEdge('failure');
+      const timeoutEdge = branchEdge('timeout');
       return {
         id: n.id,
         name: n.name,

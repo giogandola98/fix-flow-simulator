@@ -232,8 +232,11 @@ function InnerCanvas() {
         let label = 'success';
         if (conn.sourceHandle && conn.sourceHandle !== 'default') {
           const sourceRfNode = rfNodes.find((n) => n.id === conn.source);
-          if (sourceRfNode?.type === 'DECISION') {
-            label = conn.sourceHandle === 'failure' ? 'failure' : 'success';
+          // A handle literally called success/failure names the branch, whatever the node type.
+          // This used to be checked for DECISION only, so a failure handle on any other node
+          // silently produced a 'success' edge (issue #76).
+          if (conn.sourceHandle === 'success' || conn.sourceHandle === 'failure') {
+            label = conn.sourceHandle;
           } else if (sourceRfNode?.type === 'ROUTE_FIX') {
             const cfg = sourceRfNode.data?.config as { rules?: Array<{ ruleId: string; label: string; targetNodeId?: string }> } | undefined;
             const rule = cfg?.rules?.find((r) => r.ruleId === conn.sourceHandle);

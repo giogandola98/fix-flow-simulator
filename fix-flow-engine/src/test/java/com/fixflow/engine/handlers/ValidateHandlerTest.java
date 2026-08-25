@@ -50,7 +50,9 @@ class ValidateHandlerTest {
         NodeHandlerResult r = handler.handle(v, ctx);
         assertThat(r.success()).isFalse();
         assertThat(r.nextNodeId()).isEqualTo("no");
-        assertThat(r.errorMessage()).isEqualTo("validation failed");
+        // the failed rules travel with the failure, for the Validation Errors panel
+        assertThat(r.errorMessage()).contains("\"tag\":35", "\"rule\":\"EQUALS\"",
+                "\"expected\":\"8\"", "\"actual\":\"D\"");
     }
 
     @Test
@@ -164,5 +166,43 @@ class ValidateHandlerTest {
                 .onSuccess("ok").onFailure("no").build();
         NodeHandlerResult r = handler.handle(v, ctx);
         assertThat(r.success()).isTrue();
+    }
+
+    // ---- issue #76: a failure must say which rules failed ----
+
+    @Test
+    void failureDetailListsEveryFailedRuleAsJson() {
+        ExecutionContext ctx = ctx();
+        ctx.storeInboundMessage("expect", Fixtures.fields(35, "D", 39, "9"));
+        ScenarioNode v = node("v", NodeType.VALIDATE)
+                .cfg("rules", List.of(
+                        Map.of("tag", 35, "rule", "EQUALS", "value", "8"),
+                        Map.of("tag", 39, "rule", "ENUM", "values", List.of("0", "1", "2")),
+                        Map.of("tag", 55, "rule", "FIELD_PRESENT")))
+                .onSuccess("ok").onFailure("no").build();
+
+        NodeHandlerResult r = handler.handle(v, ctx);
+
+        assertThat(r.success()).isFalse();
+        assertThat(r.errorMessage()).startsWith("[");
+        assertThat(r.errorMessage()).contains("\"tag\":35", "\"tag\":39", "\"tag\":55");
+        // and it stays parseable as the array the UI expects
+        assertThat(r.errorMessage()).endsWith("]");
+    }
+
+    @Test
+    void passingRulesAreNotReportedAsFailures() {
+        ExecutionContext ctx = ctx();
+        ctx.storeInboundMessage("expect", Fixtures.fields(35, "D", 39, "0"));
+        ScenarioNode v = node("v", NodeType.VALIDATE)
+                .cfg("rules", List.of(
+                        Map.of("tag", 35, "rule", "EQUALS", "value", "8"),
+                        Map.of("tag", 39, "rule", "EQUALS", "value", "0")))
+                .onSuccess("ok").onFailure("no").build();
+
+        NodeHandlerResult r = handler.handle(v, ctx);
+
+        assertThat(r.errorMessage()).contains("\"tag\":35");
+        assertThat(r.errorMessage()).doesNotContain("\"tag\":39");
     }
 }
