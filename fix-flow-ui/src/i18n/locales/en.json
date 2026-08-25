@@ -251,6 +251,9 @@
     "download": "Download Report"
   },
   "canvas": {
-    "fit": "Fit"
+    "fit": "Fit",
+    "exportPdf": "PDF",
+    "exportPdfBusy": "PDF...",
+    "exportPdfTitle": "Export the flowchart as a PDF"
   }
 }

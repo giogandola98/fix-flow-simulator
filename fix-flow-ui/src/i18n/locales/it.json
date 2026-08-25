@@ -251,6 +251,9 @@
     "download": "Scarica Report"
   },
   "canvas": {
-    "fit": "Adatta"
+    "fit": "Adatta",
+    "exportPdf": "PDF",
+    "exportPdfBusy": "PDF...",
+    "exportPdfTitle": "Esporta il diagramma in PDF"
   }
 }
