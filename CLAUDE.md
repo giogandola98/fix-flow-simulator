@@ -25,11 +25,11 @@
 ~/maven/bin/mvn clean package -DskipTests
 
 # Run (current version)
-java -jar fix-flow-api/target/fix-flow-api-0.7.1-beta.jar
+java -jar fix-flow-api/target/fix-flow-api-0.7.2-beta.jar
 
 # Run without browser auto-open (testing/CI)
 java -Dfixflow.browser.auto-open=false -Dfixflow.no-relaunch=true \
-  -jar fix-flow-api/target/fix-flow-api-0.7.1-beta.jar
+  -jar fix-flow-api/target/fix-flow-api-0.7.2-beta.jar
 
 # Dev mode (UI hot-reload on :5173, proxies /api + /ws to :8080)
 ~/maven/bin/mvn -pl fix-flow-api spring-boot:run   # backend
@@ -127,7 +127,7 @@ settings.setString("ResetOnLogon", cfg.resetOnLogon() ? "Y" : "N");
 fuser -k 8080/tcp
 rm -rf ./data/fixflow.*
 java -Dfixflow.browser.auto-open=false -Dfixflow.no-relaunch=true \
-  -jar fix-flow-api/target/fix-flow-api-0.7.1-beta.jar
+  -jar fix-flow-api/target/fix-flow-api-0.7.2-beta.jar
 ```
 Recreate sessions + scenarios from scratch. Never UAT against DB with leftover state.
 
