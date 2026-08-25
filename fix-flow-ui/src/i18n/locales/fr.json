@@ -175,9 +175,17 @@
       "targetTag": "Tag Cible (dans le nœud d'envoi)"
     },
     "decision": {
-      "desc": "Évalue une expression conditionnelle. Vrai → chemin succès (onSuccess). Faux → chemin échec (onFailure).",
+      "desc": "Évalue des conditions. Sans branches : vrai → chemin succès, faux → chemin échec. Avec branches : la première branche dont toutes les conditions sont vraies est prise ; une branche sans condition est celle par défaut.",
       "condition": "Condition",
-      "operators": "Opérateurs :"
+      "operators": "Opérateurs :",
+      "branches": "Branches",
+      "addBranch": "+ Branche",
+      "conditions": "Conditions (toutes doivent être vraies)",
+      "addCondition": "+ Condition",
+      "defaultBranch": "par défaut",
+      "targetNode": "Nœud cible",
+      "selectNode": "-- sélectionner un nœud --",
+      "noBranches": "Aucune branche : la condition unique ci-dessus route succès/échec."
     },
     "validate": {
       "desc": "Valide les champs d'un message stocké (d'un nœud Expect FIX). Les règles s'exécutent dans l'ordre ; toutes doivent réussir sauf si le mode Strict est désactivé.",

@@ -226,6 +226,9 @@ public class ExecutionManager {
                 if (node.type() == NodeType.ROUTE_FIX) {
                     String matchedLabel = ctx.getVariable("node:" + node.id() + ":matchedRuleLabel");
                     if (matchedLabel != null) exitDetail = "Routed via rule: " + matchedLabel;
+                } else if (node.type() == NodeType.DECISION) {
+                    String matchedLabel = ctx.getVariable("node:" + node.id() + ":matchedBranchLabel");
+                    if (matchedLabel != null) exitDetail = "Routed via branch: " + matchedLabel;
                 }
                 emitAndPersist(ctx.executionId(), ExecutionEventType.NODE_EXITED, node.id(), exitDetail);
             } else {

@@ -175,9 +175,17 @@
       "targetTag": "Tag Target (nel nodo inviato)"
     },
     "decision": {
-      "desc": "Valuta un'espressione condizionale. Vero → percorso successo (onSuccess). Falso → percorso fallimento (onFailure).",
+      "desc": "Valuta condizioni. Senza rami: vero → percorso successo, falso → percorso fallimento. Con rami: viene preso il primo ramo le cui condizioni valgono tutte; un ramo senza condizioni è il predefinito.",
       "condition": "Condizione",
-      "operators": "Operatori:"
+      "operators": "Operatori:",
+      "branches": "Rami",
+      "addBranch": "+ Ramo",
+      "conditions": "Condizioni (tutte devono valere)",
+      "addCondition": "+ Condizione",
+      "defaultBranch": "predefinito",
+      "targetNode": "Nodo di destinazione",
+      "selectNode": "-- seleziona nodo --",
+      "noBranches": "Nessun ramo: la condizione singola sopra instrada successo/fallimento."
     },
     "validate": {
       "desc": "Valida i campi di un messaggio memorizzato (da un nodo Expect FIX). Le regole vengono eseguite in ordine; tutte devono passare a meno che la modalità Strict non sia disabilitata.",

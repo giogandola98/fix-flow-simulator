@@ -175,9 +175,17 @@
       "targetTag": "Target Tag (in send node)"
     },
     "decision": {
-      "desc": "Evaluates a condition expression. True → success path (onSuccess). False → failure path (onFailure).",
+      "desc": "Evaluates conditions. With no branches: true → success path, false → failure path. With branches: the first branch whose conditions all hold is taken; a branch with no conditions is the default.",
       "condition": "Condition",
-      "operators": "Operators:"
+      "operators": "Operators:",
+      "branches": "Branches",
+      "addBranch": "+ Branch",
+      "conditions": "Conditions (all must hold)",
+      "addCondition": "+ Condition",
+      "defaultBranch": "default",
+      "targetNode": "Target node",
+      "selectNode": "-- select node --",
+      "noBranches": "No branches: the single condition above routes success/failure."
     },
     "validate": {
       "desc": "Validates fields of a stored message (from an Expect FIX node). Rules run in order; all must pass unless Strict Mode is disabled.",
