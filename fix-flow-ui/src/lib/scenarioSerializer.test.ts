@@ -267,3 +267,69 @@ describe('repeating groups', () => {
     ]);
   });
 });
+
+describe('branch edges drawn from a named handle', () => {
+  const nodes: ScenarioNode[] = [
+    { id: 'v', name: 'Check fields', type: 'VALIDATE', config: { rules: [] }, position: { x: 0, y: 0 } },
+    { id: 'ok', name: 'Accepted', type: 'SEND_FIX', config: {}, position: { x: 0, y: 100 } },
+    { id: 'ko', name: 'Rejected', type: 'SEND_FIX', config: {}, position: { x: 200, y: 100 } },
+  ];
+
+  it('maps a VALIDATE failure edge to onFailure', () => {
+    const edges: ScenarioEdge[] = [
+      { from: 'v', to: 'ok', label: 'success' },
+      { from: 'v', to: 'ko', label: 'failure', sourceHandle: 'failure' },
+    ];
+    const parsed = parseFromYaml(serializeToYaml(nodes, edges, meta));
+    expect(parsed.nodes[0].onSuccess).toBe('ok');
+    expect(parsed.nodes[0].onFailure).toBe('ko');
+  });
+
+  it('maps a DECISION failure edge to onFailure', () => {
+    const decision: ScenarioNode[] = [
+      { id: 'd', name: 'If', type: 'DECISION', config: { condition: 'a == a' }, position: { x: 0, y: 0 } },
+      ...nodes.slice(1),
+    ];
+    const edges: ScenarioEdge[] = [
+      { from: 'd', to: 'ok', label: 'success', sourceHandle: 'success' },
+      { from: 'd', to: 'ko', label: 'failure', sourceHandle: 'failure' },
+    ];
+    const parsed = parseFromYaml(serializeToYaml(decision, edges, meta));
+    expect(parsed.nodes[0].onSuccess).toBe('ok');
+    expect(parsed.nodes[0].onFailure).toBe('ko');
+  });
+
+  it('still maps handle-less edges, as saved before named handles existed', () => {
+    const edges: ScenarioEdge[] = [
+      { from: 'v', to: 'ok', label: 'success' },
+      { from: 'v', to: 'ko', label: 'failure' },
+    ];
+    const parsed = parseFromYaml(serializeToYaml(nodes, edges, meta));
+    expect(parsed.nodes[0].onSuccess).toBe('ok');
+    expect(parsed.nodes[0].onFailure).toBe('ko');
+  });
+
+  it('does not mistake a ROUTE_FIX rule handle for a branch', () => {
+    const route: ScenarioNode[] = [
+      { id: 'r', name: 'Route', type: 'ROUTE_FIX',
+        config: { rules: [{ ruleId: 'r1', label: 'failure', matchers: [], targetNodeId: 'ko' }] },
+        position: { x: 0, y: 0 } },
+      ...nodes.slice(1),
+    ];
+    const edges: ScenarioEdge[] = [{ from: 'r', to: 'ko', label: 'failure', sourceHandle: 'r1' }];
+    const parsed = parseFromYaml(serializeToYaml(route, edges, meta));
+    expect(parsed.nodes[0].onFailure).toBeUndefined();
+    // the rule keeps its own target instead
+    const rules = parsed.nodes[0].config.rules as Array<{ targetNodeId: string }>;
+    expect(rules[0].targetNodeId).toBe('ko');
+  });
+
+  it('keeps the visual edge list intact either way', () => {
+    const edges: ScenarioEdge[] = [
+      { from: 'v', to: 'ok', label: 'success' },
+      { from: 'v', to: 'ko', label: 'failure', sourceHandle: 'failure' },
+    ];
+    const parsed = parseFromYaml(serializeToYaml(nodes, edges, meta));
+    expect(parsed.edges).toEqual(edges);
+  });
+});

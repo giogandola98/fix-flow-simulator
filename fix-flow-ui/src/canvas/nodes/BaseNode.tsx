@@ -12,6 +12,12 @@ interface Props {
   shape?: 'rect' | 'diamond' | 'circle';
   children?: ReactNode;
   handles?: { target: boolean; source: boolean };
+  /**
+   * Adds a second, red source handle on the right for the node's failure branch.
+   * The success handle deliberately keeps NO id: edges saved before this existed carry
+   * `sourceHandle: null` and bind to the id-less handle, so they keep rendering.
+   */
+  failureHandle?: boolean;
 }
 
 export function BaseNode({
@@ -24,6 +30,7 @@ export function BaseNode({
   shape = 'rect',
   children,
   handles = { target: true, source: true },
+  failureHandle = false,
 }: Props) {
   const ringColor = ringClass(status, selected);
 
@@ -50,6 +57,15 @@ export function BaseNode({
         {children && <div className="mt-1 text-xs">{children}</div>}
       </div>
       {handles.source && <Handle type="source" position={Position.Bottom} />}
+      {failureHandle && (
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="failure"
+          title="failure branch"
+          style={{ background: '#ef4444', width: 9, height: 9 }}
+        />
+      )}
     </div>
   );
 }

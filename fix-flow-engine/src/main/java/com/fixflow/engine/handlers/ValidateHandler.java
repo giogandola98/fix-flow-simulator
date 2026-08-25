@@ -1,5 +1,7 @@
 package com.fixflow.engine.handlers;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fixflow.core.domain.execution.FIXMessageData;
 import com.fixflow.core.domain.scenario.NodeType;
 import com.fixflow.core.domain.scenario.ScenarioNode;
@@ -16,6 +18,8 @@ import java.util.concurrent.TimeUnit;
 
 @Component
 public class ValidateHandler implements NodeHandler {
+
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     private final ValidationEngine engine;
 
@@ -39,7 +43,34 @@ public class ValidateHandler implements NodeHandler {
 
         return summary.passed()
             ? NodeHandlerResult.success(node.onSuccess())
-            : NodeHandlerResult.failure(node.onFailure(), "validation failed");
+            : NodeHandlerResult.failure(node.onFailure(), describeFailures(summary));
+    }
+
+    /**
+     * Renders the failed rules as the JSON array the Validation Errors panel parses out of the
+     * ERROR event detail. Reporting the bare string "validation failed" left that panel with a
+     * single {@code tag 0 / UNKNOWN} row, so a scenario could branch on a validation failure
+     * without ever showing which rule failed and why (issue #76).
+     */
+    private String describeFailures(ValidationSummary summary) {
+        List<Map<String, Object>> failures = new ArrayList<>();
+        for (ValidationResult r : summary.results()) {
+            if (r.passed()) continue;
+            Map<String, Object> failure = new LinkedHashMap<>();
+            failure.put("tag", r.tag());
+            failure.put("rule", r.ruleName());
+            failure.put("expected", r.expected() == null ? "" : r.expected());
+            failure.put("actual", r.actual() == null ? "" : r.actual());
+            if (r.message() != null) failure.put("message", r.message());
+            failures.add(failure);
+        }
+        if (failures.isEmpty()) return "validation failed";
+        try {
+            return JSON.writeValueAsString(failures);
+        } catch (JsonProcessingException e) {
+            // Never worth failing a run over: fall back to the plain wording.
+            return "validation failed";
+        }
     }
 
     /**
