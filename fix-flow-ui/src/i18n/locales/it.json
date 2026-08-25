@@ -58,6 +58,7 @@
     "newScenarioName": "Nuovo Scenario",
     "searchPlaceholder": "Cerca scenari…",
     "renameTitle": "Rinomina",
+    "duplicateTitle": "Duplica",
     "deleteTitle": "Elimina",
     "noScenarios": "Nessuno scenario",
     "noMatch": "Nessuno scenario corrisponde a \"{{search}}\""

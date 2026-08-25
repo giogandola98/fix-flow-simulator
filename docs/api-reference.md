@@ -116,6 +116,21 @@ PUT /scenarios/{id}
 ```
 Same body as create.
 
+### Duplicate scenario
+```
+POST /scenarios/{id}/duplicate
+```
+Body (optional):
+```json
+{ "name": "My copy" }
+```
+Returns `201` with the copy, `yamlDsl` included. The copy gets a **new scenario id and new node
+ids**, and every reference to those node ids is rewritten: `onSuccess` / `onFailure` / `onTimeout`,
+`timeout.jumpTo`, the visual `edges`, `ROUTE_FIX` rule targets, `EXPECT_FIX` `correlation.fromNode`,
+`VALIDATE` `sourceNodeId`, date rules' `sourceNode`, and `{{node:<id>:...}}` placeholders. Node
+positions and any other key in the source YAML are preserved, so the copy opens with the same
+layout. Without a `name`, the copy is called `<name> (copy)`.
+
 ### Delete scenario
 ```
 DELETE /scenarios/{id}

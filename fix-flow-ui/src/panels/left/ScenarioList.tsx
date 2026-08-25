@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { getScenarios, getScenario, createScenario, updateScenario, deleteScenario } from '../../api/scenarios';
+import { getScenarios, getScenario, createScenario, updateScenario, deleteScenario, duplicateScenario } from '../../api/scenarios';
 import { useScenarioStore } from '../../store/scenarioStore';
 import { parseFromYaml } from '../../lib/scenarioSerializer';
 import { Scenario } from '../../types';
@@ -48,6 +48,11 @@ export function ScenarioList() {
       if (activeScenario?.id === updated.id) setActiveScenario(updated);
       setRenamingId(null);
     },
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: (id: string) => duplicateScenario(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['scenarios'] }),
   });
 
   const deleteMutation = useMutation({
@@ -157,6 +162,12 @@ export function ScenarioList() {
                   title={t('scenarios.renameTitle')}
                   onClick={(e) => startRename(s, e)}
                 >✎</button>
+                <button
+                  className="px-1 rounded hover:bg-white/10 text-[10px]"
+                  title={t('scenarios.duplicateTitle')}
+                  aria-label={t('scenarios.duplicateTitle')}
+                  onClick={(e) => { e.stopPropagation(); duplicateMutation.mutate(s.id); }}
+                >⧉</button>
                 <button
                   className="px-1 rounded hover:bg-red-600/50 text-[10px] text-red-400"
                   title={t('scenarios.deleteTitle')}
