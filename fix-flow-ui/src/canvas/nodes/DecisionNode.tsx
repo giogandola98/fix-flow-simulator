@@ -1,12 +1,17 @@
 import { Handle, NodeProps, Position } from '@xyflow/react';
 import { ringClass } from './ringClass';
+import { useDynamicHandles } from './useDynamicHandles';
 
 interface Branch { branchId: string; label: string; conditions?: string[]; targetNodeId?: string }
 
-export function DecisionNode({ data, selected }: NodeProps) {
+export function DecisionNode({ id, data, selected }: NodeProps) {
   const cfg = (data.config as { condition?: string; branches?: Branch[] }) ?? {};
   const branches: Branch[] = cfg.branches ?? [];
   const status = data.status as string;
+
+  // Branch handles appear after the node was first measured; without this React Flow does not
+  // know they exist and refuses to draw the edges bound to them (issue #92).
+  useDynamicHandles(id, branches.map((b) => b.branchId));
 
   const ringColor = ringClass(status, selected);
 

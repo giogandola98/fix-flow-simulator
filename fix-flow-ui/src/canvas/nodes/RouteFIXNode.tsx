@@ -1,12 +1,17 @@
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { ringClass } from './ringClass';
+import { useDynamicHandles } from './useDynamicHandles';
 
 interface RoutingRule { ruleId: string; label: string; matchers: Array<{tag: number; value: string}>; targetNodeId: string; }
 
-export function RouteFIXNode({ data, selected }: NodeProps) {
+export function RouteFIXNode({ id, data, selected }: NodeProps) {
   const cfg = (data.config as { rules?: RoutingRule[] }) ?? {};
   const rules: RoutingRule[] = cfg.rules ?? [];
   const status = data.status as string | undefined;
+
+  // Same as DECISION: a rule handle added to a node already on the canvas is invisible to the
+  // edge renderer until React Flow re-measures the node (issue #92).
+  useDynamicHandles(id, rules.map((r) => r.ruleId));
 
   const ringColor = ringClass(status, selected);
 
