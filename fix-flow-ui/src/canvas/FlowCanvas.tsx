@@ -57,7 +57,7 @@ function InnerCanvas() {
       id: n.id,
       type: n.type,
       position: n.position ?? { x: 100, y: 100 },
-      data: { label: n.name, config: n.config, status: nodeStatuses[n.id] ?? 'idle' },
+      data: { label: n.name, config: n.config, timeout: n.timeout, status: nodeStatuses[n.id] ?? 'idle' },
     }));
     setRfNodes(nextNodes);
     trackedNodeIds.current = new Set(nodes.map((n) => n.id));
@@ -90,7 +90,7 @@ function InnerCanvas() {
           id: n.id,
           type: n.type,
           position: n.position ?? { x: 100, y: 100 },
-          data: { label: n.name, config: n.config, status: nodeStatuses[n.id] ?? 'idle' },
+          data: { label: n.name, config: n.config, timeout: n.timeout, status: nodeStatuses[n.id] ?? 'idle' },
         })),
       ]);
     }
@@ -108,8 +108,15 @@ function InnerCanvas() {
         const storeNode = nodes.find((n) => n.id === rfNode.id);
         if (!storeNode) return rfNode;
         const d = rfNode.data as Record<string, unknown>;
-        if (d.label === storeNode.name && d.config === storeNode.config) return rfNode;
-        return { ...rfNode, data: { ...d, label: storeNode.name, config: storeNode.config } };
+        // `timeout` is compared too: a WAIT block's duration lives there, so leaving it out
+        // meant editing the duration never re-rendered the node (issue #89).
+        if (d.label === storeNode.name && d.config === storeNode.config && d.timeout === storeNode.timeout) {
+          return rfNode;
+        }
+        return {
+          ...rfNode,
+          data: { ...d, label: storeNode.name, config: storeNode.config, timeout: storeNode.timeout },
+        };
       }),
     );
     trackedNodeIds.current = new Set(nodes.map((n) => n.id));
