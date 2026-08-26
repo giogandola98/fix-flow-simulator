@@ -105,7 +105,10 @@ export function ScenarioList() {
   const filtered = (data ?? []).filter((s) => !q || s.name.toLowerCase().includes(q));
 
   return (
-    <div className="flex flex-col min-h-0 border-t border-[#2a2d3a]">
+    // h-full matters: the parent is a plain block, so without it this column is as tall as its
+    // content, the list below has nothing to shrink against, and a long list is simply clipped by
+    // the panel's overflow-hidden with no scrollbar (issue #100). NodePalette already does this.
+    <div className="h-full flex flex-col min-h-0 border-t border-[#2a2d3a]">
       <div className="p-2 pb-0">
         <div className="flex items-center justify-between mb-1">
           <div className="text-xs uppercase tracking-wider text-gray-500">{t('scenarios.title')}</div>
@@ -124,7 +127,10 @@ export function ScenarioList() {
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2 flex flex-col gap-1">
+      <div
+        data-testid="scenario-list"
+        className="flex-1 min-h-0 overflow-y-auto px-2 pb-2 flex flex-col gap-1"
+      >
         {filtered.map((s) => (
           <div
             key={s.id}

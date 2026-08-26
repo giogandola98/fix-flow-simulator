@@ -64,3 +64,39 @@ describe('ScenarioList duplicate', () => {
     expect(api.getScenario).not.toHaveBeenCalled();
   });
 });
+
+describe('ScenarioList layout', () => {
+  beforeEach(() => {
+    vi.mocked(api.getScenarios).mockResolvedValue(
+      Array.from({ length: 40 }, (_, i) => ({ ...scenario, id: `s-${i}`, name: `Bulk ${i}` })) as never,
+    );
+  });
+
+  // jsdom has no layout, so this pins the contract that makes the column scrollable rather than
+  // the scrolling itself: a bounded column, with the list as the part that gives way (issue #100).
+  it('is a full-height column so the list can overflow inside it', async () => {
+    const { container } = renderList();
+    await screen.findByText('Bulk 0');
+
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.className).toContain('h-full');
+    expect(root.className).toContain('flex-col');
+  });
+
+  it('gives the list itself the scrollbar', async () => {
+    renderList();
+    await screen.findByText('Bulk 0');
+
+    const list = screen.getByTestId('scenario-list');
+    expect(list.className).toContain('overflow-y-auto');
+    // min-h-0 is what lets a flex child shrink below its content height
+    expect(list.className).toContain('min-h-0');
+    expect(list.className).toContain('flex-1');
+  });
+
+  it('keeps every scenario in the list, however many there are', async () => {
+    renderList();
+    await screen.findByText('Bulk 0');
+    expect(screen.getByText('Bulk 39')).toBeInTheDocument();
+  });
+});
