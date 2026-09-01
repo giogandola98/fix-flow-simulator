@@ -2,6 +2,8 @@ package com.fixflow.engine.scenario;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonLocation;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -34,9 +36,33 @@ public class ScenarioDslParser {
         try {
             ScenarioDto dto = mapper.readValue(yaml, ScenarioDto.class);
             return dto.toDomain(yaml);
+        } catch (JsonProcessingException e) {
+            // Reading a String cannot fail for I/O reasons, so this is always bad input.
+            throw new ScenarioParseException(describe(e), e);
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to parse scenario YAML", e);
         }
+    }
+
+    /**
+     * "Invalid scenario YAML at line 4, column 11: &lt;reason&gt;".
+     *
+     * <p>Kept to a single line. {@code getOriginalMessage()} drops Jackson's own trailing
+     * location suffix, but SnakeYAML then appends its own caret-marked excerpt of the document
+     * on the lines after the first — which the position prefix already conveys, and which would
+     * put raw newlines inside the JSON error message.
+     */
+    private static String describe(JsonProcessingException e) {
+        JsonLocation location = e.getLocation();
+        String where = location == null || location.getLineNr() < 0 ? ""
+                : " at line " + location.getLineNr() + ", column " + location.getColumnNr();
+        String reason = firstLine(e.getOriginalMessage());
+        return "Invalid scenario YAML" + where
+                + (reason == null || reason.isBlank() ? "" : ": " + reason);
+    }
+
+    private static String firstLine(String message) {
+        return message == null ? null : message.split("\\R", 2)[0].trim();
     }
 
     public String toYaml(Scenario scenario) {

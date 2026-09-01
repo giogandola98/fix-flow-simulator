@@ -14,7 +14,7 @@ Every error carries the same body:
 
 | Status | When |
 |---|---|
-| `400 Bad Request` | malformed JSON, missing/mistyped parameter, invalid argument |
+| `400 Bad Request` | malformed JSON, missing/mistyped parameter, invalid argument, or scenario YAML the DSL parser cannot read — `message` names the line and column |
 | `404 Not Found` | unknown entity id — **and** an unknown path (e.g. `/api/sessions` without `/v1`) |
 | `405 Method Not Allowed` | path exists, verb does not |
 | `409 Conflict` | session busy / conflicting state |

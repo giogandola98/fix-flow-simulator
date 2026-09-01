@@ -103,6 +103,43 @@ class ScenarioDslParserTest {
     @Test
     void invalidYamlThrows() {
         assertThatThrownBy(() -> parser.parseYaml("\t not: [valid"))
-                .isInstanceOf(RuntimeException.class);
+                .isInstanceOf(ScenarioParseException.class);
+    }
+
+    /**
+     * Issue #105: a document the parser cannot read is bad input, not a server fault, and the
+     * message has to say where — the old UncheckedIOException carried neither fact.
+     */
+    @Test
+    void malformedYamlReportsWhereItBroke() {
+        assertThatThrownBy(() -> parser.parseYaml("""
+                name: broken
+                nodes:
+                  - id: start
+                     name: badly indented
+                """))
+                .isInstanceOf(ScenarioParseException.class)
+                .isNotInstanceOf(java.io.UncheckedIOException.class)
+                .hasMessageContaining("Invalid scenario YAML")
+                .hasMessageContaining("line 4")
+                // SnakeYAML appends a caret-marked excerpt of the document; the position prefix
+                // already says where, and raw newlines do not belong in a JSON error message.
+                .extracting(t -> t.getMessage(), org.assertj.core.api.InstanceOfAssertFactories.STRING)
+                .doesNotContain("\n");
+    }
+
+    @Test
+    void valueThatDoesNotFitTheDslReportsTheOffendingValue() {
+        // Well-formed YAML, but END is not a node type — still the caller's mistake.
+        assertThatThrownBy(() -> parser.parseYaml("""
+                name: broken
+                nodes:
+                  - id: 11111111-1111-1111-1111-111111111111
+                    name: done
+                    type: END
+                """))
+                .isInstanceOf(ScenarioParseException.class)
+                .hasMessageContaining("Invalid scenario YAML")
+                .hasMessageContaining("END");
     }
 }

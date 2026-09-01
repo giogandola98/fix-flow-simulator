@@ -2,6 +2,7 @@ package com.fixflow.api.config;
 
 import com.fixflow.api.exception.SessionConflictException;
 import com.fixflow.api.rest.dto.ErrorResponse;
+import com.fixflow.engine.scenario.ScenarioParseException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
@@ -53,6 +54,16 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ErrorResponse> r = handler.handleBadRequestSpring(
             new MissingServletRequestParameterException("file", "MultipartFile"));
         assertThat(r.getStatusCode().value()).isEqualTo(400);
+    }
+
+    @Test
+    void handleScenarioParseMaps400AndKeepsThePosition() {
+        // Issue #105: unreadable YAML is the caller's mistake, and the answer has to say where.
+        ResponseEntity<ErrorResponse> r = handler.handleScenarioParse(
+            new ScenarioParseException("Invalid scenario YAML at line 4, column 11: bad", null));
+        assertThat(r.getStatusCode().value()).isEqualTo(400);
+        assertThat(r.getBody().status()).isEqualTo(400);
+        assertThat(r.getBody().message()).isEqualTo("Invalid scenario YAML at line 4, column 11: bad");
     }
 
     @Test
@@ -146,6 +157,14 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void scenarioParseReturns400WithTheParserMessage() throws Exception {
+        mvc.perform(get("/t/badyaml"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.message").value("Invalid scenario YAML at line 4, column 11: bad"));
+    }
+
+    @Test
     void genericReturns500WithoutLeakingMessage() throws Exception {
         mvc.perform(get("/t/boom"))
             .andExpect(status().isInternalServerError())
@@ -194,6 +213,11 @@ class GlobalExceptionHandlerTest {
 
         @GetMapping("/t/conflict")
         String conflict() { throw new SessionConflictException("busy"); }
+
+        @GetMapping("/t/badyaml")
+        String badYaml() {
+            throw new ScenarioParseException("Invalid scenario YAML at line 4, column 11: bad", null);
+        }
 
         @GetMapping("/t/boom")
         String boom() { throw new RuntimeException("kaboom-secret"); }
