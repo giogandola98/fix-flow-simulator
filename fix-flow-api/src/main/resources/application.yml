@@ -1,6 +1,10 @@
 spring:
   datasource:
-    url: jdbc:h2:file:./data/fixflow;AUTO_SERVER=TRUE
+    # No AUTO_SERVER: this is an embedded, single-instance application. Letting a second JVM
+    # open the same store is what allowed the MVStore file channel to be closed underneath a
+    # running instance, after which every endpoint answered 500 forever (issue #103). A second
+    # instance now fails fast at startup — see DatabaseInUseFailureAnalyzer.
+    url: jdbc:h2:file:./data/fixflow
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -11,6 +15,11 @@ spring:
     properties:
       hibernate:
         format_sql: false
+        # ddl-auto: update otherwise re-issues "add constraint UK..." for unique constraints
+        # that already exist, which fails with "object already exists" on every restart against
+        # an existing database (issue #103).
+        schema_update:
+          unique_constraint_strategy: SKIP
   h2:
     console:
       enabled: true

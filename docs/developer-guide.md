@@ -680,6 +680,13 @@ Runs on `ApplicationReadyEvent`. Loads all scenarios from the DB and calls `Scen
 | `ScenarioController` | `/api/v1/scenarios` | CRUD, execute, import, export |
 | `ExecutionController` | `/api/v1/executions` | list, get, stop, report |
 | `SystemController` | `/api/v1/system` | shutdown |
+| `HealthController` | `/api/v1/system` | health |
+
+**Health endpoint:** `GET /api/v1/system/health` runs a real `SELECT 1` against the store
+and returns `200 {"status":"UP",...}` or `503 {"status":"DOWN","reason":...}`. `DatabaseAvailability`
+latches the first fatal store failure it sees — a closed MVStore channel never recovers — so
+once it is down the endpoint answers without probing again, and every other endpoint answers
+`503` with the same cause instead of an opaque `500`.
 
 **Shutdown endpoint:** `POST /api/v1/system/shutdown` returns `202 Accepted`
 immediately, then exits the JVM from a dedicated non-daemon thread after a
@@ -1308,7 +1315,7 @@ fuser -k 8080/tcp
 ```yaml
 spring:
   datasource:
-    url: jdbc:h2:file:./data/fixflow;AUTO_SERVER=TRUE
+    url: jdbc:h2:file:./data/fixflow
     driver-class-name: org.h2.Driver
     username: sa
     password:           # empty
@@ -1316,6 +1323,10 @@ spring:
     hibernate:
       ddl-auto: update  # creates/alters tables on startup; change to 'validate' in prod
     show-sql: false
+    properties:
+      hibernate:
+        schema_update:
+          unique_constraint_strategy: SKIP   # don't re-add constraints that already exist
   h2:
     console:
       enabled: true
@@ -1334,7 +1345,22 @@ logging:
     com.fixflow: DEBUG  # set to INFO to reduce noise
 ```
 
-`AUTO_SERVER=TRUE` in the JDBC URL enables H2's auto-server mode, allowing the H2 console to connect while the app is running.
+The JDBC URL deliberately does **not** set `AUTO_SERVER=TRUE`. Auto-server mode lets a
+second JVM open the same store, which is how a running instance could have its MVStore file
+channel closed underneath it — after which every endpoint answered `500` until the database
+file was deleted (issue #103). The simulator is a single-instance embedded application; a
+second instance now fails fast at startup with an explanatory message: `DatabaseLockPreflight`
+(an `EnvironmentPostProcessor`) opens and closes one connection before JPA starts, and
+`DatabaseInUseFailureAnalyzer` renders the resulting `DatabaseInUseException` as a
+Description/Action block. The probe is necessary because Hibernate's `JdbcEnvironmentInitiator`
+catches the driver's `SQLException` and rethrows `Unable to determine Dialect without JDBC
+metadata` *without chaining it* — by the time the failure reaches Spring Boot, H2's error 90020
+is no longer anywhere in the exception. The bundled H2 console at `/h2-console` runs inside the same
+JVM and needs no auto-server; an *external* SQL client cannot attach while the app is running.
+
+`unique_constraint_strategy: SKIP` stops `ddl-auto: update` from re-issuing
+`alter table ... add constraint UK...` for unique constraints that already exist, which
+failed with `object already exists` on every restart against an existing database.
 
 ### Frontend environment
 

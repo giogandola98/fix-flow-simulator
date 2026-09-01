@@ -16,6 +16,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.http.HttpMethod;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import java.nio.channels.ClosedChannelException;
 import java.util.NoSuchElementException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,7 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class GlobalExceptionHandlerTest {
 
-    private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
+    private final GlobalExceptionHandler handler = new GlobalExceptionHandler(new DatabaseAvailability());
 
     // ---- direct unit tests of each handler method ----
 
@@ -75,6 +79,38 @@ class GlobalExceptionHandlerTest {
         assertThat(r.getBody().message()).doesNotContain("secret");
     }
 
+    @Test
+    void unknownPathMaps404NotFound() {
+        // Issue #103: a typo in a URL used to fall through to handleGeneric and read as a
+        // server fault. NoResourceFoundException is Spring's way of saying 404.
+        ResponseEntity<ErrorResponse> r = handler.handleNoResource(
+            new NoResourceFoundException(HttpMethod.GET, "api/sessions"));
+        assertThat(r.getStatusCode().value()).isEqualTo(404);
+        assertThat(r.getBody().message()).contains("GET", "/api/sessions");
+    }
+
+    @Test
+    void deadDatabaseMaps503WithCause() {
+        // Issue #103: once the MVStore channel is closed nothing recovers until restart, so the
+        // answer has to be distinguishable from an ordinary per-request 500.
+        ResponseEntity<ErrorResponse> r = handler.handleGeneric(
+            new RuntimeException("could not execute statement", new ClosedChannelException()));
+        assertThat(r.getStatusCode().value()).isEqualTo(503);
+        assertThat(r.getBody().status()).isEqualTo(503);
+        assertThat(r.getBody().message())
+            .contains("ClosedChannelException")
+            .contains("Restart the simulator");
+    }
+
+    @Test
+    void deadDatabaseKeepsAnswering503ForLaterRequests() {
+        handler.handleGeneric(new RuntimeException("boom", new ClosedChannelException()));
+
+        ResponseEntity<ErrorResponse> later = handler.handleGeneric(new RuntimeException("later"));
+
+        assertThat(later.getStatusCode().value()).isEqualTo(503);
+    }
+
     // ---- HTTP dispatch tests: exercise framework-thrown exceptions through the advice ----
 
     MockMvc mvc;
@@ -83,7 +119,7 @@ class GlobalExceptionHandlerTest {
     void setup() {
         mvc = MockMvcBuilders
             .standaloneSetup(new TestController())
-            .setControllerAdvice(new GlobalExceptionHandler())
+            .setControllerAdvice(new GlobalExceptionHandler(new DatabaseAvailability()))
             .setMessageConverters(new MappingJackson2HttpMessageConverter())
             .build();
     }

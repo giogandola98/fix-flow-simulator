@@ -6,8 +6,12 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
+// The unique constraint is named explicitly: an unnamed one gets a hash-derived name that
+// Hibernate's schema update then failed to recognise as already present (issue #103).
 @Table(name = "scenario_versions",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"scenario_id", "version"}))
+       uniqueConstraints = @UniqueConstraint(
+           name = "uk_scenario_versions_scenario_id_version",
+           columnNames = {"scenario_id", "version"}))
 public class ScenarioVersionEntity {
 
     @Id

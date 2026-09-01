@@ -2,6 +2,7 @@ package com.fixflow.api.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fixflow.adapters.persistence.FIXSessionRepositoryAdapter;
+import com.fixflow.api.config.DatabaseAvailability;
 import com.fixflow.api.config.GlobalExceptionHandler;
 import com.fixflow.api.exception.SessionConflictException;
 import com.fixflow.api.rest.dto.FIXSessionRequest;
@@ -42,7 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 )
 // Register the advice explicitly so status mappings (esp. 409) hold regardless of
 // test ordering — a prior version was order-dependent and only failed in the full run.
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, DatabaseAvailability.class})
 class SessionControllerTest {
 
     @Autowired MockMvc mvc;
