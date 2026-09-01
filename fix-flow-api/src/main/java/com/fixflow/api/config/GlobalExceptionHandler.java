@@ -2,6 +2,7 @@ package com.fixflow.api.config;
 
 import com.fixflow.api.exception.SessionConflictException;
 import com.fixflow.api.rest.dto.ErrorResponse;
+import com.fixflow.engine.scenario.ScenarioParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -62,6 +63,18 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleBadRequest(IllegalArgumentException ex) {
+        return ResponseEntity.status(400).body(
+            ErrorResponse.of(400, "Bad Request", ex.getMessage())
+        );
+    }
+
+    /**
+     * YAML the caller supplied that the DSL parser cannot read. The message carries the line and
+     * column the parser reported; without this it fell through to {@link #handleGeneric} and a
+     * bad request body was reported as a server fault — see issue #105.
+     */
+    @ExceptionHandler(ScenarioParseException.class)
+    public ResponseEntity<ErrorResponse> handleScenarioParse(ScenarioParseException ex) {
         return ResponseEntity.status(400).body(
             ErrorResponse.of(400, "Bad Request", ex.getMessage())
         );
