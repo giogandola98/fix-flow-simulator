@@ -1,0 +1,7 @@
+# Both run before the application context exists, so they are registered here rather than as
+# beans. See DatabaseLockPreflight / DatabaseInUseFailureAnalyzer (issue #103).
+org.springframework.boot.env.EnvironmentPostProcessor=\
+com.fixflow.api.config.DatabaseLockPreflight
+
+org.springframework.boot.diagnostics.FailureAnalyzer=\
+com.fixflow.api.config.DatabaseInUseFailureAnalyzer

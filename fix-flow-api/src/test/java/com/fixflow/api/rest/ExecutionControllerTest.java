@@ -1,6 +1,7 @@
 package com.fixflow.api.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fixflow.api.config.DatabaseAvailability;
 import com.fixflow.api.config.GlobalExceptionHandler;
 import com.fixflow.api.dto.ReportDto;
 import com.fixflow.api.rest.dto.StartExecutionRequest;
@@ -46,7 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         HibernateJpaAutoConfiguration.class
     }
 )
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, DatabaseAvailability.class})
 class ExecutionControllerTest {
 
     @Autowired MockMvc mvc;

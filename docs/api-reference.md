@@ -4,6 +4,23 @@ Base URL: `http://localhost:8080/api`
 
 All request/response bodies are JSON unless noted.
 
+## Error responses
+
+Every error carries the same body:
+
+```json
+{ "status": 404, "error": "Not Found", "message": "...", "timestamp": "2026-09-01T10:00:00Z" }
+```
+
+| Status | When |
+|---|---|
+| `400 Bad Request` | malformed JSON, missing/mistyped parameter, invalid argument |
+| `404 Not Found` | unknown entity id — **and** an unknown path (e.g. `/api/sessions` without `/v1`) |
+| `405 Method Not Allowed` | path exists, verb does not |
+| `409 Conflict` | session busy / conflicting state |
+| `500 Internal Server Error` | unhandled fault; `message` is always the fixed string `Internal server error` |
+| `503 Service Unavailable` | the embedded database is unusable and will stay that way until restart — `message` carries the cause. See `GET /api/v1/system/health`. |
+
 ---
 
 ## Sessions
@@ -235,6 +252,30 @@ Response: `application/octet-stream` JSON file download.
 ---
 
 ## System
+
+### Health check
+```
+GET /api/v1/system/health
+```
+Probes the embedded H2 store with a real query.
+
+`200 OK`:
+```json
+{ "status": "UP", "database": "UP", "timestamp": "2026-09-01T10:00:00Z" }
+```
+
+`503 Service Unavailable` when the store is unusable:
+```json
+{
+  "status": "DOWN",
+  "database": "DOWN",
+  "reason": "MVStoreException: Writing to sun.nio.ch.FileChannelImpl@17e680db failed",
+  "timestamp": "2026-09-01T10:00:00Z"
+}
+```
+A store failure is permanent until the simulator is restarted. While it is down every
+other endpoint also answers `503` (not `500`) with the same cause, so a test harness can
+tell "restart me" apart from "that one request failed".
 
 ### Shutdown the simulator
 ```

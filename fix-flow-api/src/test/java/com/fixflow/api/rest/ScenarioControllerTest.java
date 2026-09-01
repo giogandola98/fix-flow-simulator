@@ -1,6 +1,7 @@
 package com.fixflow.api.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fixflow.api.config.DatabaseAvailability;
 import com.fixflow.api.config.GlobalExceptionHandler;
 import com.fixflow.api.rest.dto.ScenarioRequest;
 import com.fixflow.core.domain.scenario.Scenario;
@@ -44,7 +45,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         HibernateJpaAutoConfiguration.class
     }
 )
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, DatabaseAvailability.class})
 class ScenarioControllerTest {
 
     @Autowired MockMvc mvc;

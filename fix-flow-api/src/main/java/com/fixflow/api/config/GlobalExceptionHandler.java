@@ -11,6 +11,8 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.NoSuchElementException;
 
@@ -19,10 +21,42 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    private final DatabaseAvailability database;
+
+    /**
+     * Single constructor on purpose: with two, Spring would silently pick the no-arg one and the
+     * advice would end up with its own {@link DatabaseAvailability} instead of the shared bean.
+     */
+    public GlobalExceptionHandler(DatabaseAvailability database) {
+        this.database = database;
+    }
+
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(NoSuchElementException ex) {
         return ResponseEntity.status(404).body(
             ErrorResponse.of(404, "Not Found", ex.getMessage())
+        );
+    }
+
+    /**
+     * A request for a path no controller and no static resource matches. Spring signals this
+     * with {@code NoResourceFoundException} (or {@code NoHandlerFoundException} when configured
+     * to throw); without these handlers it fell through to {@link #handleGeneric} and a typo in
+     * a URL was reported as a server fault — see issue #103.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException ex) {
+        return ResponseEntity.status(404).body(
+            ErrorResponse.of(404, "Not Found",
+                "No endpoint for " + ex.getHttpMethod() + " /" + ex.getResourcePath())
+        );
+    }
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoHandler(NoHandlerFoundException ex) {
+        return ResponseEntity.status(404).body(
+            ErrorResponse.of(404, "Not Found",
+                "No endpoint for " + ex.getHttpMethod() + " " + ex.getRequestURL())
         );
     }
 
@@ -58,8 +92,20 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * Anything unhandled. A dead H2 store is separated out here and answered {@code 503} with
+     * the real cause: it is not a per-request fault, it is permanent until restart, and a
+     * caller — a human or a test harness — needs to be able to tell the two apart.
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
+        if (database.recordIfFatal(ex)) {
+            return ResponseEntity.status(503).body(
+                ErrorResponse.of(503, "Service Unavailable",
+                    "Database is unavailable and cannot recover: " + database.failureReason()
+                        + ". Restart the simulator.")
+            );
+        }
         log.error("Unhandled exception", ex);
         return ResponseEntity.status(500).body(
             ErrorResponse.of(500, "Internal Server Error", "Internal server error")
