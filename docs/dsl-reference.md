@@ -63,6 +63,26 @@ config:
     - { tag: 44, value: "{{node:prev:tag31}}" }
 ```
 
+### Header fields
+
+Header tags written in `fields` go to the message **header**, not the body: `35` plus the
+standard FIX 4.x / FIXT.1.1 header fields — e.g. `115` OnBehalfOfCompID, `128` DeliverToCompID,
+`116`/`129` OnBehalfOf/DeliverToSubID, `97` PossResend, `122` OrigSendingTime, `347`
+MessageEncoding, `1128` ApplVerID, `1129` CstmApplVerID, `1156` ApplExtID — and any tag the
+session's dictionary declares in its header. A `NoHops` (`627`) group is also placed in the header.
+
+```yaml
+config:
+  msgType: R
+  fields:
+    - { tag: 115, value: ROUTING-ID }   # header
+    - { tag: 1128, value: "9" }         # header
+    - { tag: 131, value: "{{uuid}}" }   # body
+```
+
+Session-managed tags — `8`, `9`, `10`, `34`, `49`, `52`, `56` — are written by the FIX session
+and cannot be set from a scenario: they are dropped before sending (a warning is logged).
+
 ### Repeating groups
 
 ```yaml

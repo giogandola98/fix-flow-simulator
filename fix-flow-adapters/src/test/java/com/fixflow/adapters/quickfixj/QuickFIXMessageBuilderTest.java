@@ -141,4 +141,83 @@ class QuickFIXMessageBuilderTest {
         assertTrue(raw.contains("600=EUR/USD|587=0|624=1|"), raw);
         assertTrue(raw.contains("600=EUR/USD|587=6|624=2|"), raw);
     }
+
+    // --- #111: header fields set by a scenario must go to the header, not the body ---
+
+    private static final Map<Integer, String> ROUTED_QUOTE_REQUEST = new LinkedHashMap<>();
+    static {
+        ROUTED_QUOTE_REQUEST.put(35, "R");
+        ROUTED_QUOTE_REQUEST.put(115, "ONBEHALF");
+        ROUTED_QUOTE_REQUEST.put(128, "DELIVERTO");
+        ROUTED_QUOTE_REQUEST.put(1128, "9");
+        ROUTED_QUOTE_REQUEST.put(1129, "3.6");
+        ROUTED_QUOTE_REQUEST.put(131, "QR-1");
+    }
+
+    private void assertRoutedHeader(Message msg) throws Exception {
+        assertEquals("R", msg.getHeader().getString(35));
+        for (int tag : List.of(115, 128, 1128, 1129)) {
+            assertTrue(msg.getHeader().isSetField(tag), "tag " + tag + " must be in the header");
+            assertFalse(msg.isSetField(tag), "tag " + tag + " must not be in the body");
+        }
+        assertEquals("ONBEHALF", msg.getHeader().getString(115));
+        assertEquals("3.6", msg.getHeader().getString(1129));
+        assertEquals("QR-1", msg.getString(131));
+        assertFalse(msg.getHeader().isSetField(131), "body tag 131 must stay in the body");
+    }
+
+    @Test
+    void headerFieldsGoToTheHeaderWithoutDictionary() throws Exception {
+        assertRoutedHeader(QuickFIXAdapter.buildMessage(FIXMessageData.ofFields(ROUTED_QUOTE_REQUEST)));
+    }
+
+    /** The FIX50SP2 application dictionary — what {@code sendMessage} passes for FIXT sessions. */
+    @Test
+    void headerFieldsGoToTheHeaderWithApplicationDictionary() throws Exception {
+        DataDictionary app = new DataDictionary("FIX50SP2.xml");
+        assertRoutedHeader(QuickFIXAdapter.buildMessage(FIXMessageData.ofFields(ROUTED_QUOTE_REQUEST), app));
+    }
+
+    @Test
+    void headerFieldsGoToTheHeaderWithFix44Dictionary() throws Exception {
+        DataDictionary fix44 = new DataDictionary("FIX44.xml");
+        Map<Integer, String> fields = new LinkedHashMap<>(ROUTED_QUOTE_REQUEST);
+        fields.remove(1128);
+        fields.remove(1129);
+        Message msg = QuickFIXAdapter.buildMessage(FIXMessageData.ofFields(fields), fix44);
+        assertEquals("ONBEHALF", msg.getHeader().getString(115));
+        assertEquals("DELIVERTO", msg.getHeader().getString(128));
+        assertFalse(msg.isSetField(115));
+    }
+
+    @Test
+    void serialisedMessageHasHeaderFieldsBeforeBody() throws Exception {
+        String raw = QuickFIXAdapter.buildMessage(FIXMessageData.ofFields(ROUTED_QUOTE_REQUEST))
+                .toString().replace((char) 1, '|');
+        int bodyStart = raw.indexOf("|131=");
+        for (String header : List.of("|35=R|", "|115=ONBEHALF|", "|128=DELIVERTO|", "|1128=9|", "|1129=3.6|")) {
+            int at = raw.indexOf(header);
+            assertTrue(at >= 0 && at < bodyStart, header + " must precede the body in " + raw);
+        }
+    }
+
+    @Test
+    void sessionManagedTagsAreNotOverwritten() throws Exception {
+        Map<Integer, String> fields = ordered(35, "D", 49, "SPOOF", 56, "SPOOF", 34, "999", 52, "20000101-00:00:00", 11, "ORD-1");
+        Message msg = QuickFIXAdapter.buildMessage(FIXMessageData.ofFields(fields));
+        for (int tag : List.of(49, 56, 34, 52)) {
+            assertFalse(msg.getHeader().isSetField(tag), "session tag " + tag + " must be left to the session");
+            assertFalse(msg.isSetField(tag), "session tag " + tag + " must not leak into the body");
+        }
+        assertEquals("ORD-1", msg.getString(11));
+    }
+
+    @Test
+    void noHopsGroupGoesToTheHeader() throws Exception {
+        FIXMessageData hop = FIXMessageData.ofFields(ordered(628, "HOP1", 629, "20261013-10:00:00", 630, "7"));
+        FIXMessageData data = new FIXMessageData(ordered(35, "D", 11, "ORD-1"), Map.of(627, List.of(hop)));
+        Message msg = QuickFIXAdapter.buildMessage(data);
+        assertEquals(1, msg.getHeader().getGroupCount(627));
+        assertEquals(0, msg.getGroupCount(627));
+    }
 }
