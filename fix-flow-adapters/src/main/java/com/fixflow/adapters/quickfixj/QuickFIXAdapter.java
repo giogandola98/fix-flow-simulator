@@ -6,17 +6,24 @@ import com.fixflow.core.domain.session.FIXSessionConfig;
 import com.fixflow.core.ports.outbound.FIXSessionPort;
 import com.fixflow.core.ports.outbound.InboundMessageListener;
 import jakarta.annotation.PreDestroy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import quickfix.*;
 import quickfix.Message;
 
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class QuickFIXAdapter implements FIXSessionPort {
+
+    private static final Logger log = LoggerFactory.getLogger(QuickFIXAdapter.class);
 
     private final QuickFIXApplicationAdapter application;
     private final Map<UUID, Connector> connectors = new ConcurrentHashMap<>();
@@ -136,7 +143,10 @@ public class QuickFIXAdapter implements FIXSessionPort {
     }
 
     /**
-     * Builds a QuickFIX/J message from engine data. Tag 35 goes to the header. Every repeating
+     * Builds a QuickFIX/J message from engine data. Header tags (35, 115, 128, 1128, …: the
+     * dictionary's header section plus {@link #STANDARD_HEADER_TAGS}) and the {@code NoHops}
+     * group go to the header; session-managed tags ({@link #SESSION_MANAGED_TAGS}) are ignored
+     * with a warning, since the session writes them itself. Every repeating
      * group entry becomes a {@link Group}; when {@code dictionary} is available its dictionary
      * order is used, since the FIX wire format requires an entry's fields in dictionary-defined
      * order, not ascending-tag order, and QuickFIX/J's receiving parser ends an entry at the
@@ -148,12 +158,43 @@ public class QuickFIXAdapter implements FIXSessionPort {
     static Message buildMessage(FIXMessageData data, DataDictionary dictionary) {
         Message msg = new Message();
         data.fields().forEach((tag, value) -> {
-            if (tag == 35) msg.getHeader().setString(35, value);
-            else msg.setString(tag, value);
+            if (SESSION_MANAGED_TAGS.contains(tag)) {
+                log.warn("Ignoring session-managed tag {}={} — set by the FIX session, not the scenario", tag, value);
+            } else if (isHeaderTag(tag, dictionary)) {
+                msg.getHeader().setString(tag, value);
+            } else {
+                msg.setString(tag, value);
+            }
         });
         String msgType = data.fields().get(35);
-        applyGroups(msg, data, dictionary, msgType);
+        applyGroups(msg.getHeader(), headerGroups(data, true), dictionary, msgType);
+        applyGroups(msg, headerGroups(data, false), dictionary, msgType);
         return msg;
+    }
+
+    /** Tags the FIX session writes itself (BeginString, BodyLength, MsgSeqNum, CompIDs, SendingTime, CheckSum). */
+    static final Set<Integer> SESSION_MANAGED_TAGS = Set.of(8, 9, 10, 34, 49, 52, 56);
+
+    /**
+     * Standard header tags of FIX 4.2/4.4 and FIXT.1.1, used when the dictionary passed in doesn't
+     * say otherwise — notably the FIX 5.0 application dictionary, whose header section is empty
+     * because FIXT.1.1 keeps the header in the transport dictionary.
+     */
+    static final Set<Integer> STANDARD_HEADER_TAGS = Set.of(
+            35, 115, 128, 90, 91, 50, 142, 57, 143, 116, 144, 129, 145, 43, 97, 122,
+            212, 213, 347, 369, 370, 627, 628, 629, 630, 1128, 1129, 1156);
+
+    private static boolean isHeaderTag(int tag, DataDictionary dictionary) {
+        return STANDARD_HEADER_TAGS.contains(tag) || (dictionary != null && dictionary.isHeaderField(tag));
+    }
+
+    /** The groups of {@code data} that belong in the header ({@code header == true}) or in the body. */
+    private static FIXMessageData headerGroups(FIXMessageData data, boolean header) {
+        Map<Integer, List<FIXMessageData>> selected = new LinkedHashMap<>();
+        data.groups().forEach((counterTag, entries) -> {
+            if (STANDARD_HEADER_TAGS.contains(counterTag) == header) selected.put(counterTag, entries);
+        });
+        return new FIXMessageData(Map.of(), selected);
     }
 
     private static void applyGroups(FieldMap target, FIXMessageData data, DataDictionary dictionary, String msgType) {
