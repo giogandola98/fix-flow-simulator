@@ -31,6 +31,8 @@ public class VariableResolver {
             new NowOffsetPlugin(),
             new NowDateOffsetPlugin(),
             new NowDatePlugin(),
+            new FixTimePlugin(),
+            new FixTimeOffsetPlugin(),
             new UuidPlugin(),
             new SeqPlugin(sequences),
             new EnvPlugin(),
@@ -73,40 +75,16 @@ public class VariableResolver {
         private static final Pattern P = Pattern.compile("^now:offset:([+\\-])(\\d+)([smhd])$");
         public boolean supports(String e) { return P.matcher(e).matches(); }
         public String resolve(String e, ExecutionContext c) {
-            Matcher m = P.matcher(e);
-            if (!m.matches()) throw new IllegalArgumentException("Bad now:offset expression: " + e);
-            long amount = Long.parseLong(m.group(2));
-            ChronoUnit cu = switch (m.group(3)) {
-                case "s" -> ChronoUnit.SECONDS;
-                case "m" -> ChronoUnit.MINUTES;
-                case "h" -> ChronoUnit.HOURS;
-                case "d" -> ChronoUnit.DAYS;
-                default  -> throw new IllegalArgumentException("Bad unit: " + m.group(3));
-            };
-            Instant now = Instant.now();
-            return (m.group(1).equals("+") ? now.plus(amount, cu) : now.minus(amount, cu)).toString();
+            return applyOffset(P, e, "now:offset", Instant.now()).toString();
         }
     }
 
+    /** {@code {{nowdate:offset:+1d}}} — UTC date with offset, {@code yyyyMMdd} (same format as {@code {{nowdate}}}). */
     static final class NowDateOffsetPlugin implements VariableResolverPlugin {
         private static final Pattern P = Pattern.compile("^nowdate:offset:([+\\-])(\\d+)([smhd])$");
-        private static final DateTimeFormatter FMT =
-            DateTimeFormatter.ofPattern("yyyyMMdd-HH:mm:ss").withZone(ZoneOffset.UTC);
         public boolean supports(String e) { return P.matcher(e).matches(); }
         public String resolve(String e, ExecutionContext c) {
-            Matcher m = P.matcher(e);
-            if (!m.matches()) throw new IllegalArgumentException("Bad nowdate:offset expression: " + e);
-            long amount = Long.parseLong(m.group(2));
-            ChronoUnit cu = switch (m.group(3)) {
-                case "s" -> ChronoUnit.SECONDS;
-                case "m" -> ChronoUnit.MINUTES;
-                case "h" -> ChronoUnit.HOURS;
-                case "d" -> ChronoUnit.DAYS;
-                default  -> throw new IllegalArgumentException("Bad unit: " + m.group(3));
-            };
-            Instant now = Instant.now();
-            Instant result = m.group(1).equals("+") ? now.plus(amount, cu) : now.minus(amount, cu);
-            return FMT.format(result);
+            return FIX_DATE.format(applyOffset(P, e, "nowdate:offset", Instant.now()));
         }
     }
 
@@ -115,6 +93,41 @@ public class VariableResolver {
         public String resolve(String e, ExecutionContext c) {
             return LocalDate.now(ZoneOffset.UTC).format(DateTimeFormatter.BASIC_ISO_DATE);
         }
+    }
+
+    /** {@code {{fixtime}}} — current time as FIX UTCTimestamp {@code yyyyMMdd-HH:mm:ss.SSS}. */
+    static final class FixTimePlugin implements VariableResolverPlugin {
+        public boolean supports(String e) { return e.equals("fixtime"); }
+        public String resolve(String e, ExecutionContext c) { return FIX_TIMESTAMP.format(Instant.now()); }
+    }
+
+    /** {@code {{fixtime:offset:+5m}}} — FIX UTCTimestamp {@code yyyyMMdd-HH:mm:ss.SSS} with offset. */
+    static final class FixTimeOffsetPlugin implements VariableResolverPlugin {
+        private static final Pattern P = Pattern.compile("^fixtime:offset:([+\\-])(\\d+)([smhd])$");
+        public boolean supports(String e) { return P.matcher(e).matches(); }
+        public String resolve(String e, ExecutionContext c) {
+            return FIX_TIMESTAMP.format(applyOffset(P, e, "fixtime:offset", Instant.now()));
+        }
+    }
+
+    static final DateTimeFormatter FIX_DATE =
+        DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
+    static final DateTimeFormatter FIX_TIMESTAMP =
+        DateTimeFormatter.ofPattern("yyyyMMdd-HH:mm:ss.SSS").withZone(ZoneOffset.UTC);
+
+    /** Applies a {@code [+-]N[smhd]} offset captured by {@code p} (groups 1-3) to {@code base}. */
+    private static Instant applyOffset(Pattern p, String e, String label, Instant base) {
+        Matcher m = p.matcher(e);
+        if (!m.matches()) throw new IllegalArgumentException("Bad " + label + " expression: " + e);
+        long amount = Long.parseLong(m.group(2));
+        ChronoUnit cu = switch (m.group(3)) {
+            case "s" -> ChronoUnit.SECONDS;
+            case "m" -> ChronoUnit.MINUTES;
+            case "h" -> ChronoUnit.HOURS;
+            case "d" -> ChronoUnit.DAYS;
+            default  -> throw new IllegalArgumentException("Bad unit: " + m.group(3));
+        };
+        return m.group(1).equals("+") ? base.plus(amount, cu) : base.minus(amount, cu);
     }
 
     static final class UuidPlugin implements VariableResolverPlugin {

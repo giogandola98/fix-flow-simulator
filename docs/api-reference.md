@@ -1,6 +1,7 @@
 # API Reference
 
-Base URL: `http://localhost:8080/api`
+Base URL: `http://localhost:8080/api/v1` — every path below is relative to it (e.g. `POST /sessions` is
+`POST http://localhost:8080/api/v1/sessions`). `/api/...` without `/v1` answers `404`.
 
 All request/response bodies are JSON unless noted.
 
@@ -19,7 +20,7 @@ Every error carries the same body:
 | `405 Method Not Allowed` | path exists, verb does not |
 | `409 Conflict` | session busy / conflicting state |
 | `500 Internal Server Error` | unhandled fault; `message` is always the fixed string `Internal server error` |
-| `503 Service Unavailable` | the embedded database is unusable and will stay that way until restart — `message` carries the cause. See `GET /api/v1/system/health`. |
+| `503 Service Unavailable` | the embedded database is unusable and will stay that way until restart — `message` carries the cause. See `GET /system/health`. |
 
 ---
 
@@ -44,15 +45,50 @@ Body:
 ```json
 {
   "name": "My Session",
-  "fixVersion": "FIX42",
-  "senderCompId": "CLIENT",
-  "targetCompId": "SERVER",
+  "mode": "INITIATOR",
+  "fixVersion": "FIX_44",
+  "defaultApplVerID": null,
+  "senderCompID": "CLIENT",
+  "targetCompID": "SERVER",
   "host": "localhost",
   "port": 9876,
-  "heartbeatInterval": 30
+  "heartbeatInterval": 30,
+  "resetOnLogon": true,
+  "resetOnLogout": true
 }
 ```
-`fixVersion`: `FIX42` | `FIX44` | `FIX50SP2`
+
+| Field | Required | Values / notes |
+|---|---|---|
+| `name` | yes | display label |
+| `mode` | **yes** | `INITIATOR` (connects to `host`:`port`) \| `ACCEPTOR` (listens on `port`) |
+| `fixVersion` | **yes** | `FIX_42` \| `FIX_44` \| `FIXT_11` (use `FIXT_11` for FIX 5.0 / 5.0 SP2) |
+| `defaultApplVerID` | with `FIXT_11` | FIX `DefaultApplVerID` (tag 1137), e.g. `"9"` = FIX 5.0 SP2; ignored for `FIX_42`/`FIX_44` |
+| `senderCompID` / `targetCompID` | yes | tags 49 / 56 — note the upper-case `ID` |
+| `host` | INITIATOR | acceptor address; ignored by an ACCEPTOR |
+| `port` | yes | TCP port to connect to (INITIATOR) or listen on (ACCEPTOR) |
+| `heartbeatInterval` | yes | seconds (tag 108) |
+| `resetOnLogon` / `resetOnLogout` | no | reset sequence numbers; default `false` |
+
+A missing or unknown `mode` / `fixVersion` is answered `400 Bad Request` with the allowed values in
+`message`.
+
+FIX 5.0 SP2 acceptor example:
+```json
+{
+  "name": "venue-sim",
+  "mode": "ACCEPTOR",
+  "fixVersion": "FIXT_11",
+  "defaultApplVerID": "9",
+  "senderCompID": "VENUE",
+  "targetCompID": "CLIENT",
+  "host": "",
+  "port": 7000,
+  "heartbeatInterval": 30,
+  "resetOnLogon": true,
+  "resetOnLogout": true
+}
+```
 
 ### Update session
 ```
@@ -83,6 +119,12 @@ Response:
 ```json
 { "sessionId": "abc", "connected": true }
 ```
+
+### Hot-reload session
+```
+POST /sessions/{id}/reload
+```
+Re-applies the stored configuration to a live session without restarting running scenarios.
 
 ---
 
@@ -161,7 +203,7 @@ Body:
 ```json
 { "sessionId": "session-uuid" }
 ```
-Response:
+Response: `202 Accepted`, `Location: /api/v1/executions/{executionId}`
 ```json
 { "executionId": "exec-uuid" }
 ```
@@ -183,12 +225,6 @@ Response: `application/octet-stream` YAML file download.
 
 ## Executions
 
-### List executions
-```
-GET /executions
-```
-Optional query params: `scenarioId`, `status`
-
 ### Get execution
 ```
 GET /executions/{id}
@@ -198,13 +234,31 @@ Response:
 {
   "id": "exec-uuid",
   "scenarioId": "scenario-uuid",
+  "scenarioVersion": "1.0",
   "sessionId": "session-uuid",
   "status": "RUNNING",
-  "startedAt": "2024-01-01T10:00:00Z",
-  "endedAt": null
+  "startTime": "2024-01-01T10:00:00Z",
+  "endTime": null,
+  "currentNodeId": "expect-quote"
 }
 ```
-`status`: `PENDING` | `RUNNING` | `PASSED` | `FAILED` | `TIMEOUT` | `ABORTED`
+`status`: `RUNNING` | `PASSED` | `FAILED` | `STOPPED`
+
+There is no endpoint listing all executions; keep the `executionId` returned by
+`POST /scenarios/{id}/execute`.
+
+### Execution events
+```
+GET /executions/{id}/events
+```
+Response: the execution's event log (`EXECUTION_STARTED`, `NODE_ENTERED`, `NODE_EXITED`,
+`MESSAGE_SENT`, `MESSAGE_RECEIVED`, `TIMEOUT`, `ERROR`, `EXECUTION_FINISHED`, …) in order.
+
+### Execution FIX messages
+```
+GET /executions/{id}/messages
+```
+Response: the FIX messages sent and received by the execution.
 
 ### Stop execution
 ```
@@ -255,7 +309,7 @@ Response: `application/octet-stream` JSON file download.
 
 ### Health check
 ```
-GET /api/v1/system/health
+GET /system/health
 ```
 Probes the embedded H2 store with a real query.
 
@@ -279,7 +333,7 @@ tell "restart me" apart from "that one request failed".
 
 ### Shutdown the simulator
 ```
-POST /api/v1/system/shutdown
+POST /system/shutdown
 ```
 Returns `202 Accepted` and terminates the JVM shortly after. Used by the
 Shutdown button in the top bar. Repeated calls are idempotent — only the first

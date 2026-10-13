@@ -30,7 +30,7 @@ open http://localhost:8080
 - ROUTE_FIX: multi-rule conditional routing on inbound FIX fields
 - CALL_SCENARIO: reusable sub-flows with input/output variable mapping
 - HTTP_REQUEST: REST integration block with response variable capture
-- Dynamic placeholders: `{{uuid}}`, `{{now}}`, `{{now:offset:+5m}}`, `{{seq:...}}`, `{{env:VAR}}`, `{{node:id:tagN}}`
+- Dynamic placeholders: `{{uuid}}`, `{{now}}`, `{{now:offset:+5m}}`, `{{nowdate}}`, `{{fixtime}}`, `{{fixtime:offset:+5m}}`, `{{seq:...}}`, `{{env:VAR}}`, `{{node:id:tagN}}`
 - FIX repeating groups: build, edit and validate `NoLegs`, `NoEvents`,
   `NoPositions` and nested groups from the visual editor
 - Group-aware placeholders: `{{node:id:g555.0:tag600}}`

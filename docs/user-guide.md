@@ -427,7 +427,9 @@ Variables let you build dynamic FIX messages that reference runtime values.
 | `{{now}}` | Current UTC ISO timestamp | `2026-05-20T12:00:00Z` |
 | `{{now:offset:+5m}}` | Current UTC time with offset | `{{now:offset:+1h}}` |
 | `{{nowdate}}` | Current UTC date as `YYYYMMDD` | `20260520` |
-| `{{nowdate:offset:+1d}}` | Date with offset (today + N days) | `{{nowdate:offset:+1d}}` |
+| `{{nowdate:offset:+1d}}` | Date with offset as `YYYYMMDD` (today + N days) | `20260521` |
+| `{{fixtime}}` | Current time as FIX `UTCTimestamp` | `20260520-12:00:00.000` |
+| `{{fixtime:offset:+5m}}` | FIX `UTCTimestamp` with offset | `{{fixtime:offset:+5m}}` |
 | `{{uuid}}` | Random UUID v4 | `550e8400-e29b-41d4...` |
 | `{{seq:name}}` | Auto-incrementing counter (resets each run) | `{{seq:orderId}}` → 1, 2, 3 |
 | `{{env:VAR}}` | Environment variable | `{{env:SENDER_ID}}` |
