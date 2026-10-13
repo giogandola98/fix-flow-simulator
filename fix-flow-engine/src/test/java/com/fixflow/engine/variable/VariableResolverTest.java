@@ -7,6 +7,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 
 import static com.fixflow.engine.support.Fixtures.scenario;
 import static com.fixflow.engine.support.Fixtures.start;
@@ -61,8 +65,75 @@ class VariableResolverTest {
     }
 
     @Test
-    void nowDateOffsetMatchesFixFormat() {
-        assertThat(resolve("{{nowdate:offset:+30m}}")).matches("\\d{8}-\\d{2}:\\d{2}:\\d{2}");
+    void nowDateOffsetIsEightDigitDate() {
+        assertThat(resolve("{{nowdate:offset:+30m}}")).matches("\\d{8}");
+    }
+
+    @Test
+    void nowDateOffsetPlusOneDayIsTomorrow() {
+        // Retry once around UTC midnight so the two clock reads see the same day.
+        String expected = LocalDate.now(ZoneOffset.UTC).plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE);
+        String out = resolve("{{nowdate:offset:+1d}}");
+        if (!out.equals(expected)) {
+            expected = LocalDate.now(ZoneOffset.UTC).plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE);
+            out = resolve("{{nowdate:offset:+1d}}");
+        }
+        assertThat(out).isEqualTo(expected);
+    }
+
+    @Test
+    void nowDateOffsetMinusTwoDaysIsInThePast() {
+        String expected = LocalDate.now(ZoneOffset.UTC).minusDays(2).format(DateTimeFormatter.BASIC_ISO_DATE);
+        String out = resolve("{{nowdate:offset:-2d}}");
+        if (!out.equals(expected)) {
+            expected = LocalDate.now(ZoneOffset.UTC).minusDays(2).format(DateTimeFormatter.BASIC_ISO_DATE);
+            out = resolve("{{nowdate:offset:-2d}}");
+        }
+        assertThat(out).matches("\\d{8}").isEqualTo(expected);
+    }
+
+    @Test
+    void fixTimeIsFixUtcTimestamp() {
+        Instant before = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+        String out = resolve("{{fixtime}}");
+        Instant after = Instant.now();
+        assertThat(out).matches(FIX_TS);
+        Instant parsed = parseFixTimestamp(out);
+        assertThat(parsed).isBetween(before, after);
+    }
+
+    @Test
+    void fixTimeOffsetPlusAppliesOffset() {
+        Instant before = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+        String out = resolve("{{fixtime:offset:+5m}}");
+        Instant after = Instant.now();
+        assertThat(out).matches(FIX_TS);
+        assertThat(parseFixTimestamp(out))
+            .isBetween(before.plus(5, ChronoUnit.MINUTES), after.plus(5, ChronoUnit.MINUTES));
+    }
+
+    @Test
+    void fixTimeOffsetMinusAppliesOffset() {
+        Instant before = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+        String out = resolve("{{fixtime:offset:-1d}}");
+        Instant after = Instant.now();
+        assertThat(out).matches(FIX_TS);
+        assertThat(parseFixTimestamp(out))
+            .isBetween(before.minus(1, ChronoUnit.DAYS), after.minus(1, ChronoUnit.DAYS));
+    }
+
+    @Test
+    void nowStaysIso8601() {
+        String out = resolve("{{now}}");
+        assertThat(out).contains("T").endsWith("Z");
+        assertThat(Instant.parse(out)).isNotNull();
+    }
+
+    private static final String FIX_TS = "^\\d{8}-\\d{2}:\\d{2}:\\d{2}\\.\\d{3}$";
+
+    private static Instant parseFixTimestamp(String s) {
+        return DateTimeFormatter.ofPattern("yyyyMMdd-HH:mm:ss.SSS").withZone(ZoneOffset.UTC)
+            .parse(s, Instant::from);
     }
 
     @Test

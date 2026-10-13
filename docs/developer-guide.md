@@ -483,6 +483,9 @@ Resolves `{{...}}` placeholders in node config values at execution time. Uses a 
 | Expression | Plugin | Result |
 |------------|--------|--------|
 | `{{now}}` | `NowPlugin` | `Instant.now().toString()` (ISO 8601) |
+| `{{now:offset:+1h}}` | `NowOffsetPlugin` | ISO 8601 instant plus offset |
+| `{{nowdate}}` / `{{nowdate:offset:+1d}}` | `NowDatePlugin` / `NowDateOffsetPlugin` | UTC date `yyyyMMdd` (with offset) |
+| `{{fixtime}}` / `{{fixtime:offset:+5m}}` | `FixTimePlugin` / `FixTimeOffsetPlugin` | FIX UTCTimestamp `yyyyMMdd-HH:mm:ss.SSS` (with offset) |
 | `{{uuid}}` | `UuidPlugin` | Random UUID string |
 | `{{seq:name}}` | `SeqPlugin` | Monotonic counter keyed by `name` (per-JVM lifecycle) |
 | `{{env:VAR}}` | `EnvPlugin` | `System.getenv("VAR")`, empty string if absent |
