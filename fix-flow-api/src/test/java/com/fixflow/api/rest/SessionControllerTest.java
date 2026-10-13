@@ -222,4 +222,42 @@ class SessionControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.status").value(400));
     }
+
+    @Test
+    void createWithUndocumentedFixVersionReturns400ListingAllowedValues() throws Exception {
+        mvc.perform(post("/api/v1/sessions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(request("FIX50SP2"))))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Invalid fixVersion 'FIX50SP2'")))
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("FIXT_11")));
+        verify(sessionRepo, never()).save(any());
+    }
+
+    @Test
+    void createWithoutModeReturns400InsteadOf500() throws Exception {
+        FIXSessionRequest noMode = new FIXSessionRequest("s1", null, "FIXT_11", "9",
+            "SENDER", "TARGET", "localhost", 9999, 30, true, true);
+        mvc.perform(post("/api/v1/sessions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(noMode)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Missing required field 'mode'")))
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("ACCEPTOR")));
+        verify(sessionRepo, never()).save(any());
+    }
+
+    @Test
+    void createFixt11SessionWithDefaultApplVerIdReturns201() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(sessionRepo.save(any())).thenReturn(session(id, FIXVersion.FIXT_11));
+        FIXSessionRequest fix50sp2 = new FIXSessionRequest("s1", "ACCEPTOR", "FIXT_11", "9",
+            "SENDER", "TARGET", "localhost", 9999, 30, true, true);
+        mvc.perform(post("/api/v1/sessions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(fix50sp2)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.id").value(id.toString()));
+    }
 }

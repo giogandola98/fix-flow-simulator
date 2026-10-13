@@ -5,14 +5,19 @@ Scenarios are YAML documents stored under the `yamlDsl` field of a scenario.
 ## Top-level shape
 
 ```yaml
-id: rfq-flow
+# id: 3f0c2a5e-8d6b-4c1e-9a7f-2b5d8e1c4a90   # optional — must be a UUID; omit it to get a generated one
 name: RFQ Flow
 description: Quote request/response
 version: '1.0'
-sessionRef: default
+sessionRef: 7b1e9c42-0d3a-4f55-b8e6-91c2d4a07f13   # UUID of a session (GET /sessions)
 nodes: []
 edges: []
 ```
+
+| field | notes |
+|---|---|
+| `id` | **Optional, must be a UUID.** Omit it and the simulator generates one. A non-UUID value such as `rfq-flow` is rejected on create/import with `400 Bad Request` (`Cannot deserialize value of type java.util.UUID`). |
+| `sessionRef` | The **UUID of a session** (`id` from `GET /sessions`). Used only when `POST /scenarios/{id}/execute` is called without a `sessionId` in its body — a `sessionId` in the request always wins. A value that is not a UUID (e.g. `default`, which older editor exports contain) is not an error: the run starts **without a bound session** and the engine logs a warning, so every `SEND_FIX` / `EXPECT_FIX` in it will fail. |
 
 ## Node types
 
@@ -302,10 +307,12 @@ Executes another scenario synchronously as a sub-flow. The child inherits the pa
 
 | placeholder | meaning |
 |---|---|
-| `{{now}}` | current UTC ISO timestamp |
-| `{{now:offset:+1h}}` | current UTC time with offset applied |
-| `{{nowdate}}` | current UTC date as `YYYYMMDD` |
-| `{{nowdate:offset:+1d}}` | current UTC date with offset, e.g. `+1d` for tomorrow |
+| `{{now}}` | current UTC ISO-8601 timestamp, e.g. `2026-10-13T09:52:00.123Z` (not a FIX format) |
+| `{{now:offset:+1h}}` | ISO-8601 timestamp with offset applied |
+| `{{nowdate}}` | current UTC date as `YYYYMMDD` (FIX `LocalMktDate`, e.g. tags 64, 75) |
+| `{{nowdate:offset:+1d}}` | UTC date with offset as `YYYYMMDD`, e.g. `+1d` for tomorrow |
+| `{{fixtime}}` | current time as FIX `UTCTimestamp` `YYYYMMDD-HH:MM:SS.sss` (tags 60, 62, 126 …) |
+| `{{fixtime:offset:+5m}}` | FIX `UTCTimestamp` with offset, e.g. an `ExpireTime` five minutes out |
 | `{{uuid}}` | random UUID |
 | `{{seq:name}}` | monotonic sequence keyed by `name` |
 | `{{env:VAR}}` | environment variable |
@@ -316,6 +323,10 @@ Executes another scenario synchronously as a sub-flow. The child inherits the pa
 | `{{node:id:gNNN.i:tagM:offset:+2d}}` | same, with a date offset applied |
 
 Offset format: `[+-](\d+)[smhd]` (seconds, minutes, hours, days).
+
+> **Changed in the next release:** `{{nowdate:offset:…}}` used to return a date-time
+> (`YYYYMMDD-HH:MM:SS`). It now returns a date (`YYYYMMDD`), like `{{nowdate}}`. Scenarios that
+> relied on it for a timestamp must switch to `{{fixtime:offset:…}}`.
 
 ## Edges
 
@@ -329,11 +340,10 @@ edges:
 ## Worked example — RFQ flow
 
 ```yaml
-id: rfq-flow
-name: RFQ Flow
+name: RFQ Flow                       # no `id`: the simulator generates a UUID
 description: Quote request/response
 version: '1.0'
-sessionRef: default
+sessionRef: 7b1e9c42-0d3a-4f55-b8e6-91c2d4a07f13   # your session's UUID
 nodes:
   - id: start
     name: Start

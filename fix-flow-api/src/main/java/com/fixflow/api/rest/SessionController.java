@@ -12,10 +12,12 @@ import com.fixflow.engine.fix.HotReloadService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/sessions")
@@ -59,7 +61,7 @@ public class SessionController {
         FIXSessionConfig existing = sessionRepo.findById(id)
             .orElseThrow(() -> new NoSuchElementException("session not found: " + id));
         boolean connected = manager.isConnected(id);
-        FIXVersion newVersion = FIXVersion.valueOf(req.fixVersion());
+        FIXVersion newVersion = parseEnum(FIXVersion.class, "fixVersion", req.fixVersion());
         if (connected && existing.fixVersion() != newVersion) {
             throw new SessionConflictException("Disconnect session before changing FIX version");
         }
@@ -101,10 +103,30 @@ public class SessionController {
 
     private FIXSessionConfig toConfig(UUID id, FIXSessionRequest req) {
         return new FIXSessionConfig(
-            id, req.name(), FIXMode.valueOf(req.mode()), FIXVersion.valueOf(req.fixVersion()),
+            id, req.name(),
+            parseEnum(FIXMode.class, "mode", req.mode()),
+            parseEnum(FIXVersion.class, "fixVersion", req.fixVersion()),
             req.defaultApplVerID(), req.senderCompID(), req.targetCompID(),
             req.host(), req.port(), req.heartbeatInterval(),
             req.resetOnLogon(), req.resetOnLogout()
         );
+    }
+
+    /**
+     * Enum request fields with a clear 400 instead of {@code valueOf}'s "No enum constant …" text,
+     * or a 500 from the {@code NullPointerException} a missing field used to raise — see issue #110.
+     */
+    static <E extends Enum<E>> E parseEnum(Class<E> type, String field, String value) {
+        String allowed = Arrays.stream(type.getEnumConstants()).map(Enum::name)
+            .collect(Collectors.joining(", "));
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Missing required field '" + field + "'. Allowed values: " + allowed);
+        }
+        try {
+            return Enum.valueOf(type, value.trim());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                "Invalid " + field + " '" + value + "'. Allowed values: " + allowed, e);
+        }
     }
 }
