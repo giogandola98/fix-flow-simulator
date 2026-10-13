@@ -9,78 +9,146 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
+import java.awt.GraphicsEnvironment;
 import java.io.File;
+import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @SpringBootApplication(scanBasePackages = "com.fixflow")
 @EntityScan(basePackages = "com.fixflow.adapters.persistence.entity")
 @EnableJpaRepositories(basePackages = "com.fixflow.adapters.persistence.jpa")
 public class FixFlowApplication {
 
+    static final String NO_RELAUNCH_PROPERTY = "fixflow.no-relaunch";
+    static final String WINDOW_TITLE = "FIX Flow Simulator";
+    static final String[] LINUX_TERMINALS =
+        {"gnome-terminal", "konsole", "xfce4-terminal", "xterm", "x-terminal-emulator"};
+
     public static void main(String[] args) {
-        // No console = double-clicked JAR; re-launch inside a terminal window
-        if (System.console() == null && !Boolean.getBoolean("fixflow.no-relaunch")) {
-            try { relaunchInTerminal(); } catch (Exception e) { /* fall through to normal start */ }
-            return;
+        // No console + a desktop display = double-clicked JAR; re-launch inside a terminal window.
+        // Services, containers and SSH sessions start directly with the original arguments.
+        String os = System.getProperty("os.name", "");
+        if (shouldRelaunch(os, System.getenv(), GraphicsEnvironment.isHeadless(),
+                System.console() != null, Boolean.getBoolean(NO_RELAUNCH_PROPERTY))) {
+            try {
+                List<String> command = buildRelaunchCommand(os,
+                    ProcessHandle.current().info().command().orElse("java"),
+                    jarPath(),
+                    ManagementFactory.getRuntimeMXBean().getInputArguments(),
+                    args,
+                    findExecutableOnPath(System.getenv("PATH"), LINUX_TERMINALS));
+                if (command != null) {
+                    new ProcessBuilder(command).inheritIO().start();
+                    return;
+                }
+            } catch (Exception e) {
+                System.err.println("FIX Flow: terminal relaunch failed, starting in this process: " + e);
+            }
         }
         SpringApplication.run(FixFlowApplication.class, args);
     }
 
-    private static void relaunchInTerminal() throws Exception { // NOSONAR
-        String jarPath = jarPath();
-        String javaExe = ProcessHandle.current().info().command().orElse("java");
+    /**
+     * Relaunch only for an interactive desktop start without a console (double-clicked JAR).
+     */
+    static boolean shouldRelaunch(String osName, Map<String, String> env, boolean headless,
+                                  boolean hasConsole, boolean noRelaunch) {
+        if (noRelaunch || hasConsole || headless) return false;
+        String os = osName.toLowerCase(Locale.ROOT);
+        if (os.contains("win") || os.contains("mac")) return true;
+        // Linux/Unix: without an X11 or Wayland display no terminal window can be opened
+        return !isBlank(env.get("DISPLAY")) || !isBlank(env.get("WAYLAND_DISPLAY"));
+    }
 
-        String os = System.getProperty("os.name", "").toLowerCase();
+    /**
+     * Builds the command that re-runs this JAR inside a terminal window, forwarding the
+     * original JVM options and program arguments.
+     *
+     * @return the command, or {@code null} when no relaunch is possible (not running from a
+     *         JAR, or no terminal emulator found on Linux)
+     */
+    static List<String> buildRelaunchCommand(String osName, String javaExe, String jarPath,
+                                             List<String> jvmArgs, String[] args,
+                                             String linuxTerminal) {
+        if (jarPath == null || !jarPath.toLowerCase(Locale.ROOT).endsWith(".jar")) return null;
+
+        List<String> java = new ArrayList<>();
+        java.add(javaExe);
+        for (String a : jvmArgs) {
+            if (isForwardableJvmArg(a)) java.add(a);
+        }
+        java.add("-D" + NO_RELAUNCH_PROPERTY + "=true");
+        java.add("-jar");
+        java.add(jarPath);
+        java.addAll(List.of(args));
+
+        String os = osName.toLowerCase(Locale.ROOT);
         List<String> exec = new ArrayList<>();
-
         if (os.contains("win")) {
-            // Pass each token separately — ProcessBuilder handles quoting of paths with spaces.
-            // cmd /c start "title" cmd /k java -D... -jar app.jar
-            exec.addAll(List.of(
-                "cmd", "/c", "start", "FIX Flow Simulator", "cmd", "/k",
-                javaExe, "-Dfixflow.no-relaunch=true", "-jar", jarPath
-            ));
+            // cmd /c start "title" cmd /k java ... — each token separate, ProcessBuilder quotes them
+            exec.addAll(List.of("cmd", "/c", "start", WINDOW_TITLE, "cmd", "/k"));
+            exec.addAll(java);
         } else if (os.contains("mac")) {
-            // osascript: paths may contain spaces — escape single quotes in paths
-            String safeJava = javaExe.replace("'", "'\\''");
-            String safeJar  = jarPath.replace("'", "'\\''");
-            String script = "tell application \"Terminal\" to do script \"'" +
-                            safeJava + "' -Dfixflow.no-relaunch=true -jar '" + safeJar + "'\"";
+            String script = "tell application \"Terminal\" to do script \"" +
+                            appleScriptEscape(shellJoin(java)) + "\"";
             exec.addAll(List.of("osascript", "-e", script));
         } else {
-            // Linux — each token separate, no pre-quoted cmd string
-            String found = findTerminal("gnome-terminal", "konsole", "xfce4-terminal", "xterm", "x-terminal-emulator");
-            if (found == null) {
-                SpringApplication.run(FixFlowApplication.class, new String[0]);
-                return;
-            }
-            String keepOpen = "; echo; read -p 'Press Enter to close...'";
-            String bashCmd  = javaExe + " -Dfixflow.no-relaunch=true -jar " + jarPath + keepOpen;
-            if (found.equals("gnome-terminal")) {
-                exec.addAll(List.of(found, "--", "bash", "-c", bashCmd));
+            if (linuxTerminal == null) return null;
+            String bashCmd = shellJoin(java) + "; echo; read -p 'Press Enter to close...'";
+            if (linuxTerminal.equals("gnome-terminal")) {
+                exec.addAll(List.of(linuxTerminal, "--", "bash", "-c", bashCmd));
             } else {
-                exec.addAll(List.of(found, "-e", "bash", "-c", bashCmd));
+                exec.addAll(List.of(linuxTerminal, "-e", "bash", "-c", bashCmd));
             }
         }
+        return exec;
+    }
 
-        new ProcessBuilder(exec).inheritIO().start();
+    /** Debug agents would clash on their port in the relaunched JVM; the guard flag is re-added. */
+    static boolean isForwardableJvmArg(String arg) {
+        return !arg.startsWith("-agentlib:jdwp")
+            && !arg.startsWith("-Xrunjdwp")
+            && !arg.startsWith("-D" + NO_RELAUNCH_PROPERTY);
+    }
+
+    /** POSIX shell quoting: every token in single quotes, embedded quotes escaped. */
+    static String shellJoin(List<String> tokens) {
+        StringBuilder sb = new StringBuilder();
+        for (String t : tokens) {
+            if (!sb.isEmpty()) sb.append(' ');
+            sb.append('\'').append(t.replace("'", "'\\''")).append('\'');
+        }
+        return sb.toString();
+    }
+
+    static String appleScriptEscape(String s) {
+        return s.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    /** Looks up the first candidate executable in the given PATH (no dependency on `which`). */
+    static String findExecutableOnPath(String path, String... candidates) {
+        if (isBlank(path)) return null;
+        for (String candidate : candidates) {
+            for (String dir : path.split(File.pathSeparator)) {
+                if (dir.isEmpty()) continue;
+                File f = new File(dir, candidate);
+                if (f.isFile() && f.canExecute()) return candidate;
+            }
+        }
+        return null;
     }
 
     private static String jarPath() {
         // java.class.path == the JAR path when launched with java -jar
         String cp = System.getProperty("java.class.path", "");
         File f = new File(cp);
-        return f.isFile() ? f.getAbsolutePath() : cp;
+        return f.isFile() ? f.getAbsolutePath() : null;
     }
 
-    private static String findTerminal(String... candidates) {
-        for (String t : candidates) {
-            try {
-                Process p = new ProcessBuilder("which", t).start();
-                if (p.waitFor() == 0) return t;
-            } catch (Exception ignored) {}
-        }
-        return null;
+    private static boolean isBlank(String s) {
+        return s == null || s.isBlank();
     }
 }
