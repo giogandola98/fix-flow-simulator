@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useExecutionStore } from '../store/executionStore';
 import { wsClient } from '../app/wsClient';
-import { getExecutionEvents, getExecutionMessages, getOperatorPrompt } from '../api/executions';
+import { getExecutionEvents, getExecutionMessages } from '../api/executions';
 import { ExecutionEvent, FIXMessage } from '../types';
 
 export function useExecutionSubscription(executionId: string | null): void {
@@ -12,6 +12,7 @@ export function useExecutionSubscription(executionId: string | null): void {
   const setStartedAt = useExecutionStore((s) => s.setStartedAt);
   const setEndedAt = useExecutionStore((s) => s.setEndedAt);
   const setOperatorPrompt = useExecutionStore((s) => s.setOperatorPrompt);
+  const refreshOperatorPrompt = useExecutionStore((s) => s.refreshOperatorPrompt);
 
   useEffect(() => {
     if (!executionId) return;
@@ -22,11 +23,7 @@ export function useExecutionSubscription(executionId: string | null): void {
 
     // The open prompt is read from the server: it knows the labels and the id of the child
     // execution that is waiting, which the event alone does not carry.
-    const refreshPrompt = () => {
-      getOperatorPrompt(executionId)
-        .then((p) => { if (!cancelled) setOperatorPrompt(p); })
-        .catch(() => { /* best-effort */ });
-    };
+    const refreshPrompt = () => { if (!cancelled) void refreshOperatorPrompt(executionId); };
 
     const TERMINAL: ReadonlyArray<string> = ['PASSED', 'FAILED', 'STOPPED'];
 
@@ -79,5 +76,5 @@ export function useExecutionSubscription(executionId: string | null): void {
       cancelled = true;
       if (disposer) disposer();
     };
-  }, [executionId, addEvent, addMessage, setNodeStatus, updateStatus, setStartedAt, setEndedAt, setOperatorPrompt]);
+  }, [executionId, addEvent, addMessage, setNodeStatus, updateStatus, setStartedAt, setEndedAt, setOperatorPrompt, refreshOperatorPrompt]);
 }

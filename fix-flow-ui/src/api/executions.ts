@@ -19,4 +19,4 @@ export const getOperatorPrompt = async (id: string): Promise<OperatorPromptData 
 };
 export const answerOperator = (executionId: string, nodeId: string, ok: boolean, note: string) =>
   postJson<{ ok: boolean; note: string }, void>(`/executions/${executionId}/operator/${nodeId}`, { ok, note });
-export const getExecutionReport =(id: string) => getJson<ExecutionReport>(`/executions/${id}/report`);
+export const getExecutionReport = (id: string) => getJson<ExecutionReport>(`/executions/${id}/report`);

@@ -8,6 +8,8 @@ export default function OperatorPrompt() {
   const { t } = useTranslation();
   const prompt = useExecutionStore((s) => s.operatorPrompt);
   const setPrompt = useExecutionStore((s) => s.setOperatorPrompt);
+  const refresh = useExecutionStore((s) => s.refreshOperatorPrompt);
+  const activeId = useExecutionStore((s) => s.activeExecutionId);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
@@ -20,7 +22,9 @@ export default function OperatorPrompt() {
     try {
       await answerOperator(prompt.executionId, prompt.nodeId, ok, note);
       setNote('');
-      setPrompt(null);
+      // Ask the server what is open now instead of clearing: the answered event may already have
+      // brought the next sibling prompt, which a blind clear would wipe.
+      if (activeId) await refresh(activeId); else setPrompt(null);
     } catch {
       // A 404 means the prompt is already gone (timeout, stop, answered elsewhere); the next event clears it.
       setError(true);

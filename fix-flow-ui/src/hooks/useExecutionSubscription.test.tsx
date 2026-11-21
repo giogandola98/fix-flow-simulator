@@ -114,6 +114,14 @@ describe('useExecutionSubscription', () => {
     await waitFor(() => expect(useExecutionStore.getState().operatorPrompt).toBeNull());
   });
 
+  it('OPERATOR_ANSWERED with detail timeout clears the prompt', async () => {
+    await mountAndReady();
+    useExecutionStore.setState({ operatorPrompt: { executionId: 'exec-1', nodeId: 'op', instruction: 'x' } });
+    vi.mocked(getOperatorPrompt).mockResolvedValueOnce(null);
+    capturedOnEvent!(evt('t1', 'OPERATOR_ANSWERED', { nodeId: 'op', detail: 'timeout' }));
+    await waitFor(() => expect(useExecutionStore.getState().operatorPrompt).toBeNull());
+  });
+
   it('EXECUTION_FINISHED drops an open prompt', async () => {
     await mountAndReady();
     useExecutionStore.setState({ operatorPrompt: { executionId: 'exec-1', nodeId: 'op', instruction: 'x' } });

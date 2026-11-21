@@ -422,7 +422,7 @@ answers *confirm* or *fail* (with an optional note).
 
 Confirm follows `onSuccess`, fail follows `onFailure`. The note is stored as variable
 `operator:<nodeId>:note` (empty when none). Events: `OPERATOR_PROMPT` (detail = resolved
-instruction) and `OPERATOR_ANSWERED` (detail `ok: <note>` or `fail: <note>`). Stopping the execution
+instruction) and `OPERATOR_ANSWERED` (detail `ok: <note>` or `fail: <note>`; `timeout` or `cancelled` when the prompt ended without an answer, so the UI closes it). Stopping the execution
 cancels the prompt. An OPERATOR node inside a `CALL_SCENARIO` or `PARALLEL` child works the same way;
 its events appear on the parent execution.
 

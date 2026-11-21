@@ -12,6 +12,7 @@ describe('OperatorPrompt', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.mocked(api.answerOperator).mockResolvedValue(undefined);
+    vi.mocked(api.getOperatorPrompt).mockResolvedValue(null);
     useExecutionStore.setState({ activeExecutionId: 'exec-1', operatorPrompt: null });
   });
 
@@ -30,6 +31,30 @@ describe('OperatorPrompt', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Done' }));
     expect(api.answerOperator).toHaveBeenCalledWith('child-1', 'op', true, 'sent');
     await vi.waitFor(() => expect(useExecutionStore.getState().operatorPrompt).toBeNull());
+  });
+
+  it('keeps the next sibling prompt that arrived before the answer response', async () => {
+    const next = { executionId: 'child-2', nodeId: 'op', instruction: 'second' };
+    vi.mocked(api.getOperatorPrompt).mockResolvedValue(next);
+    useExecutionStore.setState({
+      operatorPrompt: { executionId: 'child-1', nodeId: 'op', instruction: 'first' },
+    });
+    render(<OperatorPrompt />);
+    await userEvent.click(screen.getByRole('button', { name: 'Done' }));
+    await vi.waitFor(() => expect(useExecutionStore.getState().operatorPrompt).toEqual(next));
+  });
+
+  it('drops a stale read that resolves after a newer one', async () => {
+    let resolveOld: (v: api.OperatorPromptData | null) => void = () => {};
+    vi.mocked(api.getOperatorPrompt)
+      .mockReturnValueOnce(new Promise((r) => { resolveOld = r; }))
+      .mockResolvedValueOnce({ executionId: 'c2', nodeId: 'op', instruction: 'new' });
+    const store = useExecutionStore.getState();
+    const first = store.refreshOperatorPrompt('exec-1');
+    await store.refreshOperatorPrompt('exec-1');
+    resolveOld({ executionId: 'c1', nodeId: 'op', instruction: 'old' });
+    await first;
+    expect(useExecutionStore.getState().operatorPrompt?.instruction).toBe('new');
   });
 
   it('posts fail with the custom label', async () => {

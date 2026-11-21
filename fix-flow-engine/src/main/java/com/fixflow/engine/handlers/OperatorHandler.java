@@ -44,30 +44,49 @@ public class OperatorHandler implements NodeHandler {
     public NodeHandlerResult handle(ScenarioNode node, ExecutionContext ctx) throws InterruptedException {
         Map<String, Object> cfg = node.config();
         String instruction = resolver.resolveAll(text(cfg.get("instruction")), ctx);
-        CompletableFuture<OperatorAnswer> future = gateway.open(ctx.executionId(), ctx.ancestors(), node.id(),
-                instruction, blankToNull(cfg.get("confirmLabel")), blankToNull(cfg.get("failLabel")));
-        ctx.emitNodeEvent(ExecutionEventType.OPERATOR_PROMPT, node.id(), instruction);
         long timeoutMs = node.timeout() == null ? DEFAULT_TIMEOUT_MS : node.timeout().toMillis();
+        CompletableFuture<OperatorAnswer> future = null;
         try {
-            OperatorAnswer answer = future.get(timeoutMs, TimeUnit.MILLISECONDS);
-            String note = answer.note() == null ? "" : answer.note();
-            ctx.setVariable("operator:" + node.id() + ":note", note);
-            ctx.emitNodeEvent(ExecutionEventType.OPERATOR_ANSWERED, node.id(),
-                    (answer.ok() ? "ok" : "fail") + ": " + note);
-            return answer.ok() ? NodeHandlerResult.success(node.onSuccess())
-                    : NodeHandlerResult.failure(node.onFailure(), "operator failed the step"
-                            + (note.isEmpty() ? "" : ": " + note));
+            future = gateway.open(ctx.executionId(), ctx.ancestors(), node.id(),
+                    instruction, blankToNull(cfg.get("confirmLabel")), blankToNull(cfg.get("failLabel")));
+            ctx.emitNodeEvent(ExecutionEventType.OPERATOR_PROMPT, node.id(), instruction);
+            return answered(node, ctx, future.get(timeoutMs, TimeUnit.MILLISECONDS));
         } catch (TimeoutException timeout) {
+            // An answer that landed between the expiry and now still counts: cancel() fails when
+            // the future is already completed.
+            if (!future.cancel(false)) return answered(node, ctx, future.join());
+            ctx.emitNodeEvent(ExecutionEventType.OPERATOR_ANSWERED, node.id(), "timeout");
             return onTimeout(node);
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
+            emitQuietly(ctx, node, "cancelled");
             throw ie;
         } catch (CancellationException cancelled) {
+            emitQuietly(ctx, node, "cancelled");
             return NodeHandlerResult.failure(node.onFailure(), "operator prompt cancelled");
         } catch (Exception other) {
             return NodeHandlerResult.failure(node.onFailure(), other.getMessage());
         } finally {
-            gateway.close(ctx.executionId(), node.id());
+            if (future != null) gateway.close(ctx.executionId(), node.id(), future);
+        }
+    }
+
+    private NodeHandlerResult answered(ScenarioNode node, ExecutionContext ctx, OperatorAnswer answer) {
+        String note = answer.note() == null ? "" : answer.note();
+        ctx.setVariable("operator:" + node.id() + ":note", note);
+        ctx.emitNodeEvent(ExecutionEventType.OPERATOR_ANSWERED, node.id(),
+                (answer.ok() ? "ok" : "fail") + ": " + note);
+        return answer.ok() ? NodeHandlerResult.success(node.onSuccess())
+                : NodeHandlerResult.failure(node.onFailure(), "operator failed the step"
+                        + (note.isEmpty() ? "" : ": " + note));
+    }
+
+    /** Tells the UI the prompt is gone; a failing emitter must not mask the reason the node ended. */
+    private void emitQuietly(ExecutionContext ctx, ScenarioNode node, String detail) {
+        try {
+            ctx.emitNodeEvent(ExecutionEventType.OPERATOR_ANSWERED, node.id(), detail);
+        } catch (RuntimeException ignored) {
+            // best-effort
         }
     }
 

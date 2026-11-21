@@ -359,7 +359,7 @@ POST /executions/{executionId}/operator/{nodeId}
 ```
 `204` when the prompt was open and is now answered; `404` when no such prompt is open (already answered,
 timed out, stopped). Events on `/topic/executions/{id}/events`: `OPERATOR_PROMPT` (detail = instruction)
-and `OPERATOR_ANSWERED` (detail `ok: <note>` / `fail: <note>`).
+and `OPERATOR_ANSWERED` (detail `ok: <note>` / `fail: <note>` / `timeout` / `cancelled`). When several child prompts are open, the oldest is returned first.
 
 ### Execution FIX messages
 ```
