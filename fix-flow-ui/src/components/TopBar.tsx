@@ -4,10 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { useScenarioStore } from '../store/scenarioStore';
 import { useSessionStore } from '../store/sessionStore';
 import { useExecutionStore } from '../store/executionStore';
-import { executeScenario, updateScenario, importScenario } from '../api/scenarios';
+import { executeScenario, updateScenario, importScenario, ExecuteInputs } from '../api/scenarios';
+import RunDialog from './RunDialog';
 import { stopExecution } from '../api/executions';
 import { shutdownSimulator } from '../api/system';
-import { serializeToYaml, parseFromYaml } from '../lib/scenarioSerializer';
+import { serializeToYaml, parseFromYaml, metaForSave } from '../lib/scenarioSerializer';
 
 const LANGUAGES = [
   { code: 'en', label: 'EN' },
@@ -33,17 +34,12 @@ export default function TopBar() {
   const updateStatus = useExecutionStore((s) => s.updateStatus);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [shutdownDone, setShutdownDone] = useState(false);
+  const [runDialogOpen, setRunDialogOpen] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
 
   const handleExport = () => {
     if (!activeScenario) return;
-    const yamlDsl = serializeToYaml(nodes, edges, {
-      id: activeScenario.id,
-      name: activeScenario.name,
-      description: activeScenario.description,
-      version: activeScenario.version,
-      sessionRef: activeScenario.sessionRef,
-    });
+    const yamlDsl = serializeToYaml(nodes, edges, metaForSave(activeScenario));
     const blob = new Blob([yamlDsl], { type: 'text/yaml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -80,16 +76,17 @@ export default function TopBar() {
   };
 
   const runMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (inputs: ExecuteInputs) => {
       if (!activeScenario || !activeSession) throw new Error('No scenario or session selected');
-      return executeScenario(activeScenario.id, activeSession.id);
+      return executeScenario(activeScenario.id, activeSession.id, inputs);
     },
     onSuccess: (exec) => {
       setErrorMsg(null);
       // Atomic reset + new ID in one update — prevents null intermediate state
       // that would cause useExecutionSubscription to briefly unsubscribe
       useExecutionStore.setState({
-        activeExecutionId: exec.executionId,
+        // An all-rows run starts several executions; the first one is shown.
+        activeExecutionId: exec.executionIds?.[0] ?? exec.executionId,
         executionStatus: 'RUNNING',
         events: [],
         messages: [],
@@ -116,13 +113,7 @@ export default function TopBar() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!activeScenario) throw new Error('No active scenario');
-      const yamlDsl = serializeToYaml(nodes, edges, {
-        id: activeScenario.id,
-        name: activeScenario.name,
-        description: activeScenario.description,
-        version: activeScenario.version,
-        sessionRef: activeScenario.sessionRef,
-      });
+      const yamlDsl = serializeToYaml(nodes, edges, metaForSave(activeScenario));
       return updateScenario(activeScenario.id, {
         name: activeScenario.name,
         description: activeScenario.description,
@@ -140,6 +131,7 @@ export default function TopBar() {
   });
 
   const isRunning = executionStatus === 'RUNNING';
+  const defaultDatasetRef = activeScenario ? metaForSave(activeScenario).datasetRef : undefined;
   const currentLang = i18n.language?.slice(0, 2) ?? 'en';
 
   return (
@@ -174,11 +166,7 @@ export default function TopBar() {
         className="px-3 py-1 rounded bg-green-600 hover:bg-green-500 disabled:opacity-40 text-sm"
         onClick={() => {
           if (!activeScenario || !activeSession?.connected) return;
-          if (isDirty) {
-            saveMutation.mutate(undefined, { onSuccess: () => runMutation.mutate() });
-          } else {
-            runMutation.mutate();
-          }
+          setRunDialogOpen(true);
         }}
         disabled={!activeScenario || !activeSession || !activeSession.connected || isRunning}
       >
@@ -226,6 +214,20 @@ export default function TopBar() {
       >
         {t('topbar.shutdown')}
       </button>
+      {runDialogOpen && (
+        <RunDialog
+          defaultDatasetRef={defaultDatasetRef}
+          onClose={() => setRunDialogOpen(false)}
+          onRun={(inputs) => {
+            setRunDialogOpen(false);
+            if (isDirty) {
+              saveMutation.mutate(undefined, { onSuccess: () => runMutation.mutate(inputs) });
+            } else {
+              runMutation.mutate(inputs);
+            }
+          }}
+        />
+      )}
       {shutdownDone && (
         <div
           data-testid="shutdown-overlay"

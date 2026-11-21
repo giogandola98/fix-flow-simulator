@@ -5,6 +5,7 @@ import com.fixflow.core.domain.scenario.*;
 import com.fixflow.engine.correlation.CorrelationEngine;
 import com.fixflow.engine.execution.ExecutionContext;
 import com.fixflow.engine.fix.MessageRouter;
+import com.fixflow.engine.variable.VariableResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -21,10 +22,17 @@ public class ExpectFIXHandler implements NodeHandler {
 
     private final CorrelationEngine correlation;
     private final MessageRouter router;
+    private final VariableResolver resolver;
 
-    public ExpectFIXHandler(CorrelationEngine correlation, MessageRouter router) {
+    @org.springframework.beans.factory.annotation.Autowired
+    public ExpectFIXHandler(CorrelationEngine correlation, MessageRouter router, VariableResolver resolver) {
         this.correlation = correlation;
         this.router = router;
+        this.resolver = resolver;
+    }
+
+    public ExpectFIXHandler(CorrelationEngine correlation, MessageRouter router) {
+        this(correlation, router, new VariableResolver());
     }
 
     @Override
@@ -84,7 +92,7 @@ public class ExpectFIXHandler implements NodeHandler {
         Map<Integer, String> matchers = new LinkedHashMap<>();
 
         String msgType = cfg.get("msgType") == null ? "" : String.valueOf(cfg.get("msgType")).trim();
-        if (!msgType.isEmpty()) matchers.put(35, msgType);
+        if (!msgType.isEmpty()) matchers.put(35, resolver.resolveAll(msgType, ctx));
 
         Object corrObj = cfg.get("correlation");
         if (corrObj instanceof Map<?, ?> corr && !corr.isEmpty()) {
@@ -106,14 +114,14 @@ public class ExpectFIXHandler implements NodeHandler {
                 }
                 matchers.put(sourceTag, expected);
             } else if (corr.get("expectedValue") != null) {
-                matchers.put(sourceTag, String.valueOf(corr.get("expectedValue")));
+                matchers.put(sourceTag, resolver.resolveAll(String.valueOf(corr.get("expectedValue")), ctx));
             }
             // else: a correlation block with only tag numbers and no value to compare against
             // carries no condition — the msgType (if any) is the whole predicate.
         } else if (cfg.get("correlationTag") != null) {
             // Legacy flat format: correlationTag + expectedValue.
             int tag = ((Number) cfg.get("correlationTag")).intValue();
-            matchers.put(tag, String.valueOf(cfg.get("expectedValue")));
+            matchers.put(tag, resolver.resolveAll(String.valueOf(cfg.get("expectedValue")), ctx));
         }
 
         return matchers;

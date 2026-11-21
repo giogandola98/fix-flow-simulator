@@ -10,6 +10,7 @@ name: RFQ Flow
 description: Quote request/response
 version: '1.0'
 sessionRef: 7b1e9c42-0d3a-4f55-b8e6-91c2d4a07f13   # UUID of a session (GET /sessions)
+# datasetRef: My Rows     # optional — name or id of a data set
 nodes: []
 edges: []
 ```
@@ -18,6 +19,8 @@ edges: []
 |---|---|
 | `id` | **Optional, must be a UUID.** Omit it and the simulator generates one. A non-UUID value such as `rfq-flow` is rejected on create/import with `400 Bad Request` (`Cannot deserialize value of type java.util.UUID`). |
 | `sessionRef` | The **UUID of a session** (`id` from `GET /sessions`). Used only when `POST /scenarios/{id}/execute` is called without a `sessionId` in its body — a `sessionId` in the request always wins. A value that is not a UUID (e.g. `default`, which older editor exports contain) is not an error: the run starts **without a bound session** and the engine logs a warning, so every `SEND_FIX` / `EXPECT_FIX` in it will fail. |
+| `datasetRef` | **Optional.** Name or id of a [data set](user-guide.md#data-sets). When a run is started without a data set in the request, this one is used and its **row 0** is bound (or the row the request names). A name that matches no data set makes the start answer `400`. See `{{row:..}}` below. |
+| `variables` | Optional map `name: {type, defaultValue}`. Every run starts with each default loaded as `{{var:name}}`; variables passed in the execute request override them. |
 
 ## Node types
 
@@ -336,11 +339,15 @@ Executes another scenario synchronously as a sub-flow. The child inherits the pa
 | `{{uuid}}` | random UUID |
 | `{{seq:name}}` | monotonic sequence keyed by `name` |
 | `{{env:VAR}}` | environment variable |
-| `{{var:name}}` | named variable set earlier via HTTP_REQUEST response or CALL_SCENARIO output |
+| `{{var:name}}` | named variable: a scenario `variables` default, a value passed in the execute request, or one set earlier via HTTP_REQUEST response or CALL_SCENARIO output |
+| `{{row:Column}}` | value of `Column` in the data set row bound to the run. An unknown column, or a run without a bound row, fails with an error naming the column |
+| `{{row:#}}` | 0-based index of the bound row |
 | `{{node:id:tagN}}` | value of tag N from a previous node |
 | `{{node:id:tagN:offset:+5m}}` | value with date offset applied |
 | `{{node:id:gNNN.i:tagM}}` | tag M of entry `i` (0-based) of group NNN on node `id` |
 | `{{node:id:gNNN.i:tagM:offset:+2d}}` | same, with a date offset applied |
+
+Placeholders are also resolved in the expected values of `EXPECT_FIX` (`msgType`, correlation `expectedValue`, legacy `expectedValue`), so `{{row:..}}` and `{{var:..}}` can be matched on the wire. A `CALL_SCENARIO` child run sees the same data set row as its parent.
 
 Offset format: `[+-](\d+)[smhd]` (seconds, minutes, hours, days).
 

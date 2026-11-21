@@ -55,6 +55,19 @@ class ExpectFIXHandlerTest {
     }
 
     @Test
+    void expected_values_are_resolved() throws Exception {
+        ExecutionContext ctx = ctx(scenario("s", start("exp")));
+        ctx.setVariable("oid", "ORD9");
+        ScenarioNode exp = node("exp", NodeType.EXPECT_FIX)
+                .cfg("msgType", "8")
+                .cfg("correlation", Map.of("sourceTag", 11, "expectedValue", "{{var:oid}}"))
+                .onSuccess("done").onFailure("fail").build();
+        NodeHandlerResult r = runAndInject(exp, ctx, Fixtures.fields(35, "8", 11, "ORD9"));
+        assertThat(r.success()).isTrue();
+        assertThat(r.nextNodeId()).isEqualTo("done");
+    }
+
+    @Test
     void supportsExpectFix() {
         assertThat(handler.getSupportedType()).isEqualTo(NodeType.EXPECT_FIX);
     }

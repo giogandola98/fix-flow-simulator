@@ -129,4 +129,24 @@ class CallScenarioHandlerTest {
         assertThat(r.success()).isFalse();
         assertThat(r.errorMessage()).contains("Scenario not found");
     }
+
+    @Test
+    void child_inherits_the_parent_row() throws Exception {
+        java.util.concurrent.atomic.AtomicReference<Map<String, String>> seen =
+                new java.util.concurrent.atomic.AtomicReference<>();
+        ProgrammableHandler spy = new ProgrammableHandler(NodeType.SEND_FIX, (n, c) -> {
+            seen.set(c.row());
+            return NodeHandlerResult.success(n.onSuccess());
+        });
+        NodeDispatcher d = new NodeDispatcher(List.of(new StartHandler(), new EndHandler(), spy));
+        handler = new CallScenarioHandler(registry, new ScenarioExecutor(d), new VariableResolver());
+        Scenario child = scenario("child", start("s"),
+                node("s", NodeType.SEND_FIX).onSuccess("e").build(), Fixtures.endPass("e"));
+        registry.register(child);
+        ExecutionContext parent = parentCtx();
+        parent.setRow(Map.of("Isin", "XS1"));
+        parent.setRowIndex(2);
+        handler.handle(callNode(child.id().toString()), parent);
+        assertThat(seen.get()).containsEntry("Isin", "XS1");
+    }
 }

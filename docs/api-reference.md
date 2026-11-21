@@ -272,14 +272,26 @@ DELETE /scenarios/{id}
 ```
 POST /scenarios/{id}/execute
 ```
-Body:
+Body (every field optional):
 ```json
-{ "sessionId": "session-uuid" }
+{
+  "sessionId": "session-uuid",
+  "datasetId": "data-set-uuid",
+  "rowIndex": 0,
+  "allRows": false,
+  "vars": { "qty": "100" }
+}
 ```
-Response: `202 Accepted`, `Location: /api/v1/executions/{executionId}`
+- `datasetId`: data set to read; without it the scenario's `datasetRef` (name or id) is used. `rowIndex` is the 0-based row (default 0).
+- `allRows: true`: one execution per row, started one after another on one worker; a failed row does not stop the next. Needs a data set.
+- `vars`: scenario variables, applied after the scenario's own `variables` defaults.
+- Unknown data set, no data set for a requested row, empty data set or a row out of range answer `400` before anything starts.
+
+Response: `202 Accepted`, `Location: /api/v1/executions/{executionId}` (the first execution)
 ```json
-{ "executionId": "exec-uuid" }
+{ "executionId": "exec-uuid", "executionIds": ["exec-uuid"] }
 ```
+`executionIds` lists every execution in row order (one element for a plain run); `executionId` is the first one.
 
 ### Import scenario (YAML file)
 ```

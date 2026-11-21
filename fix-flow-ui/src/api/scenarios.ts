@@ -24,5 +24,14 @@ export async function importScenario(file: File): Promise<Scenario> {
   }
   return r.json();
 }
-export const executeScenario = (id: string, sessionId: string) =>
-  postJson<{ sessionId: string }, { executionId: string }>(`/scenarios/${id}/execute`, { sessionId });
+/** What the Run dialog asks for; every field optional. */
+export interface ExecuteInputs {
+  datasetId?: string;
+  rowIndex?: number;
+  allRows?: boolean;
+  vars?: Record<string, string>;
+}
+
+export const executeScenario = (id: string, sessionId: string, inputs: ExecuteInputs = {}) =>
+  postJson<ExecuteInputs & { sessionId: string }, { executionId: string; executionIds?: string[] }>(
+    `/scenarios/${id}/execute`, { sessionId, ...inputs });

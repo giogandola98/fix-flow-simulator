@@ -86,7 +86,8 @@ public class ScenarioDslParser {
             @JsonProperty("correlationRules") List<CorrelationRuleDto> correlationRules,
             @JsonProperty("nodes") List<NodeDto> nodes,
             @JsonProperty("edges") List<EdgeDto> edges,
-            @JsonProperty("variables") Map<String, VariableDefDto> variables
+            @JsonProperty("variables") Map<String, VariableDefDto> variables,
+            @JsonProperty("datasetRef") String datasetRef
     ) {
         Scenario toDomain(String rawYaml) {
             return new Scenario(
@@ -107,7 +108,8 @@ public class ScenarioDslParser {
                     variables == null ? Map.of()
                             : variables.entrySet().stream().collect(Collectors.toMap(
                                     Map.Entry::getKey, e -> e.getValue().toDomain())),
-                    rawYaml
+                    rawYaml,
+                    datasetRef == null || datasetRef.isBlank() ? null : datasetRef.trim()
             );
         }
 
@@ -120,7 +122,8 @@ public class ScenarioDslParser {
                     s.nodes().stream().map(NodeDto::fromDomain).toList(),
                     s.edges().stream().map(EdgeDto::fromDomain).toList(),
                     s.variables().entrySet().stream().collect(Collectors.toMap(
-                            Map.Entry::getKey, e -> VariableDefDto.fromDomain(e.getValue())))
+                            Map.Entry::getKey, e -> VariableDefDto.fromDomain(e.getValue()))),
+                    s.datasetRef()
             );
         }
     }

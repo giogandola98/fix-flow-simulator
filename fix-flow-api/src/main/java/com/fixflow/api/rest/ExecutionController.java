@@ -9,6 +9,7 @@ import com.fixflow.core.domain.execution.Execution;
 import com.fixflow.core.domain.execution.ExecutionEvent;
 import com.fixflow.core.domain.execution.FIXMessage;
 import com.fixflow.core.ports.outbound.ExecutionRepositoryPort;
+import com.fixflow.engine.execution.ExecutionInputs;
 import com.fixflow.engine.execution.ExecutionManager;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -38,15 +39,18 @@ public class ExecutionController {
     }
 
     @PostMapping("/api/v1/scenarios/{scenarioId}/execute")
-    public ResponseEntity<Map<String, UUID>> start(
+    public ResponseEntity<Map<String, Object>> start(
         @PathVariable UUID scenarioId,
         @RequestBody StartExecutionRequest req
     ) {
-        UUID execId = manager.start(scenarioId, req.sessionId());
+        ExecutionInputs inputs = new ExecutionInputs(req.datasetId(), req.rowIndex(),
+            Boolean.TRUE.equals(req.allRows()), req.vars());
+        List<UUID> ids = manager.start(scenarioId, req.sessionId(), inputs);
+        UUID execId = ids.get(0);
         return ResponseEntity
             .accepted()
             .location(URI.create("/api/v1/executions/" + execId))
-            .body(Map.of("executionId", execId));
+            .body(Map.of("executionId", execId, "executionIds", ids));
     }
 
     @PostMapping("/api/v1/executions/{id}/stop")

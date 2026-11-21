@@ -1,5 +1,6 @@
 package com.fixflow.engine.execution;
 
+import com.fixflow.core.domain.dataset.DataSet;
 import com.fixflow.core.domain.execution.Execution;
 import com.fixflow.core.domain.execution.ExecutionEvent;
 import com.fixflow.core.domain.execution.ExecutionEventType;
@@ -11,6 +12,7 @@ import com.fixflow.core.domain.execution.NodeResult;
 import com.fixflow.core.domain.scenario.NodeType;
 import com.fixflow.core.domain.scenario.Scenario;
 import com.fixflow.core.domain.scenario.ScenarioNode;
+import com.fixflow.core.ports.outbound.DataSetRepositoryPort;
 import com.fixflow.core.ports.outbound.EventPublisherPort;
 import com.fixflow.core.ports.outbound.ExecutionRepositoryPort;
 import com.fixflow.engine.fix.RawFixRenderer;
@@ -25,6 +27,7 @@ import org.springframework.stereotype.Service;
 import jakarta.annotation.PreDestroy;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -46,6 +49,10 @@ public class ExecutionManager {
     private final ExecutionRepositoryPort executionRepo;
     private final EventPublisherPort eventPublisher;
     private final SessionExecutionRegistry sessionExecutions;
+    /** Null in unit tests that run without data sets. */
+    private final DataSetRepositoryPort dataSets;
+    /** Rows of an all-rows run that are waiting for their turn; stopping one must not interrupt the running row. */
+    private final java.util.Set<UUID> queued = ConcurrentHashMap.newKeySet();
     private final Map<UUID, ExecutionContext> contexts = new ConcurrentHashMap<>();
     /** Tracks the running task per execution so a stop can interrupt a blocked node. */
     private final Map<UUID, Future<?>> runningTasks = new ConcurrentHashMap<>();
@@ -59,11 +66,20 @@ public class ExecutionManager {
             });
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
-    @Autowired
     public ExecutionManager(ScenarioRegistry registry, NodeWalker walker,
                             ExecutionRepositoryPort executionRepo,
                             EventPublisherPort eventPublisher,
                             SessionExecutionRegistry sessionExecutions) {
+        this(registry, walker, executionRepo, eventPublisher, sessionExecutions, null);
+    }
+
+    @Autowired
+    public ExecutionManager(ScenarioRegistry registry, NodeWalker walker,
+                            ExecutionRepositoryPort executionRepo,
+                            EventPublisherPort eventPublisher,
+                            SessionExecutionRegistry sessionExecutions,
+                            DataSetRepositoryPort dataSets) {
+        this.dataSets = dataSets;
         this.registry = registry;
         this.walker = walker;
         this.executionRepo = executionRepo;
@@ -98,26 +114,130 @@ public class ExecutionManager {
     }
 
     public UUID start(UUID scenarioId, UUID sessionId) {
+        return start(scenarioId, sessionId, ExecutionInputs.none()).get(0);
+    }
+
+    /**
+     * Starts a run, or one run per data set row when {@code inputs.allRows()}. The rows run one
+     * after another on a single worker; a failed row does not stop the next. Ids come back in row
+     * order. Bad inputs (unknown data set, row out of range) are rejected before anything starts.
+     */
+    public List<UUID> start(UUID scenarioId, UUID sessionId, ExecutionInputs inputs) {
         Scenario scenario = registry.getById(scenarioId)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown scenario: " + scenarioId));
-        UUID executionId = UUID.randomUUID();
+        ExecutionInputs in = inputs == null ? ExecutionInputs.none() : inputs;
         UUID resolvedSession = sessionId != null ? sessionId : parseSessionRef(scenario);
-        ExecutionContext ctx = new ExecutionContext(executionId, scenario, resolvedSession);
-        contexts.put(executionId, ctx);
-        if (executionRepo != null) {
-            executionRepo.save(new Execution(executionId, scenarioId,
-                    scenario.version() == null ? "1" : scenario.version(),
-                    resolvedSession, ExecutionStatus.RUNNING, Instant.now(), null, null,
-                    Map.of(), List.of(), List.of()));
+
+        DataSet dataSet = resolveDataSet(scenario, in);
+        List<Integer> rowIndexes = new ArrayList<>();
+        List<Map<String, String>> rows = new ArrayList<>();
+        if (dataSet == null) {
+            rowIndexes.add(-1);
+            rows.add(null);
+        } else if (in.allRows()) {
+            if (dataSet.rows().isEmpty()) {
+                throw new IllegalArgumentException("Data set '" + dataSet.name() + "' has no rows");
+            }
+            for (int i = 0; i < dataSet.rows().size(); i++) {
+                rowIndexes.add(i);
+                rows.add(dataSet.row(i));
+            }
+        } else {
+            int index = in.rowIndex() == null ? 0 : in.rowIndex();
+            try {
+                rows.add(dataSet.row(index));
+            } catch (IndexOutOfBoundsException e) {
+                throw new IllegalArgumentException(e.getMessage() + " (data set '" + dataSet.name() + "')");
+            }
+            rowIndexes.add(index);
         }
 
-        if (resolvedSession != null) sessionExecutions.register(resolvedSession.toString(), executionId);
+        List<ExecutionContext> batch = new ArrayList<>();
+        for (int i = 0; i < rows.size(); i++) {
+            UUID executionId = UUID.randomUUID();
+            ExecutionContext ctx = new ExecutionContext(executionId, scenario, resolvedSession);
+            scenario.variables().forEach((name, def) -> {
+                if (def != null && def.defaultValue() != null) ctx.setVariable(name, def.defaultValue());
+            });
+            in.vars().forEach(ctx::setVariable);
+            if (rows.get(i) != null) {
+                ctx.setRow(rows.get(i));
+                ctx.setRowIndex(rowIndexes.get(i));
+            }
+            batch.add(ctx);
+        }
 
-        Future<?> task = executor.submit(() -> runScenario(ctx));
-        runningTasks.put(executionId, task);
+        for (int i = 0; i < batch.size(); i++) {
+            ExecutionContext ctx = batch.get(i);
+            contexts.put(ctx.executionId(), ctx);
+            if (i > 0) queued.add(ctx.executionId());
+            if (executionRepo != null) {
+                executionRepo.save(new Execution(ctx.executionId(), scenarioId,
+                        scenario.version() == null ? "1" : scenario.version(),
+                        resolvedSession, ExecutionStatus.RUNNING, Instant.now(), null, null,
+                        Map.of(), List.of(), List.of()));
+            }
+        }
+
+        if (resolvedSession != null) {
+            sessionExecutions.register(resolvedSession.toString(), batch.get(0).executionId());
+        }
+
+        Future<?> task = executor.submit(() -> runBatch(batch));
+        for (ExecutionContext ctx : batch) {
+            if (contexts.containsKey(ctx.executionId())) runningTasks.put(ctx.executionId(), task);
+        }
         // Guard the rare case where the run finished before we recorded the task.
-        if (task.isDone()) runningTasks.remove(executionId);
-        return executionId;
+        if (task.isDone()) batch.forEach(c -> runningTasks.remove(c.executionId()));
+        return batch.stream().map(ExecutionContext::executionId).toList();
+    }
+
+    /** The data set a run reads: the request's, else the scenario's {@code datasetRef} (id or name). */
+    private DataSet resolveDataSet(Scenario scenario, ExecutionInputs in) {
+        if (in.datasetId() != null) {
+            if (dataSets == null) throw new IllegalArgumentException("Data sets are not available");
+            return dataSets.findById(in.datasetId())
+                    .orElseThrow(() -> new IllegalArgumentException("Unknown data set: " + in.datasetId()));
+        }
+        String ref = scenario.datasetRef();
+        if (ref != null && !ref.isBlank() && dataSets != null) {
+            java.util.Optional<DataSet> found = java.util.Optional.empty();
+            try {
+                found = dataSets.findById(UUID.fromString(ref.trim()));
+            } catch (IllegalArgumentException notAnId) {
+                // a name, looked up below
+            }
+            return found.or(() -> dataSets.findByName(ref.trim()))
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Scenario '" + scenario.name() + "' refers to unknown data set '" + ref + "'"));
+        }
+        if (in.allRows() || in.rowIndex() != null) {
+            throw new IllegalArgumentException("A row was requested but the scenario has no data set");
+        }
+        return null;
+    }
+
+    /** Runs the rows of one start request in order; each ends in its own status. */
+    private void runBatch(List<ExecutionContext> batch) {
+        boolean abort = false;
+        for (int i = 0; i < batch.size(); i++) {
+            ExecutionContext ctx = batch.get(i);
+            queued.remove(ctx.executionId());
+            if (abort || ctx.status() == ExecutionStatus.STOPPED) {
+                ctx.setStatus(ExecutionStatus.STOPPED);
+                finish(ctx);
+                continue;
+            }
+            if (i > 0 && ctx.sessionId() != null) {
+                sessionExecutions.register(ctx.sessionId().toString(), ctx.executionId());
+            }
+            runScenario(ctx);
+            if (Thread.currentThread().isInterrupted()) {
+                // A stop of this row interrupts the worker: that ends the row, not the rest of the batch.
+                if (ctx.status() == ExecutionStatus.STOPPED) Thread.interrupted();
+                else abort = true;
+            }
+        }
     }
 
     /**
@@ -140,6 +260,8 @@ public class ExecutionManager {
     public void stop(UUID executionId) {
         ExecutionContext ctx = contexts.get(executionId);
         if (ctx != null) ctx.setStatus(ExecutionStatus.STOPPED);
+        // A row still waiting its turn is skipped when reached; only a started run needs interrupting.
+        if (queued.contains(executionId)) return;
         // Interrupt the worker so a node blocked in a wait/sleep/loop unwinds immediately.
         Future<?> task = runningTasks.get(executionId);
         if (task != null) task.cancel(true);
@@ -190,15 +312,19 @@ public class ExecutionManager {
                     t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName());
             if (ctx.status() == ExecutionStatus.RUNNING) ctx.setStatus(ExecutionStatus.FAILED);
         } finally {
-            emitAndPersist(ctx.executionId(), ExecutionEventType.EXECUTION_FINISHED, null,
-                    "Execution finished with status " + ctx.status());
-            persistFinalStatus(ctx);
-            completedStatuses.put(ctx.executionId(), ctx.status());
-            contexts.remove(ctx.executionId());
-            runningTasks.remove(ctx.executionId());
-            if (ctx.sessionId() != null) {
-                sessionExecutions.unregister(ctx.sessionId().toString(), ctx.executionId());
-            }
+            finish(ctx);
+        }
+    }
+
+    private void finish(ExecutionContext ctx) {
+        emitAndPersist(ctx.executionId(), ExecutionEventType.EXECUTION_FINISHED, null,
+                "Execution finished with status " + ctx.status());
+        persistFinalStatus(ctx);
+        completedStatuses.put(ctx.executionId(), ctx.status());
+        contexts.remove(ctx.executionId());
+        runningTasks.remove(ctx.executionId());
+        if (ctx.sessionId() != null) {
+            sessionExecutions.unregister(ctx.sessionId().toString(), ctx.executionId());
         }
     }
 

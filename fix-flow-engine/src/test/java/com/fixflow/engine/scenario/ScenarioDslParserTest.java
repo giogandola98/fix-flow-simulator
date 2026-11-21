@@ -142,4 +142,13 @@ class ScenarioDslParserTest {
                 .hasMessageContaining("Invalid scenario YAML")
                 .hasMessageContaining("END");
     }
+
+    @Test
+    void dataset_ref_round_trips() {
+        String yaml = String.join("\n", "name: s", "datasetRef: My Rows", "nodes:",
+                "  - id: start", "    name: start", "    type: START", "");
+        Scenario sc = parser.parseYaml(yaml);
+        assertThat(sc.datasetRef()).isEqualTo("My Rows");
+        assertThat(parser.parseYaml(parser.toYaml(sc)).datasetRef()).isEqualTo("My Rows");
+    }
 }
