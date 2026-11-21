@@ -408,6 +408,29 @@ class ExecutionManagerTest {
     }
 
     @Test
+    void parallel_counts_overwritten_with_non_numbers_do_not_fail_the_run() {
+        ProgrammableHandler par = new ProgrammableHandler(NodeType.PARALLEL, (n, c) -> {
+            c.setVariable("parallel:" + n.id() + ":passed", "lots");
+            c.setVariable("parallel:" + n.id() + ":failed", "0");
+            return NodeHandlerResult.success(n.onSuccess());
+        });
+        NodeDispatcher d = new NodeDispatcher(List.of(new StartHandler(), new EndHandler(), par));
+        ExecutionManagerPersistenceTest.FakePublisher publisher = new ExecutionManagerPersistenceTest.FakePublisher();
+        ExecutionManager mgr = new ExecutionManager(registry, new NodeWalker(d), null, publisher, null, null);
+        Scenario s = scenario("p", start("par"),
+                node("par", NodeType.PARALLEL).onSuccess("end").build(), Fixtures.endPass("end"));
+        registry.register(s);
+        List<UUID> ids = mgr.start(s.id(), UUID.randomUUID(), ExecutionInputs.none());
+        awaitDone(mgr, ids);
+        assertThat(mgr.getStatus(ids.get(0))).isEqualTo(ExecutionStatus.PASSED);
+        assertThat(publisher.published)
+                .filteredOn(e -> e.type() == com.fixflow.core.domain.execution.ExecutionEventType.NODE_EXITED
+                        && "par".equals(e.nodeId()))
+                .extracting(e -> e.detail())
+                .containsExactly("Node par completed");
+    }
+
+    @Test
     void parallel_node_runs_one_child_per_row_of_the_bound_data_set() {
         List<String> seen = new CopyOnWriteArrayList<>();
         ProgrammableHandler rec = new ProgrammableHandler(NodeType.SEND_FIX, (n, c) -> {

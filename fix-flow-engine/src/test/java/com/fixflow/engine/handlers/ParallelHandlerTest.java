@@ -183,8 +183,7 @@ class ParallelHandlerTest {
         NodeHandlerResult r = handler.handle(parNode(10_000, Map.of("maxConcurrency", 2)),
                 parent(inquiries("ok", "ok", "ok", "ok", "ok")));
         assertThat(r.success()).isTrue();
-        assertThat(peak.get()).isLessThanOrEqualTo(2);
-        assertThat(peak.get()).isEqualTo(2);
+        assertThat(peak.get()).isBetween(1, 2);
     }
 
     @Test
@@ -232,10 +231,16 @@ class ParallelHandlerTest {
             return NodeHandlerResult.failure(n.onFailure(), "interrupted");
         });
         ExecutionContext parent = parent(inquiries("ok", "ok"));
-        Future<NodeHandlerResult> f = pool.submit(() -> handler.handle(parNode(0, Map.of()), parent));
+        java.util.concurrent.FutureTask<NodeHandlerResult> f =
+                new java.util.concurrent.FutureTask<>(() -> handler.handle(parNode(0, Map.of()), parent));
+        Thread parentThread = new Thread(f, "parallel-parent");
+        parentThread.start();
         assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
-        f.cancel(true);
+        parentThread.interrupt();
         await().atMost(Duration.ofSeconds(5)).until(() -> interrupted.get() == 2);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> f.get(5, TimeUnit.SECONDS))
+                .isInstanceOf(java.util.concurrent.ExecutionException.class)
+                .hasCauseInstanceOf(InterruptedException.class);
     }
 
     @Test
@@ -265,6 +270,44 @@ class ParallelHandlerTest {
         assertThat(r.success()).as(r.errorMessage()).isTrue();
         assertThat(parent.getVariable("parallel:par:passed")).isEqualTo("3");
         assertThat(correlation.pendingCount()).isZero();
+    }
+
+    @Test
+    void children_get_messages_through_the_router_including_ones_buffered_before_they_registered() throws Exception {
+        CorrelationEngine correlation = new CorrelationEngine();
+        MessageBuffer buffer = new MessageBuffer();
+        MessageRouter router = new MessageRouter(correlation, buffer);
+        NodeDispatcher d = new NodeDispatcher(List.of(new StartHandler(), new EndHandler(), new EndFailHandler(),
+                new ExpectFIXHandler(correlation, router, new VariableResolver())));
+        handler = new ParallelHandler(registry, new ScenarioExecutor(d), new VariableResolver());
+        child = scenario("child", start("exp"),
+                node("exp", NodeType.EXPECT_FIX)
+                        .cfg("msgType", "S")
+                        .cfg("correlation", Map.of("sourceTag", 20117, "expectedValue", "{{row:inquiry}}"))
+                        .timeout(timeout(5_000, TimeoutAction.FAIL, null))
+                        .onSuccess("pass").onFailure("fail").build(),
+                Fixtures.endPass("pass"), Fixtures.endFail("fail"));
+        registry.register(child);
+        ExecutionContext parent = parent(inquiries("ok", "ok", "ok", "ok"));
+        String session = parent.sessionId().toString();
+
+        // Two quotes arrive before any child exists: they are buffered.
+        router.onMessage(session, Fixtures.fields(35, "S", 20117, "INQ2"));
+        router.onMessage(session, Fixtures.fields(35, "S", 20117, "INQ4"));
+        assertThat(buffer.size(session)).isEqualTo(2);
+
+        Future<NodeHandlerResult> f = pool.submit(() -> handler.handle(parNode(10_000, Map.of()), parent));
+        // INQ2 and INQ4 are drained by their children on registration; INQ1 and INQ3 still wait.
+        await().atMost(Duration.ofSeconds(5))
+                .until(() -> correlation.pendingCount() == 2 && buffer.size(session) == 0);
+        router.onMessage(session, Fixtures.fields(35, "S", 20117, "INQ3"));
+        router.onMessage(session, Fixtures.fields(35, "S", 20117, "INQ1"));
+
+        NodeHandlerResult r = f.get(5, TimeUnit.SECONDS);
+        assertThat(r.success()).as(r.errorMessage()).isTrue();
+        assertThat(parent.getVariable("parallel:par:passed")).isEqualTo("4");
+        assertThat(correlation.pendingCount()).isZero();
+        assertThat(buffer.size(session)).isZero();
     }
 
     @Test

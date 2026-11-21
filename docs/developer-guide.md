@@ -461,7 +461,7 @@ value.
 
 `com.fixflow.engine.fix.MessageBuffer`
 
-Thread-safe queue of inbound FIX messages. `ExpectFIXHandler` and `RouteFIXHandler` poll this buffer with backoff. `MessageRouter` (implements `InboundMessageListener`) feeds messages into it as they arrive from QuickFIX/J. `poll(sessionId, matcher)` runs one caller at a time per session (it locks that session's deque): the matcher consumes the message by completing a correlation waiter, so two executions draining the same session at once (e.g. PARALLEL children) must never both take one buffered message.
+Thread-safe queue of inbound FIX messages. `ExpectFIXHandler` and `RouteFIXHandler` poll this buffer with backoff. `MessageRouter` (implements `InboundMessageListener`) feeds messages into it as they arrive from QuickFIX/J. `poll(sessionId, matcher)` runs one caller at a time per session (it locks that session's deque): the matcher consumes the message by completing a correlation waiter, so two executions draining the same session at once (e.g. PARALLEL children) must never both take one buffered message. `MessageRouter.onMessage` offers a message to the correlation engine, and on a miss parks it, records it, then drains the session once more: a waiter that registered (and drained an empty buffer) between the miss and the park would otherwise never see it.
 
 ### ValidationEngine
 

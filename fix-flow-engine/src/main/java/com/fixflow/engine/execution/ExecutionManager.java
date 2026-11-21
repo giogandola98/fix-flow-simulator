@@ -368,9 +368,15 @@ public class ExecutionManager {
                 } else if (node.type() == NodeType.PARALLEL) {
                     String passed = ctx.getVariable("parallel:" + node.id() + ":passed");
                     String failed = ctx.getVariable("parallel:" + node.id() + ":failed");
-                    if (passed != null && failed != null) {
-                        exitDetail = passed + "/" + (Integer.parseInt(passed) + Integer.parseInt(failed))
-                                + " children passed";
+                    // Plain variables, so a scenario could overwrite them: keep the default detail
+                    // rather than fail the run on a value that is not a count.
+                    try {
+                        if (passed != null && failed != null) {
+                            exitDetail = passed + "/" + (Integer.parseInt(passed) + Integer.parseInt(failed))
+                                    + " children passed";
+                        }
+                    } catch (NumberFormatException notACount) {
+                        log.debug("PARALLEL node {}: counts are not numbers ({}, {})", node.id(), passed, failed);
                     }
                 }
                 emitAndPersist(ctx.executionId(), ExecutionEventType.NODE_EXITED, node.id(), exitDetail);
