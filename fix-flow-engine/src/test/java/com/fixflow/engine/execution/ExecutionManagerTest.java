@@ -326,4 +326,84 @@ class ExecutionManagerTest {
         assertThatThrownBy(() -> mgr.start(s.id(), null, new ExecutionInputs(d.id(), 5, false, Map.of())))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("5");
     }
+
+    // ---- stopping rows of an all-rows batch ----
+
+    /** SEND_FIX handler that records its row, tells the test it started, then blocks until released or interrupted. */
+    private static final class BlockingRows implements NodeHandler {
+        final List<String> started = new CopyOnWriteArrayList<>();
+        final Map<String, java.util.concurrent.CountDownLatch> release = new java.util.concurrent.ConcurrentHashMap<>();
+        final java.util.Set<String> blocking;
+        BlockingRows(String... blocking) {
+            this.blocking = java.util.Set.of(blocking);
+            for (String b : blocking) release.put(b, new java.util.concurrent.CountDownLatch(1));
+        }
+        public NodeType getSupportedType() { return NodeType.SEND_FIX; }
+        public NodeHandlerResult handle(com.fixflow.core.domain.scenario.ScenarioNode n, ExecutionContext c)
+                throws InterruptedException {
+            String v = c.row().get("Isin");
+            started.add(v);
+            if (blocking.contains(v)) release.get(v).await(30, java.util.concurrent.TimeUnit.SECONDS);
+            return NodeHandlerResult.success(n.onSuccess());
+        }
+    }
+
+    private ExecutionManager managerBlocking(MemDataSets ds, BlockingRows h) {
+        NodeDispatcher d = new NodeDispatcher(List.of(new StartHandler(), new EndHandler(), new EndFailHandler(), h));
+        return new ExecutionManager(registry, new NodeWalker(d), null, null, null, ds);
+    }
+
+    private List<UUID> startBatch(ExecutionManager mgr, MemDataSets ds, String... isins) {
+        DataSet d = ds.save(rows("rs", isins));
+        Scenario s = recScenario(null, Map.of());
+        registry.register(s);
+        return mgr.start(s.id(), UUID.randomUUID(), new ExecutionInputs(d.id(), null, true, Map.of()));
+    }
+
+    private static void awaitStarted(BlockingRows h, String isin) {
+        await().atMost(Duration.ofSeconds(5)).until(() -> h.started.contains(isin));
+    }
+
+    private static void awaitStatus(ExecutionManager mgr, UUID id, ExecutionStatus expected) {
+        await().atMost(Duration.ofSeconds(3)).until(() -> mgr.getStatus(id) == expected);
+    }
+
+    @Test
+    void stopping_a_queued_row_skips_it_and_the_others_run() {
+        MemDataSets ds = new MemDataSets();
+        BlockingRows h = new BlockingRows("A");
+        ExecutionManager mgr = managerBlocking(ds, h);
+        List<UUID> ids = startBatch(mgr, ds, "A", "B", "C");
+        awaitStarted(h, "A");
+
+        mgr.stop(ids.get(1));
+        h.release.get("A").countDown();
+        awaitDone(mgr, ids);
+
+        assertThat(ids.stream().map(mgr::getStatus).toList())
+                .containsExactly(ExecutionStatus.PASSED, ExecutionStatus.STOPPED, ExecutionStatus.PASSED);
+        assertThat(h.started).containsExactly("A", "C");
+    }
+
+    @Test
+    void each_running_row_can_be_stopped_in_turn_without_touching_the_others() {
+        MemDataSets ds = new MemDataSets();
+        BlockingRows h = new BlockingRows("A", "B");
+        ExecutionManager mgr = managerBlocking(ds, h);
+        List<UUID> ids = startBatch(mgr, ds, "A", "B", "C");
+
+        awaitStarted(h, "A");
+        mgr.stop(ids.get(0));
+        awaitStatus(mgr, ids.get(0), ExecutionStatus.STOPPED);   // unwinds well under the 30 s block
+        awaitStarted(h, "B");                                   // the next row starts and is not marked stopped
+        assertThat(mgr.getStatus(ids.get(1))).isEqualTo(ExecutionStatus.RUNNING);
+
+        mgr.stop(ids.get(1));                                   // a second stop in the same batch still interrupts
+        awaitStatus(mgr, ids.get(1), ExecutionStatus.STOPPED);
+        awaitDone(mgr, ids);
+
+        assertThat(ids.stream().map(mgr::getStatus).toList())
+                .containsExactly(ExecutionStatus.STOPPED, ExecutionStatus.STOPPED, ExecutionStatus.PASSED);
+        assertThat(h.started).containsExactly("A", "B", "C");
+    }
 }

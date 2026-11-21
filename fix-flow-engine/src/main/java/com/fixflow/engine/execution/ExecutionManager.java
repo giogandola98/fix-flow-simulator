@@ -32,11 +32,11 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -51,11 +51,10 @@ public class ExecutionManager {
     private final SessionExecutionRegistry sessionExecutions;
     /** Null in unit tests that run without data sets. */
     private final DataSetRepositoryPort dataSets;
-    /** Rows of an all-rows run that are waiting for their turn; stopping one must not interrupt the running row. */
-    private final java.util.Set<UUID> queued = ConcurrentHashMap.newKeySet();
+    /** Guards {@link #workers}: which worker thread is running which execution right now. */
+    private final Object runLock = new Object();
+    private final Map<UUID, Thread> workers = new ConcurrentHashMap<>();
     private final Map<UUID, ExecutionContext> contexts = new ConcurrentHashMap<>();
-    /** Tracks the running task per execution so a stop can interrupt a blocked node. */
-    private final Map<UUID, Future<?>> runningTasks = new ConcurrentHashMap<>();
     /** Size-capped LRU so completed-status history cannot grow unbounded. */
     private final Map<UUID, ExecutionStatus> completedStatuses = Collections.synchronizedMap(
             new LinkedHashMap<>(16, 0.75f, true) {
@@ -170,7 +169,6 @@ public class ExecutionManager {
         for (int i = 0; i < batch.size(); i++) {
             ExecutionContext ctx = batch.get(i);
             contexts.put(ctx.executionId(), ctx);
-            if (i > 0) queued.add(ctx.executionId());
             if (executionRepo != null) {
                 executionRepo.save(new Execution(ctx.executionId(), scenarioId,
                         scenario.version() == null ? "1" : scenario.version(),
@@ -183,12 +181,7 @@ public class ExecutionManager {
             sessionExecutions.register(resolvedSession.toString(), batch.get(0).executionId());
         }
 
-        Future<?> task = executor.submit(() -> runBatch(batch));
-        for (ExecutionContext ctx : batch) {
-            if (contexts.containsKey(ctx.executionId())) runningTasks.put(ctx.executionId(), task);
-        }
-        // Guard the rare case where the run finished before we recorded the task.
-        if (task.isDone()) batch.forEach(c -> runningTasks.remove(c.executionId()));
+        executor.submit(() -> runBatch(batch));
         return batch.stream().map(ExecutionContext::executionId).toList();
     }
 
@@ -201,7 +194,7 @@ public class ExecutionManager {
         }
         String ref = scenario.datasetRef();
         if (ref != null && !ref.isBlank() && dataSets != null) {
-            java.util.Optional<DataSet> found = java.util.Optional.empty();
+            Optional<DataSet> found = Optional.empty();
             try {
                 found = dataSets.findById(UUID.fromString(ref.trim()));
             } catch (IllegalArgumentException notAnId) {
@@ -222,8 +215,14 @@ public class ExecutionManager {
         boolean abort = false;
         for (int i = 0; i < batch.size(); i++) {
             ExecutionContext ctx = batch.get(i);
-            queued.remove(ctx.executionId());
-            if (abort || ctx.status() == ExecutionStatus.STOPPED) {
+            // Check and register under the lock: a stop either sees the status before the row starts
+            // (skipped) or finds the worker registered (interrupted), never neither.
+            boolean skip;
+            synchronized (runLock) {
+                skip = abort || ctx.status() == ExecutionStatus.STOPPED;
+                if (!skip) workers.put(ctx.executionId(), Thread.currentThread());
+            }
+            if (skip) {
                 ctx.setStatus(ExecutionStatus.STOPPED);
                 finish(ctx);
                 continue;
@@ -231,7 +230,15 @@ public class ExecutionManager {
             if (i > 0 && ctx.sessionId() != null) {
                 sessionExecutions.register(ctx.sessionId().toString(), ctx.executionId());
             }
-            runScenario(ctx);
+            // Only this row is interruptible while it is registered here, so a stop of another
+            // row can never land on the one running now.
+            try {
+                runScenario(ctx);
+            } finally {
+                synchronized (runLock) {
+                    workers.remove(ctx.executionId());
+                }
+            }
             if (Thread.currentThread().isInterrupted()) {
                 // A stop of this row interrupts the worker: that ends the row, not the rest of the batch.
                 if (ctx.status() == ExecutionStatus.STOPPED) Thread.interrupted();
@@ -258,13 +265,16 @@ public class ExecutionManager {
     }
 
     public void stop(UUID executionId) {
-        ExecutionContext ctx = contexts.get(executionId);
-        if (ctx != null) ctx.setStatus(ExecutionStatus.STOPPED);
-        // A row still waiting its turn is skipped when reached; only a started run needs interrupting.
-        if (queued.contains(executionId)) return;
-        // Interrupt the worker so a node blocked in a wait/sleep/loop unwinds immediately.
-        Future<?> task = runningTasks.get(executionId);
-        if (task != null) task.cancel(true);
+        // A row still waiting its turn is skipped when reached. A row that is running right now has
+        // its worker interrupted so a node blocked in a wait/sleep/loop unwinds immediately; the
+        // lock keeps the interrupt from landing after the row ended and the worker moved on.
+        synchronized (runLock) {
+            ExecutionContext ctx = contexts.get(executionId);
+            if (ctx == null) return; // already finished
+            ctx.setStatus(ExecutionStatus.STOPPED);
+            Thread worker = workers.get(executionId);
+            if (worker != null) worker.interrupt();
+        }
     }
 
     public ExecutionStatus getStatus(UUID executionId) {
@@ -322,7 +332,6 @@ public class ExecutionManager {
         persistFinalStatus(ctx);
         completedStatuses.put(ctx.executionId(), ctx.status());
         contexts.remove(ctx.executionId());
-        runningTasks.remove(ctx.executionId());
         if (ctx.sessionId() != null) {
             sessionExecutions.unregister(ctx.sessionId().toString(), ctx.executionId());
         }
