@@ -111,7 +111,7 @@ final class PackFakes {
 
     static String read(String rel) {
         try {
-            return Files.readString(DEMO.resolve(rel));
+            return Files.readString(DEMO.resolve(rel)).replace("\r\n", "\n");
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
