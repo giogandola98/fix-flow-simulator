@@ -121,7 +121,8 @@
       "END_PASS": "Fin OK",
       "END_FAIL": "Fin Erreur",
       "TIMEOUT": "Timeout",
-      "BRANCH": "Branchement"
+      "BRANCH": "Branchement",
+      "OPERATOR": "Opérateur"
     },
     "descriptions": {
       "RETRY": "Réexécute un sous-graphe jusqu'à N fois ; s'arrête au premier succès.",
@@ -129,7 +130,8 @@
       "WAIT": "Bloque jusqu'au timeout ; action configurable (continuer / échouer / sauter).",
       "DELAY": "Pause fixe (ms). Continue toujours au succès — pas de branchement.",
       "CALL_SCENARIO": "Exécute un autre scénario comme sous-flux synchrone réutilisable.",
-      "PARALLEL": "Exécute le scénario enfant pour chaque ligne du jeu de données, en parallèle ; réussit si tous les enfants réussissent."
+      "PARALLEL": "Exécute le scénario enfant pour chaque ligne du jeu de données, en parallèle ; réussit si tous les enfants réussissent.",
+      "OPERATOR": "Attend qu'une personne ait effectué une étape dans un autre système et la confirme ou la refuse ici."
     }
   },
   "bottomPanel": {
@@ -297,6 +299,13 @@
       "rowsSummary": "lignes {{rows}}",
       "maxConcurrency": "Enfants simultanés max",
       "inputVarsHint": "Copiées du parent dans chaque enfant. Chaque enfant voit aussi sa propre ligne (marqueurs row:Colonne)."
+    },
+    "operator": {
+      "desc": "Affiche l'instruction à la personne qui exécute le scénario et attend sa réponse. Confirmer suit success, échec suit failure ; la note est stockée dans operator:<nodeId>:note. Délai par défaut 10 minutes.",
+      "instruction": "Instruction",
+      "instructionHint": "Les paramètres comme {{var:x}} ou {{row:Colonne}} sont résolus à l'ouverture de l'invite.",
+      "confirmLabel": "Libellé du bouton de confirmation",
+      "failLabel": "Libellé du bouton d'échec"
     }
   },
   "executionReport": {
@@ -321,5 +330,12 @@
     "removeVar": "Supprimer la variable",
     "cancel": "Annuler",
     "start": "Démarrer"
+  },
+  "operator": {
+    "title": "Action de l'opérateur requise",
+    "note": "Note (facultative)",
+    "confirm": "Fait",
+    "fail": "Échec",
+    "error": "La réponse n'a pas pu être envoyée"
   }
 }

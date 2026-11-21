@@ -50,6 +50,25 @@ public class ExecutionContext {
     public void setNodeEventEmitter(BiConsumer<ExecutionEventType, String> emitter) { this.nodeEventEmitter = emitter; }
     public void emitNodeEvent(ExecutionEventType type, String nodeId) { nodeEventEmitter.accept(type, nodeId); }
 
+    /** Emits a node event that carries its own detail text. */
+    @FunctionalInterface
+    public interface NodeDetailEmitter { void emit(ExecutionEventType type, String nodeId, String detail); }
+
+    private volatile NodeDetailEmitter nodeDetailEmitter;
+    public void setNodeDetailEmitter(NodeDetailEmitter emitter) { this.nodeDetailEmitter = emitter; }
+    public NodeDetailEmitter nodeDetailEmitter() { return nodeDetailEmitter; }
+
+    /** Emits with a detail; without a detail emitter it falls back to the plain event. */
+    public void emitNodeEvent(ExecutionEventType type, String nodeId, String detail) {
+        NodeDetailEmitter e = nodeDetailEmitter;
+        if (e != null) e.emit(type, nodeId, detail); else nodeEventEmitter.accept(type, nodeId);
+    }
+
+    /** Executions this run is nested under (CALL_SCENARIO/PARALLEL), nearest parent last; empty at top level. */
+    private volatile java.util.List<UUID> ancestors = java.util.List.of();
+    public java.util.List<UUID> ancestors() { return ancestors; }
+    public void setAncestors(java.util.List<UUID> ancestors) { this.ancestors = java.util.List.copyOf(ancestors); }
+
     public StepListener stepListener() { return stepListener; }
     public void setStepListener(StepListener listener) { this.stepListener = listener == null ? StepListener.NOOP : listener; }
 

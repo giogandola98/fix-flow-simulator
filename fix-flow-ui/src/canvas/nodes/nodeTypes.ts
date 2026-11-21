@@ -12,6 +12,7 @@ import { HttpRequestNode } from './HttpRequestNode';
 import { RouteFIXNode } from './RouteFIXNode';
 import { CallScenarioNode } from './CallScenarioNode';
 import { ParallelNode } from './ParallelNode';
+import { OperatorNode } from './OperatorNode';
 
 export const nodeTypes: NodeTypes = {
   START: StartNode,
@@ -31,4 +32,5 @@ export const nodeTypes: NodeTypes = {
   ROUTE_FIX: RouteFIXNode,
   CALL_SCENARIO: CallScenarioNode,
   PARALLEL: ParallelNode,
+  OPERATOR: OperatorNode,
 };

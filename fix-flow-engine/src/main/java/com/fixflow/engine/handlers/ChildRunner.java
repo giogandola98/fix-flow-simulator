@@ -61,6 +61,11 @@ public final class ChildRunner {
         child.setRow(row);
         child.setRowIndex(rowIndex);
         child.setDataSet(parent.dataSet());
+        java.util.List<UUID> chain = new java.util.ArrayList<>(parent.ancestors());
+        chain.add(parent.executionId());
+        child.setAncestors(chain);
+        // The child emits no events of its own: operator prompts are reported on the parent's stream.
+        child.setNodeDetailEmitter(parent.nodeDetailEmitter());
         child.setVariable(DEPTH_KEY, String.valueOf(childDepth));
 
         for (Map<String, String> entry : inputVars == null ? List.<Map<String, String>>of() : inputVars) {

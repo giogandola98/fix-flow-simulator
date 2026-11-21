@@ -337,10 +337,29 @@ There is no endpoint listing all executions; keep the `executionId` returned by
 GET /executions/{id}/events
 ```
 Response: the execution's event log (`EXECUTION_STARTED`, `NODE_ENTERED`, `NODE_EXITED`,
-`MESSAGE_SENT`, `MESSAGE_RECEIVED`, `TIMEOUT`, `ERROR`, `EXECUTION_FINISHED`, …) in order.
+`MESSAGE_SENT`, `MESSAGE_RECEIVED`, `TIMEOUT`, `ERROR`, `OPERATOR_PROMPT`, `OPERATOR_ANSWERED`, `EXECUTION_FINISHED`, …) in order.
 Child runs of `CALL_SCENARIO` and `PARALLEL` have no event log of their own; a `PARALLEL` node reports
 for its children in its `NODE_EXITED` detail (`"<passed>/<total> children passed"`), and every inbound
 message on the session is recorded against the parent execution.
+
+### Operator prompt
+```
+GET /executions/{id}/operator
+```
+Response: the open prompt of an `OPERATOR` node, or `204` when the execution is not waiting for a person.
+Prompts of `CALL_SCENARIO` / `PARALLEL` children are included (one of them when several are open); the
+`executionId` in the body is the one to answer on.
+```json
+{ "executionId": "…", "nodeId": "ask-dealer", "instruction": "Accept the quote…",
+  "confirmLabel": "Accepted", "failLabel": null }
+```
+```
+POST /executions/{executionId}/operator/{nodeId}
+{ "ok": true, "note": "done on the venue" }
+```
+`204` when the prompt was open and is now answered; `404` when no such prompt is open (already answered,
+timed out, stopped). Events on `/topic/executions/{id}/events`: `OPERATOR_PROMPT` (detail = instruction)
+and `OPERATOR_ANSWERED` (detail `ok: <note>` / `fail: <note>` / `timeout` / `cancelled`). When several child prompts are open, the oldest is returned first.
 
 ### Execution FIX messages
 ```

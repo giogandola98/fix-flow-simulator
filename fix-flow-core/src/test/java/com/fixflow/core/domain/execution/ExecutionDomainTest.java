@@ -207,7 +207,8 @@ class ExecutionDomainTest {
                 ExecutionEventType.NODE_ENTERED, ExecutionEventType.NODE_EXITED,
                 ExecutionEventType.MESSAGE_SENT, ExecutionEventType.MESSAGE_RECEIVED,
                 ExecutionEventType.TIMEOUT, ExecutionEventType.ERROR,
-                ExecutionEventType.SESSION_UP, ExecutionEventType.SESSION_DOWN);
+                ExecutionEventType.SESSION_UP, ExecutionEventType.SESSION_DOWN,
+                ExecutionEventType.OPERATOR_PROMPT, ExecutionEventType.OPERATOR_ANSWERED);
         assertThat(ExecutionEventType.valueOf("SESSION_UP")).isEqualTo(ExecutionEventType.SESSION_UP);
     }
 }

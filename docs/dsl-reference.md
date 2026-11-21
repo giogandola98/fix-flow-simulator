@@ -34,6 +34,7 @@ edges: []
 | `ROUTE_FIX` | Wait for inbound FIX; route to first matching rule. |
 | `CALL_SCENARIO` | Synchronously execute another scenario as a reusable sub-flow. |
 | `PARALLEL` | Run another scenario once per data set row, concurrently on the same session; pass when all children pass. |
+| `OPERATOR` | Pause until a person has done a step in another system and confirms or fails it in the UI. |
 | `BRANCH` | Alias for `DECISION`. |
 | `RETRY` / `LOOP` | Retry a sub-graph N times with delay. |
 | `WAIT` / `DELAY` / `TIMEOUT` | Pause for a duration. |
@@ -394,6 +395,36 @@ Variables set on the parent:
 
 The node's `NODE_EXITED` event detail is `"<passed>/<total> children passed"`; when the node fails,
 its `ERROR` event carries the same text (prefixed `timeout: ` after a timeout).
+
+## OPERATOR config
+
+Manual step: the run stops, the UI shows the instruction, and a person who acted in another system
+answers *confirm* or *fail* (with an optional note).
+
+```yaml
+- id: ask-dealer
+  name: Accept the quote on the venue
+  type: OPERATOR
+  config:
+    instruction: "Accept the quote for {{row:inquiry}} on the venue, then confirm."
+    confirmLabel: "Accepted"
+    failLabel: "Could not accept"
+  timeout: { value: 10, unit: MINUTES, onTimeout: FAIL }
+  onSuccess: next
+  onFailure: failed
+```
+
+| key | meaning |
+|---|---|
+| `instruction` | text shown to the person; placeholders are resolved when the prompt opens |
+| `confirmLabel`, `failLabel` | optional button labels (defaults: *Done*, *Failed*) |
+| timeout | the node `timeout`, default 10 minutes; `onTimeout` as for the other nodes (`FAIL`/`RETRY` → `onFailure`, `CONTINUE` → `onSuccess`, `JUMP` → `jumpTo`) |
+
+Confirm follows `onSuccess`, fail follows `onFailure`. The note is stored as variable
+`operator:<nodeId>:note` (empty when none). Events: `OPERATOR_PROMPT` (detail = resolved
+instruction) and `OPERATOR_ANSWERED` (detail `ok: <note>` or `fail: <note>`; `timeout` or `cancelled` when the prompt ended without an answer, so the UI closes it). Stopping the execution
+cancels the prompt. An OPERATOR node inside a `CALL_SCENARIO` or `PARALLEL` child works the same way;
+its events appear on the parent execution.
 
 ## Variable syntax
 
