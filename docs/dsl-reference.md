@@ -381,12 +381,13 @@ The child scenario then waits for its own message, e.g.
 
 | aspect | behaviour |
 |---|---|
-| data set | the one bound to the execution (`datasetId` in the execute request, else the scenario's `datasetRef`); without one the node fails |
+| data set | the one bound to the execution (`datasetId` in the execute request, else the scenario's `datasetRef`); without one the node fails. Choosing *no data set* in the Run dialog only leaves `datasetId` out of the request, so a scenario with a `datasetRef` still runs with that data set |
 | rows | `all`, or a list of indexes; an index out of range fails the node before any child starts |
 | child run | own execution id, parent's session, its row (`{{row:..}}`, `{{row:#}}`), only the `inputVars`; no events of its own and no output variables |
 | result | `onSuccess` when every child ends `PASSED`, else `onFailure` |
 | timeout | covers the whole node. When it expires, the children still running are interrupted (their waiting nodes cancel their correlation waiters) and count as failed with status `TIMEOUT`; `onTimeout: FAIL`/`RETRY` → `onFailure`, `CONTINUE` → `onSuccess`, `JUMP` → `jumpTo`. Without a timeout the node waits as long as its children do |
 | stop | stopping the execution interrupts every child |
+| unwind | after a timeout or a stop the node waits up to 5 s for interrupted children to end. A child that ignores the interrupt (e.g. a handler that swallows it and keeps blocking) is abandoned after that wait: the node returns, the child counts as failed, and its thread may keep running in the background until it ends on its own |
 | depth | shares the CALL_SCENARIO depth limit of 5 |
 
 Variables set on the parent:

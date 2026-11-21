@@ -527,9 +527,9 @@ Click **Run** (or **Esegui**) in the top bar. The button is greyed out if no ses
 
 The **Run scenario** dialog opens:
 
-- **Data set**: optional. The scenario's own `datasetRef` is preselected. Its values are used in the scenario as `{{row:Column}}`.
+- **Data set**: optional. The scenario's own `datasetRef` is preselected. Its values are used in the scenario as `{{row:Column}}`. Choosing *no data set* does not override a `datasetRef`: the scenario still runs with its own data set.
 - **Row**: which row of the data set to use (row 0 by default); the first columns of each row are shown.
-- **All rows**: one execution per row, one after another. A failed row does not stop the next one. The canvas shows the first execution; the others are listed by the API (`executionIds`).
+- **All rows**: one execution per row, one after another. A failed row does not stop the next one. The canvas, the event log and the operator prompt follow the row that is running now: when a row ends the GUI moves on to the next one (block colours start again from blank, the log keeps the earlier rows). **Run** stays disabled until the last row has ended; the run's final status is *FAILED* if any row failed, else *STOPPED* if a row was stopped, else *PASSED*. **Stop** stops every row that has not ended (queued rows are skipped).
 - **+ Variable**: name/value pairs passed to the run as `{{var:name}}`, overriding the scenario's defaults.
 
 Press **Start** to run (an unsaved scenario is saved first).

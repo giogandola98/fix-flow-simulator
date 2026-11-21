@@ -594,10 +594,18 @@ JPA entities live in `com.fixflow.adapters.persistence.entity`. Entity names map
 | `FIXMessageEntity` | `fix_message` | Raw FIX string + direction |
 | `FIXSessionEntity` | `fix_session` | Session config; `connected` not persisted |
 | `ValidationErrorEntity` | `validation_error` | Per-field rule failures |
-| `DataSetEntity` | `data_sets` | Data set table: unique `name`, nullable `packId`, `columnsJson` / `rowsJson` CLOBs (JSON arrays of strings). CSV parsing and writing is `CsvCodec` in the engine module; the domain record is `DataSet` (`row(int)` gives column to value) |
+| `DataSetEntity` | `data_sets` | Data set table: unique `name` (index `uk_data_sets_name`, see below), nullable `packId`, `columnsJson` / `rowsJson` CLOBs (JSON arrays of strings). CSV parsing and writing is `CsvCodec` in the engine module; the domain record is `DataSet` (`row(int)` gives column to value) |
 | `PackEntity` | `packs` | Installed provider packs: `id`, `name`, `version`, `provider`, `manifestYaml` CLOB (the parsed `pack.yaml` written back), `valuesJson` CLOB (values the pack was installed with), `installedAt`, `updatedAt` |
 
 `ScenarioEntity`, `DataSetEntity` and `FIXSessionEntity` carry a nullable `packId`: the pack that installed the row.
+
+**Unique data set names.** The application runs `ddl-auto: update` with `unique_constraint_strategy: SKIP` (so a
+restart does not re-issue existing constraints, issue #103), which means Hibernate never creates the
+`@UniqueConstraint` of `DataSetEntity`. `DataSetNameIndex` (adapters, runs after the `EntityManagerFactory` is built)
+creates it with `CREATE UNIQUE INDEX IF NOT EXISTS uk_data_sets_name ON data_sets(name)`. If the table already holds
+duplicate names it logs a WARN naming them and skips the index instead of failing startup; lookups stay deterministic
+because `JpaDataSetRepository.findFirstByNameOrderByCreatedAtAscIdAsc` answers the oldest row. `DataSetController`
+turns a `DataIntegrityViolationException` from the save (two creates racing past the name check) into `409`.
 
 Repository adapters (`ScenarioRepositoryAdapter`, `ExecutionRepositoryAdapter`, `FIXSessionRepositoryAdapter`) implement the core port interfaces by delegating to Spring Data JPA repositories.
 
@@ -895,7 +903,9 @@ markDirty()             markClean()
 #### `executionStore`
 
 ```typescript
-activeExecutionId: string | null
+activeExecutionId: string | null   // the execution the GUI shows and subscribes to
+executionIds: string[]             // every execution of the current run, in row order
+finishedStatuses: Record<string, 'PASSED'|'FAILED'|'STOPPED'>
 executionStatus: ExecutionStatus | 'IDLE'
 events: ExecutionEvent[]
 messages: FIXMessage[]
@@ -910,10 +920,16 @@ addEvent(event)        // deduped by event.id
 addMessage(msg)        // deduped by msg.id
 setNodeStatus(nodeId, status)
 setStartedAt(iso)      setEndedAt(iso)
-reset()
+finishExecution(id, status, at)   // on EXECUTION_FINISHED
+unfinishedExecutionIds()          // what Stop stops
 ```
 
-`reset()` is called before each new execution to clear previous results.
+`TopBar` resets the store with one atomic `setState` before each new run (`executionIds` from the execute
+response). An all-rows run is followed row by row: `finishExecution` of the active id moves `activeExecutionId`
+to the next id in one `setState` (so `useExecutionSubscription` resubscribes, backfills and reads that row's operator
+prompt) and keeps the status; after the last row the status is `FAILED` if any row failed, else `STOPPED` if any was
+stopped, else `PASSED`. A finish of an id the run has already left (a backfill replay) is ignored. Stop calls
+`POST /executions/{id}/stop` for every unfinished id, queued rows first (no batch endpoint).
 
 #### `sessionStore`
 
@@ -1152,7 +1168,10 @@ Sessions are created via the GUI or `POST /api/v1/sessions`. QuickFIX/J handles 
 `FIXSessionConfig` also carries `packId`, persisted but not exposed in the REST DTOs.
 `QuickFIXAdapter.buildSettings` resolves a dictionary name through `DictionaryStore.resolve` and sets its absolute path
 (QuickFIX/J resolves a setting as URL, then file, then classpath). A missing or unparsable file throws
-`IllegalArgumentException`, which `GlobalExceptionHandler` answers as 400.
+`IllegalArgumentException`, which `GlobalExceptionHandler` answers as 400. `QuickFIXAdapter.connect` builds the
+settings before it stops the existing connector, so a reconnect with a bad dictionary fails without dropping the live
+session. On `PUT /sessions/{id}` an absent (`null`) dictionary keeps the stored value and `""` clears it (the
+session panel sends `""` for the built-in choice).
 
 ### Session lifecycle
 
