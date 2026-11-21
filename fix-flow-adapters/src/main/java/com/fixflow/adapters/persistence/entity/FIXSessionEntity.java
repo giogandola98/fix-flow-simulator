@@ -32,6 +32,10 @@ public class FIXSessionEntity {
     private int heartbeatInterval;
     private boolean resetOnLogon;
     private boolean resetOnLogout;
+    private String appDataDictionary;
+    private String transportDataDictionary;
+    private Boolean autoConnect; // wrapper: rows written before the column existed read as null
+    private String packId;
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
@@ -57,4 +61,12 @@ public class FIXSessionEntity {
     public void setResetOnLogon(boolean r) { this.resetOnLogon = r; }
     public boolean isResetOnLogout() { return resetOnLogout; }
     public void setResetOnLogout(boolean r) { this.resetOnLogout = r; }
+    public String getAppDataDictionary() { return appDataDictionary; }
+    public void setAppDataDictionary(String d) { this.appDataDictionary = d; }
+    public String getTransportDataDictionary() { return transportDataDictionary; }
+    public void setTransportDataDictionary(String d) { this.transportDataDictionary = d; }
+    public boolean isAutoConnect() { return Boolean.TRUE.equals(autoConnect); }
+    public void setAutoConnect(boolean a) { this.autoConnect = a; }
+    public String getPackId() { return packId; }
+    public void setPackId(String p) { this.packId = p; }
 }

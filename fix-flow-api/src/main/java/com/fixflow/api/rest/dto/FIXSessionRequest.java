@@ -11,5 +11,7 @@ public record FIXSessionRequest(
     int port,
     int heartbeatInterval,
     boolean resetOnLogon,
-    boolean resetOnLogout
+    boolean resetOnLogout,
+    String appDataDictionary,
+    String transportDataDictionary
 ) {}

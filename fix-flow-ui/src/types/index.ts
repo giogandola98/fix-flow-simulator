@@ -29,6 +29,7 @@ export interface FIXSessionConfig {
   defaultApplVerID: string; senderCompID: string; targetCompID: string;
   host: string; port: number; heartbeatInterval: number;
   resetOnLogon: boolean; resetOnLogout: boolean; connected: boolean;
+  appDataDictionary?: string | null; transportDataDictionary?: string | null;
 }
 
 export interface FIXSessionCreateRequest {
@@ -36,6 +37,7 @@ export interface FIXSessionCreateRequest {
   senderCompID: string; targetCompID: string; host: string; port: number;
   heartbeatInterval: number;
   resetOnLogon: boolean; resetOnLogout: boolean;
+  appDataDictionary?: string | null; transportDataDictionary?: string | null;
 }
 
 export interface Execution {

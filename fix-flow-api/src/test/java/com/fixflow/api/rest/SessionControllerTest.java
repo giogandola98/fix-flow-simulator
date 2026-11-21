@@ -59,7 +59,7 @@ class SessionControllerTest {
 
     private FIXSessionRequest request(String fixVersion) {
         return new FIXSessionRequest("s1", "ACCEPTOR", fixVersion, null,
-            "SENDER", "TARGET", "localhost", 9999, 30, true, true);
+            "SENDER", "TARGET", "localhost", 9999, 30, true, true, null, null);
     }
 
     @Test
@@ -170,6 +170,18 @@ class SessionControllerTest {
     }
 
     @Test
+    void connect_with_missing_dictionary_is_400() throws Exception {
+        UUID id = UUID.randomUUID();
+        FIXSessionConfig cfg = session(id, FIXVersion.FIX_44);
+        when(sessionRepo.findById(id)).thenReturn(Optional.of(cfg));
+        org.mockito.Mockito.doThrow(new IllegalArgumentException("dictionary not found: X.xml"))
+            .when(manager).connect(cfg);
+        mvc.perform(put("/api/v1/sessions/" + id + "/connect"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("dictionary not found: X.xml"));
+    }
+
+    @Test
     void connectUnknownReturns404() throws Exception {
         UUID id = UUID.randomUUID();
         when(sessionRepo.findById(id)).thenReturn(Optional.empty());
@@ -238,7 +250,7 @@ class SessionControllerTest {
     @Test
     void createWithoutModeReturns400InsteadOf500() throws Exception {
         FIXSessionRequest noMode = new FIXSessionRequest("s1", null, "FIXT_11", "9",
-            "SENDER", "TARGET", "localhost", 9999, 30, true, true);
+            "SENDER", "TARGET", "localhost", 9999, 30, true, true, null, null);
         mvc.perform(post("/api/v1/sessions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(noMode)))
@@ -253,7 +265,7 @@ class SessionControllerTest {
         UUID id = UUID.randomUUID();
         when(sessionRepo.save(any())).thenReturn(session(id, FIXVersion.FIXT_11));
         FIXSessionRequest fix50sp2 = new FIXSessionRequest("s1", "ACCEPTOR", "FIXT_11", "9",
-            "SENDER", "TARGET", "localhost", 9999, 30, true, true);
+            "SENDER", "TARGET", "localhost", 9999, 30, true, true, null, null);
         mvc.perform(post("/api/v1/sessions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(fix50sp2)))

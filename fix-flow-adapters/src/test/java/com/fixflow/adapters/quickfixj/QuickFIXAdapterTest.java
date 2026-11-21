@@ -1,5 +1,6 @@
 package com.fixflow.adapters.quickfixj;
 
+import com.fixflow.adapters.dictionary.DictionaryStore;
 import com.fixflow.core.domain.session.FIXMode;
 import com.fixflow.core.domain.session.FIXSessionConfig;
 import com.fixflow.core.domain.session.FIXVersion;
@@ -53,6 +54,58 @@ class QuickFIXAdapterTest {
     }
 
     // ---------- buildSettings ----------
+
+    private static final String MINI_DICT = "<fix major='4' minor='4'><header><field name='BeginString' required='Y'/></header>"
+        + "<trailer><field name='CheckSum' required='Y'/></trailer><messages><message name='Heartbeat' msgtype='0' msgcat='admin'><field name='BeginString' required='N'/></message></messages><components/>"
+        + "<fields><field number='8' name='BeginString' type='STRING'/><field number='10' name='CheckSum' type='STRING'/></fields></fix>";
+
+    private DictionaryStore storeWith(java.nio.file.Path dir, String name) throws Exception {
+        DictionaryStore store = new DictionaryStore(dir.toString());
+        store.save(name, new java.io.ByteArrayInputStream(MINI_DICT.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        return store;
+    }
+
+    @Test
+    void fixt_session_uses_configured_dictionaries(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        DictionaryStore store = storeWith(dir, "MY.xml");
+        QuickFIXAdapter adapter = new QuickFIXAdapter(newApplication(), store);
+        FIXSessionConfig cfg = new FIXSessionConfig(UUID.randomUUID(), "t11", FIXMode.INITIATOR,
+            FIXVersion.FIXT_11, null, "SENDER", "TARGET", "localhost", 9001, 30, false, false,
+            "MY.xml", null, false, null);
+
+        SessionSettings settings = buildSettings(adapter, cfg);
+        SessionID sid = sidFor("FIXT.1.1");
+
+        assertThat(settings.getString(sid, "AppDataDictionary"))
+            .isEqualTo(store.resolve("MY.xml").orElseThrow().toAbsolutePath().toString());
+        assertThat(settings.getString(sid, "TransportDataDictionary")).isEqualTo("FIXT11.xml");
+    }
+
+    @Test
+    void fix44_session_uses_configured_dictionary(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        DictionaryStore store = storeWith(dir, "MY.xml");
+        QuickFIXAdapter adapter = new QuickFIXAdapter(newApplication(), store);
+        FIXSessionConfig cfg = new FIXSessionConfig(UUID.randomUUID(), "s", FIXMode.INITIATOR,
+            FIXVersion.FIX_44, null, "SENDER", "TARGET", "localhost", 9001, 30, false, false,
+            "MY.xml", null, false, null);
+
+        SessionSettings settings = buildSettings(adapter, cfg);
+
+        assertThat(settings.getString(sidFor("FIX.4.4"), "DataDictionary"))
+            .isEqualTo(store.resolve("MY.xml").orElseThrow().toAbsolutePath().toString());
+    }
+
+    @Test
+    void unknown_dictionary_name_is_a_config_error(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) {
+        QuickFIXAdapter adapter = new QuickFIXAdapter(newApplication(), new DictionaryStore(dir.toString()));
+        FIXSessionConfig cfg = new FIXSessionConfig(UUID.randomUUID(), "s", FIXMode.INITIATOR,
+            FIXVersion.FIX_44, null, "SENDER", "TARGET", "localhost", 9001, 30, false, false,
+            "X.xml", null, false, null);
+
+        assertThatThrownBy(() -> buildSettings(adapter, cfg))
+            .hasRootCauseInstanceOf(IllegalArgumentException.class)
+            .rootCause().hasMessage("dictionary not found: X.xml");
+    }
 
     @Test
     void buildSettingsUsesYNForBooleanConverterGotcha() throws Exception {

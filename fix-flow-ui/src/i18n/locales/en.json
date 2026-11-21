@@ -29,6 +29,7 @@
     "delete": "Del",
     "deleteConfirm": "Delete session \"{{name}}\"?",
     "disconnectBeforeFIXVersion": "Disconnect before changing FIX version",
+    "builtInDictionary": "Built-in",
     "fields": {
       "name": "Name",
       "mode": "Mode",
@@ -40,7 +41,10 @@
       "port": "Port",
       "heartbeat": "Heartbeat Interval (sec)",
       "resetOnLogon": "Reset on Logon",
-      "resetOnLogout": "Reset on Logout"
+      "resetOnLogout": "Reset on Logout",
+      "dataDictionary": "Data dictionary",
+      "appDataDictionary": "App data dictionary",
+      "transportDataDictionary": "Transport data dictionary"
     },
     "hints": {
       "mode": "INITIATOR connects to a counterparty. ACCEPTOR listens for incoming FIX connections.",
@@ -49,7 +53,8 @@
       "targetCompID": "Counterparty CompID — identifies the remote side (tag 56).",
       "host": "IP or hostname of the ACCEPTOR. Only relevant for INITIATOR mode.",
       "port": "TCP port. ACCEPTOR listens; INITIATOR connects to it.",
-      "heartbeat": "Seconds between heartbeat messages (FIX tag 108). Standard is 30."
+      "heartbeat": "Seconds between heartbeat messages (FIX tag 108). Standard is 30.",
+      "dictionary": "Optional XML uploaded to the dictionaries folder (POST /api/v1/dictionaries). Built-in uses the dictionary bundled with the FIX version."
     }
   },
   "scenarios": {

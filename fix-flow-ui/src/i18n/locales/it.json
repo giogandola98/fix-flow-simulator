@@ -29,6 +29,7 @@
     "delete": "Elim.",
     "deleteConfirm": "Eliminare la sessione \"{{name}}\"?",
     "disconnectBeforeFIXVersion": "Disconnettersi prima di cambiare la versione FIX",
+    "builtInDictionary": "Predefinito",
     "fields": {
       "name": "Nome",
       "mode": "Modalità",
@@ -40,7 +41,10 @@
       "port": "Porta",
       "heartbeat": "Intervallo heartbeat (sec)",
       "resetOnLogon": "Reset al Logon",
-      "resetOnLogout": "Reset al Logout"
+      "resetOnLogout": "Reset al Logout",
+      "dataDictionary": "Data dictionary",
+      "appDataDictionary": "Data dictionary applicativo",
+      "transportDataDictionary": "Data dictionary di trasporto"
     },
     "hints": {
       "mode": "INITIATOR si connette a una controparte. ACCEPTOR ascolta le connessioni FIX in entrata.",
@@ -49,7 +53,8 @@
       "targetCompID": "CompID della controparte — identifica il lato remoto (tag 56).",
       "host": "IP o hostname dell'ACCEPTOR. Rilevante solo per la modalità INITIATOR.",
       "port": "Porta TCP. L'ACCEPTOR ascolta; l'INITIATOR si connette.",
-      "heartbeat": "Secondi tra i messaggi heartbeat (tag FIX 108). Standard: 30."
+      "heartbeat": "Secondi tra i messaggi heartbeat (tag FIX 108). Standard: 30.",
+      "dictionary": "XML opzionale caricato nella cartella dei dictionary (POST /api/v1/dictionaries). Predefinito usa il dictionary incluso per la versione FIX."
     }
   },
   "scenarios": {
