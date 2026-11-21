@@ -642,6 +642,7 @@ edges:
 | Heartbeat Interval (sec) | Seconds between heartbeat messages | `30` |
 | Reset on Logon | Reset sequence numbers on each logon | `No` |
 | Reset on Logout | Reset sequence numbers on logout | `No` |
+| Data dictionary | Optional custom QuickFIX/J dictionary for this session, chosen from the XML files uploaded via `POST /api/v1/dictionaries`. `Built-in` keeps the dictionary bundled with the FIX version. FIX 5.0 SP2 sessions show an app and a transport dictionary | `Built-in` |
 
 ### FIX versions
 

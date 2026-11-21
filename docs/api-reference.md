@@ -69,9 +69,11 @@ Body:
 | `port` | yes | TCP port to connect to (INITIATOR) or listen on (ACCEPTOR) |
 | `heartbeatInterval` | yes | seconds (tag 108) |
 | `resetOnLogon` / `resetOnLogout` | no | reset sequence numbers; default `false` |
+| `appDataDictionary` | no | name of an uploaded dictionary (see [Dictionaries](#dictionaries)) used as the application dictionary: `DataDictionary` for `FIX_42`/`FIX_44`, `AppDataDictionary` for `FIXT_11`. `null`/absent keeps the built-in one (`FIX42.xml`, `FIX44.xml`, `FIX50SP2.xml`) |
+| `transportDataDictionary` | no | `FIXT_11` only: transport dictionary; `null` keeps `FIXT11.xml` |
 
 A missing or unknown `mode` / `fixVersion` is answered `400 Bad Request` with the allowed values in
-`message`.
+`message`. The session response carries `appDataDictionary` and `transportDataDictionary` too.
 
 FIX 5.0 SP2 acceptor example:
 ```json
@@ -105,6 +107,8 @@ DELETE /sessions/{id}
 ```
 PUT /sessions/{id}/connect
 ```
+A session whose `appDataDictionary` / `transportDataDictionary` names a dictionary that is not stored, or whose file
+is not valid QuickFIX/J XML, is answered `400` with the cause (e.g. `dictionary not found: MY.xml`).
 
 ### Disconnect
 ```
@@ -125,6 +129,32 @@ Response:
 POST /sessions/{id}/reload
 ```
 Re-applies the stored configuration to a live session without restarting running scenarios.
+
+---
+
+## Dictionaries
+
+QuickFIX/J data dictionaries (XML) a session can select by file name. Files live in the folder set by the
+property `fixflow.dictionaries.dir` (default `./dictionaries`). Names match `[A-Za-z0-9._-]+.xml`.
+
+### List dictionaries
+```
+GET /dictionaries
+```
+Response: `[{ "name": "MY.xml", "sizeBytes": 2048 }]`
+
+### Upload dictionary
+```
+POST /dictionaries        (multipart/form-data, part "file")
+```
+The file name is the dictionary name; an existing file with that name is replaced. The XML is parsed as a
+QuickFIX/J `DataDictionary` first: invalid XML or an unsafe name is `400`. Response `201`: `{ "name", "sizeBytes" }`.
+
+### Delete dictionary
+```
+DELETE /dictionaries/{name}
+```
+`204`; `409` naming the sessions if one of them uses the dictionary.
 
 ---
 

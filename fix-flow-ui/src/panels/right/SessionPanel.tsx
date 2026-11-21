@@ -11,6 +11,7 @@ import {
   deleteSession,
   getSession,
 } from '../../api/sessions';
+import { getDictionaries } from '../../api/dictionaries';
 import { useSessionStore } from '../../store/sessionStore';
 import { useSessionSubscription } from '../../hooks/useSessionSubscription';
 import { FIXSessionCreateRequest, FIXVersion, FIXMode } from '../../types';
@@ -26,6 +27,7 @@ const DEFAULTS: FormValues = {
   name: 'default', mode: 'INITIATOR', fixVersion: 'FIX_44', defaultApplVerID: 'FIX.5.0SP2',
   senderCompID: 'CLIENT', targetCompID: 'SERVER', host: 'localhost', port: 9876,
   heartbeatInterval: 30, resetOnLogon: true, resetOnLogout: false,
+  appDataDictionary: '', transportDataDictionary: '',
 };
 
 const STORAGE_KEY = 'fix-session-panel-collapsed';
@@ -53,6 +55,9 @@ export function SessionPanel() {
 
   const { data: sessions } = useQuery({ queryKey: ['sessions'], queryFn: getSessions });
 
+  const { data: dictionaries } = useQuery({ queryKey: ['dictionaries'], queryFn: getDictionaries });
+  const dictionaryNames = (dictionaries ?? []).map((d) => d.name);
+
   useEffect(() => { if (sessions) setSessions(sessions); }, [sessions, setSessions]);
 
   const sessionIds = useMemo(() => (sessions ?? []).map((s) => s.id), [sessions]);
@@ -66,6 +71,8 @@ export function SessionPanel() {
         targetCompID: activeSession.targetCompID, host: activeSession.host, port: activeSession.port,
         heartbeatInterval: activeSession.heartbeatInterval,
         resetOnLogon: activeSession.resetOnLogon, resetOnLogout: activeSession.resetOnLogout,
+        appDataDictionary: activeSession.appDataDictionary ?? '',
+        transportDataDictionary: activeSession.transportDataDictionary ?? '',
       });
     } else {
       reset(DEFAULTS);
@@ -74,7 +81,13 @@ export function SessionPanel() {
 
   const saveMutation = useMutation({
     mutationFn: async (values: FormValues) => {
-      return activeSession ? updateSession(activeSession.id, values) : createSession(values);
+      // empty selection = built-in dictionary
+      const req = {
+        ...values,
+        appDataDictionary: values.appDataDictionary || null,
+        transportDataDictionary: values.transportDataDictionary || null,
+      };
+      return activeSession ? updateSession(activeSession.id, req) : createSession(req);
     },
     onSuccess: (saved) => {
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
@@ -216,6 +229,20 @@ export function SessionPanel() {
             {fixVersion === 'FIXT_11' && (
               <Field label={t('session.fields.defaultApplVerID')}>
                 <input type="text" className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('defaultApplVerID')} />
+              </Field>
+            )}
+            <Field label={t(fixVersion === 'FIXT_11' ? 'session.fields.appDataDictionary' : 'session.fields.dataDictionary')} hint={t('session.hints.dictionary')}>
+              <select className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('appDataDictionary')}>
+                <option value="">{t('session.builtInDictionary')}</option>
+                {dictionaryNames.map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </Field>
+            {fixVersion === 'FIXT_11' && (
+              <Field label={t('session.fields.transportDataDictionary')} hint={t('session.hints.dictionary')}>
+                <select className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1" {...register('transportDataDictionary')}>
+                  <option value="">{t('session.builtInDictionary')}</option>
+                  {dictionaryNames.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
               </Field>
             )}
             <Field label={t('session.fields.senderCompID')} hint={t('session.hints.senderCompID')}>

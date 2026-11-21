@@ -34,6 +34,12 @@ npm run dev
 
 Open `http://localhost:5173`.
 
+## Data dictionaries
+
+Custom QuickFIX/J dictionaries uploaded through the API are stored in `./dictionaries` (relative to the working
+directory). Change the folder with the property `fixflow.dictionaries.dir`, e.g.
+`java -Dfixflow.dictionaries.dir=/opt/fixflow/dictionaries -jar fix-flow-api-<version>.jar`.
+
 ## H2 console
 
 The embedded database is exposed at `http://localhost:8080/h2-console`

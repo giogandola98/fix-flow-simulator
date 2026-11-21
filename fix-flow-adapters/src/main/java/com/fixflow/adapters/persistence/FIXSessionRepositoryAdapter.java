@@ -32,6 +32,10 @@ public class FIXSessionRepositoryAdapter {
         e.setHeartbeatInterval(cfg.heartbeatInterval());
         e.setResetOnLogon(cfg.resetOnLogon());
         e.setResetOnLogout(cfg.resetOnLogout());
+        e.setAppDataDictionary(cfg.appDataDictionary());
+        e.setTransportDataDictionary(cfg.transportDataDictionary());
+        e.setAutoConnect(cfg.autoConnect());
+        e.setPackId(cfg.packId());
         repo.save(e);
         return cfg;
     }
@@ -54,6 +58,8 @@ public class FIXSessionRepositoryAdapter {
                 e.getId(), e.getName(), e.getMode(), e.getFixVersion(),
                 e.getDefaultApplVerID(), e.getSenderCompID(), e.getTargetCompID(),
                 e.getHost(), e.getPort(), e.getHeartbeatInterval(),
-                e.isResetOnLogon(), e.isResetOnLogout());
+                e.isResetOnLogon(), e.isResetOnLogout(),
+                e.getAppDataDictionary(), e.getTransportDataDictionary(),
+                e.isAutoConnect(), e.getPackId());
     }
 }

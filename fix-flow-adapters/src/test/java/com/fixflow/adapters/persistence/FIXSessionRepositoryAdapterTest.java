@@ -43,6 +43,31 @@ class FIXSessionRepositoryAdapterTest {
     }
 
     @Test
+    void dictionaryAutoConnectAndPackFieldsRoundTrip() {
+        UUID id = UUID.randomUUID();
+        adapter.save(new FIXSessionConfig(id, "d", FIXMode.INITIATOR, FIXVersion.FIXT_11, "9",
+                "SENDER", "TARGET", "localhost", 9001, 30, true, false, "APP.xml", "TRANS.xml", true, "pack-1"));
+
+        FIXSessionConfig loaded = adapter.findById(id).orElseThrow();
+        assertThat(loaded.appDataDictionary()).isEqualTo("APP.xml");
+        assertThat(loaded.transportDataDictionary()).isEqualTo("TRANS.xml");
+        assertThat(loaded.autoConnect()).isTrue();
+        assertThat(loaded.packId()).isEqualTo("pack-1");
+    }
+
+    @Test
+    void rowWithoutNewFieldsReadsAsNullAndFalse() {
+        UUID id = UUID.randomUUID();
+        adapter.save(config(id, "old", FIXMode.ACCEPTOR));
+
+        FIXSessionConfig loaded = adapter.findById(id).orElseThrow();
+        assertThat(loaded.appDataDictionary()).isNull();
+        assertThat(loaded.transportDataDictionary()).isNull();
+        assertThat(loaded.autoConnect()).isFalse();
+        assertThat(loaded.packId()).isNull();
+    }
+
+    @Test
     void findByIdEmptyWhenAbsent() {
         assertThat(adapter.findById(UUID.randomUUID())).isEmpty();
     }
