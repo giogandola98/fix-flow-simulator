@@ -370,6 +370,22 @@ Pauses execution for a fixed number of milliseconds, then always continues on th
 
 **Results:** the parent gets `parallel:<nodeId>:passed`, `parallel:<nodeId>:failed` and `parallel:<nodeId>:<row>:status` (usable as `{{var:...}}`), and the event log shows `"<passed>/<total> children passed"`. Child runs have no event log of their own.
 
+#### Operator
+
+**Purpose:** A manual step. The run pauses and shows a prompt; you do something in another system (a venue, a back office) and then confirm or fail the step here. It sits in the **Flow Control** group of the palette.
+
+**Canvas appearance:** Rose border (`#f43f5e`). Shows the instruction. Has a success handle and a red failure handle.
+
+**Config fields:**
+
+| Field | Description |
+|---|---|
+| **Instruction** | What the person must do. `{{var:..}}` and `{{row:..}}` placeholders are resolved when the prompt opens. |
+| **Confirm / Fail button label** | Optional; default *Done* / *Failed*. |
+| **Timeout** | How long to wait (default 10 minutes) and what to do after it, as for the other nodes. |
+
+**While running:** a prompt appears at the bottom right with the instruction and a note field. *Done* continues along the success edge, *Failed* along the failure edge. The note is kept as `{{var:operator:<nodeId>:note}}`. Stopping the run closes the prompt.
+
 **Typical use case:** Extract a reusable sub-flow (e.g. a RFQ handshake) into a separate scenario and call it from multiple parent scenarios.
 
 ---

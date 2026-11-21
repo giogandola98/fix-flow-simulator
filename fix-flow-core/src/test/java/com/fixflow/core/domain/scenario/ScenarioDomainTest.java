@@ -358,7 +358,7 @@ class ScenarioDomainTest {
                 NodeType.WAIT, NodeType.TIMEOUT, NodeType.DECISION, NodeType.BRANCH,
                 NodeType.RETRY, NodeType.LOOP, NodeType.DELAY, NodeType.END_PASS,
                 NodeType.END_FAIL, NodeType.HTTP_REQUEST, NodeType.ROUTE_FIX, NodeType.CALL_SCENARIO,
-                NodeType.PARALLEL);
+                NodeType.PARALLEL, NodeType.OPERATOR);
         assertThat(NodeType.valueOf("CALL_SCENARIO")).isEqualTo(NodeType.CALL_SCENARIO);
     }
 

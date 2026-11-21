@@ -431,6 +431,7 @@ record NodeHandlerResult(
 | `HttpRequestHandler` | Issues HTTP request via `java.net.http.HttpClient`. Stores response body in context. |
 | `CallScenarioHandler` | Runs the target scenario synchronously through `ChildRunner`; copies `outputVars` back. |
 | `ParallelHandler` | Runs one child per selected data set row through `ChildRunner`, concurrently on a per-node virtual-thread executor capped by a `Semaphore(maxConcurrency)`; waits for all within the node timeout, then `shutdownNow()` interrupts the rest (their `ExpectFIXHandler` cancels its waiter on interrupt) and waits up to 5 s for them to unwind. Sets `parallel:<id>:passed/failed/<row>:status`. |
+| `OperatorHandler` | Opens a prompt on `OperatorGateway` (keyed by the context's execution id, remembering `ctx.ancestors()`), emits `OPERATOR_PROMPT` through `ctx.emitNodeEvent(type, nodeId, detail)`, waits on the future for the node timeout (default 10 min), then emits `OPERATOR_ANSWERED`. Interrupt rethrows, a cancelled prompt fails the node; the prompt is always closed in `finally`. `ExecutionManager.stop` calls `OperatorGateway.cancel`. `ChildRunner` gives a child its `ancestors` and the parent's detail emitter, so a prompt of a PARALLEL child is listed by `GET /executions/{parent}/operator` and its events land on the parent stream. |
 | `EndHandler` / `EndFailHandler` | Returns `success=true/false` with `nextNodeId=null`. |
 
 ### CorrelationEngine

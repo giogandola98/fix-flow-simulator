@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { ExecutionEvent, ExecutionStatus, FIXMessage } from '../types';
+import type { OperatorPromptData } from '../api/executions';
 
 export type NodeRuntimeStatus = 'idle' | 'running' | 'passed' | 'failed';
 
@@ -14,6 +15,9 @@ interface ExecutionState {
   nodeStatuses: Record<string, NodeRuntimeStatus>;
   startedAt: string | null;
   endedAt: string | null;
+  /** The OPERATOR prompt the active execution (or one of its children) is waiting on, if any. */
+  operatorPrompt: OperatorPromptData | null;
+  setOperatorPrompt: (p: OperatorPromptData | null) => void;
   setActiveExecution: (id: string | null) => void;
   updateStatus: (status: ExecutionStatus | 'IDLE') => void;
   addEvent: (event: ExecutionEvent) => void;
@@ -33,6 +37,8 @@ export const useExecutionStore = create<ExecutionState>((set) => ({
   nodeStatuses: {},
   startedAt: null,
   endedAt: null,
+  operatorPrompt: null,
+  setOperatorPrompt: (p) => set({ operatorPrompt: p }),
   setActiveExecution: (id) => set({ activeExecutionId: id }),
   updateStatus: (status) => set({ executionStatus: status }),
   addEvent: (event) => set((s) => {

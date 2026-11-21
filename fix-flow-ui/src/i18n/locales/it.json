@@ -121,7 +121,8 @@
       "END_PASS": "Fine OK",
       "END_FAIL": "Fine Errore",
       "TIMEOUT": "Timeout",
-      "BRANCH": "Diramazione"
+      "BRANCH": "Diramazione",
+      "OPERATOR": "Operatore"
     },
     "descriptions": {
       "RETRY": "Riesegue un sottografo fino a N volte; si ferma al primo successo.",
@@ -129,7 +130,8 @@
       "WAIT": "Blocca fino al timeout; azione configurabile (continua / fallisce / salta).",
       "DELAY": "Pausa fissa (ms). Continua sempre al successo — nessuna diramazione.",
       "CALL_SCENARIO": "Esegue un altro scenario come sotto-flusso sincrono riutilizzabile.",
-      "PARALLEL": "Esegue lo scenario figlio per ogni riga del data set, in parallelo; passa se passano tutti i figli."
+      "PARALLEL": "Esegue lo scenario figlio per ogni riga del data set, in parallelo; passa se passano tutti i figli.",
+      "OPERATOR": "Si ferma finché una persona non ha eseguito un passo in un altro sistema e lo conferma o lo boccia qui."
     }
   },
   "bottomPanel": {
@@ -297,6 +299,13 @@
       "rowsSummary": "righe {{rows}}",
       "maxConcurrency": "Massimo figli in parallelo",
       "inputVarsHint": "Copiate dal padre in ogni figlio. Ogni figlio vede anche la propria riga (segnaposto row:Colonna)."
+    },
+    "operator": {
+      "desc": "Mostra l'istruzione a chi esegue lo scenario e attende la risposta. Conferma segue success, errore segue failure; la nota è salvata come operator:<nodeId>:note. Timeout predefinito 10 minuti.",
+      "instruction": "Istruzione",
+      "instructionHint": "I segnaposto come {{var:x}} o {{row:Colonna}} sono risolti all'apertura del prompt.",
+      "confirmLabel": "Etichetta pulsante conferma",
+      "failLabel": "Etichetta pulsante errore"
     }
   },
   "executionReport": {
@@ -321,5 +330,12 @@
     "removeVar": "Rimuovi variabile",
     "cancel": "Annulla",
     "start": "Avvia"
+  },
+  "operator": {
+    "title": "Azione dell'operatore richiesta",
+    "note": "Nota (facoltativa)",
+    "confirm": "Fatto",
+    "fail": "Fallito",
+    "error": "Impossibile inviare la risposta"
   }
 }

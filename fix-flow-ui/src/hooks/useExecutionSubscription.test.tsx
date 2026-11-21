@@ -18,10 +18,12 @@ vi.mock('../app/wsClient', () => ({
 vi.mock('../api/executions', () => ({
   getExecutionEvents: vi.fn(() => Promise.resolve([])),
   getExecutionMessages: vi.fn(() => Promise.resolve([])),
+  getOperatorPrompt: vi.fn(() => Promise.resolve(null)),
 }));
 
 import { useExecutionSubscription } from './useExecutionSubscription';
 import { useExecutionStore } from '../store/executionStore';
+import { getOperatorPrompt } from '../api/executions';
 
 const resetStore = () =>
   useExecutionStore.setState({
@@ -97,6 +99,26 @@ describe('useExecutionSubscription', () => {
       capturedOnEvent!(evt(`r-${terminal}`, 'EXECUTION_STARTED'));
       expect(useExecutionStore.getState().executionStatus).toBe(terminal);
     }
+  });
+
+  it('reads the open prompt on OPERATOR_PROMPT and clears it on OPERATOR_ANSWERED', async () => {
+    await mountAndReady();
+    const prompt = { executionId: 'child-1', nodeId: 'op', instruction: 'do it' };
+    vi.mocked(getOperatorPrompt).mockResolvedValueOnce(prompt);
+    capturedOnEvent!(evt('o1', 'OPERATOR_PROMPT', { nodeId: 'op', detail: 'do it' }));
+    await waitFor(() => expect(useExecutionStore.getState().operatorPrompt).toEqual(prompt));
+    expect(useExecutionStore.getState().nodeStatuses.op).toBe('running');
+
+    vi.mocked(getOperatorPrompt).mockResolvedValueOnce(null);
+    capturedOnEvent!(evt('o2', 'OPERATOR_ANSWERED', { nodeId: 'op', detail: 'ok: ' }));
+    await waitFor(() => expect(useExecutionStore.getState().operatorPrompt).toBeNull());
+  });
+
+  it('EXECUTION_FINISHED drops an open prompt', async () => {
+    await mountAndReady();
+    useExecutionStore.setState({ operatorPrompt: { executionId: 'exec-1', nodeId: 'op', instruction: 'x' } });
+    capturedOnEvent!(evt('f1', 'EXECUTION_FINISHED', { detail: 'finished with status STOPPED' }));
+    expect(useExecutionStore.getState().operatorPrompt).toBeNull();
   });
 
   it('updates node runtime status from NODE_ENTERED / NODE_EXITED / ERROR', async () => {

@@ -18,6 +18,7 @@ import com.fixflow.core.ports.outbound.ExecutionRepositoryPort;
 import com.fixflow.engine.fix.RawFixRenderer;
 import com.fixflow.engine.handlers.NodeDispatcher;
 import com.fixflow.engine.handlers.NodeHandlerResult;
+import com.fixflow.engine.operator.OperatorGateway;
 import com.fixflow.engine.scenario.ScenarioRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -265,6 +266,11 @@ public class ExecutionManager {
         }
     }
 
+    private volatile OperatorGateway operatorGateway;
+
+    @Autowired(required = false)
+    public void setOperatorGateway(OperatorGateway gateway) { this.operatorGateway = gateway; }
+
     public void stop(UUID executionId) {
         // A row still waiting its turn is skipped when reached. A row that is running right now has
         // its worker interrupted so a node blocked in a wait/sleep/loop unwinds immediately; the
@@ -276,6 +282,8 @@ public class ExecutionManager {
             Thread worker = workers.get(executionId);
             if (worker != null) worker.interrupt();
         }
+        OperatorGateway gw = operatorGateway;
+        if (gw != null) gw.cancel(executionId);
     }
 
     public ExecutionStatus getStatus(UUID executionId) {
@@ -295,6 +303,7 @@ public class ExecutionManager {
         // Kept for handlers (e.g. RetryHandler) that emit node events directly.
         ctx.setNodeEventEmitter((type, nodeId) -> emitAndPersist(ctx.executionId(), type, nodeId,
                 type + " " + nodeId));
+        ctx.setNodeDetailEmitter((type, nodeId, detail) -> emitAndPersist(ctx.executionId(), type, nodeId, detail));
         emitAndPersist(ctx.executionId(), ExecutionEventType.EXECUTION_STARTED, null,
                 "Execution started for scenario " + ctx.scenario().id());
         try {

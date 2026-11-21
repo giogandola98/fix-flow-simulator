@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useExecutionStore } from '../store/executionStore';
 import { wsClient } from '../app/wsClient';
-import { getExecutionEvents, getExecutionMessages } from '../api/executions';
+import { getExecutionEvents, getExecutionMessages, getOperatorPrompt } from '../api/executions';
 import { ExecutionEvent, FIXMessage } from '../types';
 
 export function useExecutionSubscription(executionId: string | null): void {
@@ -11,11 +11,22 @@ export function useExecutionSubscription(executionId: string | null): void {
   const updateStatus = useExecutionStore((s) => s.updateStatus);
   const setStartedAt = useExecutionStore((s) => s.setStartedAt);
   const setEndedAt = useExecutionStore((s) => s.setEndedAt);
+  const setOperatorPrompt = useExecutionStore((s) => s.setOperatorPrompt);
 
   useEffect(() => {
     if (!executionId) return;
     let disposer: (() => void) | null = null;
     let cancelled = false;
+    let backfilling = false;
+    setOperatorPrompt(null);
+
+    // The open prompt is read from the server: it knows the labels and the id of the child
+    // execution that is waiting, which the event alone does not carry.
+    const refreshPrompt = () => {
+      getOperatorPrompt(executionId)
+        .then((p) => { if (!cancelled) setOperatorPrompt(p); })
+        .catch(() => { /* best-effort */ });
+    };
 
     const TERMINAL: ReadonlyArray<string> = ['PASSED', 'FAILED', 'STOPPED'];
 
@@ -32,7 +43,10 @@ export function useExecutionSubscription(executionId: string | null): void {
       if (event.type === 'NODE_ENTERED' && event.nodeId) setNodeStatus(event.nodeId, 'running');
       if (event.type === 'NODE_EXITED' && event.nodeId) setNodeStatus(event.nodeId, 'passed');
       if (event.type === 'ERROR' && event.nodeId) setNodeStatus(event.nodeId, 'failed');
+      if (event.type === 'OPERATOR_PROMPT' && event.nodeId) setNodeStatus(event.nodeId, 'running');
+      if ((event.type === 'OPERATOR_PROMPT' || event.type === 'OPERATOR_ANSWERED') && !backfilling) refreshPrompt();
       if (event.type === 'EXECUTION_FINISHED') {
+        setOperatorPrompt(null);
         const status = (['PASSED', 'FAILED', 'STOPPED'] as const).find((s) => event.detail?.endsWith(s)) ?? 'FAILED';
         updateStatus(status);
         setEndedAt(event.timestamp);
@@ -52,8 +66,11 @@ export function useExecutionSubscription(executionId: string | null): void {
           getExecutionMessages(executionId),
         ]).then(([events, messages]) => {
           if (cancelled) return;
+          backfilling = true;
           events.forEach(handleEvent);
+          backfilling = false;
           messages.forEach(handleMessage);
+          refreshPrompt();
         }).catch(() => { /* best-effort */ });
       })
       .catch((err) => console.error('WS subscribe failed', err));
@@ -62,5 +79,5 @@ export function useExecutionSubscription(executionId: string | null): void {
       cancelled = true;
       if (disposer) disposer();
     };
-  }, [executionId, addEvent, addMessage, setNodeStatus, updateStatus, setStartedAt, setEndedAt]);
+  }, [executionId, addEvent, addMessage, setNodeStatus, updateStatus, setStartedAt, setEndedAt, setOperatorPrompt]);
 }
