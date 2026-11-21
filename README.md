@@ -36,6 +36,12 @@ open http://localhost:8080
 - Group-aware placeholders: `{{node:id:g555.0:tag600}}`
 - Shutdown from the toolbar — no more killing the process
 - Hot reload scenarios without restarting FIX session
+- Dictionaries per session: each session picks its own QuickFIX/J data dictionary
+- Auto-connect: sessions flagged `autoConnect` come up at start-up, acceptors first
+- Data sets: CSV tables that scenarios read rows from
+- Run inputs: values asked when a scenario starts, one run per data set row or all rows
+- PARALLEL: run several branches of a flow at once
+- OPERATOR: pause a flow and wait for a person's answer
 - Provider packs: install a counterparty's dictionaries, data sets, scenarios and sessions from one zip, update in place, export, remove
 - H2 embedded database (no install required)
 
