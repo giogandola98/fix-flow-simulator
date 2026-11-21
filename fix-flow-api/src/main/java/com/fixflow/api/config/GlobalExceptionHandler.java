@@ -2,6 +2,7 @@ package com.fixflow.api.config;
 
 import com.fixflow.api.exception.SessionConflictException;
 import com.fixflow.api.rest.dto.ErrorResponse;
+import com.fixflow.engine.pack.PackConflictException;
 import com.fixflow.engine.scenario.ScenarioParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,8 +99,8 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler(SessionConflictException.class)
-    public ResponseEntity<ErrorResponse> handleConflict(SessionConflictException ex) {
+    @ExceptionHandler({SessionConflictException.class, PackConflictException.class})
+    public ResponseEntity<ErrorResponse> handleConflict(RuntimeException ex) {
         return ResponseEntity.status(409).body(
             ErrorResponse.of(409, "Conflict", ex.getMessage())
         );

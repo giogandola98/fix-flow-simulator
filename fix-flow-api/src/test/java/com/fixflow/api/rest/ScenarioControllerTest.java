@@ -156,6 +156,23 @@ class ScenarioControllerTest {
         mvc.perform(delete("/api/v1/scenarios/" + id))
             .andExpect(status().isNoContent());
         verify(repo).delete(id);
+        verify(registry).unregister(id);
+    }
+
+    @Test
+    void listFiltersByPack() throws Exception {
+        Scenario mine = new Scenario(UUID.randomUUID(), "mine", null, "1", null, null, null, null, null, null, null, null);
+        Scenario packed = mine.withIdAndPack(UUID.randomUUID(), "demo");
+        when(repo.findAll()).thenReturn(List.of(mine, packed));
+
+        mvc.perform(get("/api/v1/scenarios"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$[1].packId").value("demo"));
+        mvc.perform(get("/api/v1/scenarios").param("packId", "demo"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].id").value(packed.id().toString()));
     }
 
     @Test

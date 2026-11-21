@@ -5,6 +5,7 @@ import LeftPanel from './panels/left/LeftPanel';
 import RightPanel from './panels/right/RightPanel';
 import BottomPanel from './panels/bottom/BottomPanel';
 import DataSetPage from './panels/datasets/DataSetPage';
+import PackPage from './panels/packs/PackPage';
 import OperatorPrompt from './components/OperatorPrompt';
 import { useExecutionStore } from './store/executionStore';
 import { useExecutionSubscription } from './hooks/useExecutionSubscription';
@@ -74,6 +75,7 @@ export default function App() {
       </div>
       <BottomPanel />
       <DataSetPage />
+      <PackPage />
       <OperatorPrompt />
     </div>
   );

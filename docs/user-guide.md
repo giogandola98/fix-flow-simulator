@@ -685,6 +685,26 @@ values from a table. Open the page with the **Data sets** button at the bottom o
   remove. Press **Save** to store the changes. Names must be unique.
 - **Export CSV** downloads the data set; **Delete** removes it.
 
+## Provider packs
+
+A **provider pack** is a zip that sets the simulator up for one counterparty in one go: its FIX dictionaries, data
+sets, scenarios and sessions. Open the page with the **Packs** button at the bottom of the left panel.
+
+- **Import pack**: pick the `.zip`. The page shows the pack's name and version and a field for each value the pack
+  asks for (CompIDs, ports, ...), with its description; fields marked `*` are required, the others start from their
+  default. **Install** creates everything. The result lists what was created and any warnings.
+- Importing a newer version of an installed pack shows **Update**: the fields start from the values the pack was
+  installed with, and every object is updated in place. Scenarios, data sets and sessions the new version no longer
+  has are removed; your own objects are never touched. A connected session of the pack is reconnected only if its
+  configuration changed.
+- An import or delete is refused while an execution of the pack is running: stop it (or wait) and retry.
+- **Export** downloads the pack as it is now, your edits included; **Delete** removes the pack and everything it
+  installed.
+- In the scenario list, scenarios from a pack show `pack <id>`, and a filter above the list shows one pack, or only
+  the scenarios that are not from a pack.
+
+The pack format is described in [Provider packs](packs.md).
+
 ---
 
 ## 12. FIX Session Configuration Guide
