@@ -339,6 +339,10 @@ Executes another scenario synchronously as a sub-flow. The child inherits the pa
   onFailure: error-node
 ```
 
+**In a provider pack** the target is written by name, `targetScenario: <scenario name>`, instead of
+`targetScenarioId` (the same holds for `PARALLEL`); so are `sessionRef` and `datasetRef`. The import turns the names
+into ids and the export turns them back — see [Provider packs](packs.md#references-by-name).
+
 **Depth limit:** Maximum call depth is 5. Reaching the limit returns failure.
 
 **STOPPED propagation:** If the child is stopped (e.g. the execution is cancelled), the parent execution is also stopped immediately.

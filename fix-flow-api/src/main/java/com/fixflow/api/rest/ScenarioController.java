@@ -69,9 +69,12 @@ public class ScenarioController {
         return ResponseEntity.status(201).body(ScenarioDto.withYaml(saved, responseYaml));
     }
 
+    /** All scenarios, or with {@code packId} only those that pack installed. */
     @GetMapping
-    public List<ScenarioDto> list() {
-        return repo.findAll().stream().map(ScenarioDto::from).toList();
+    public List<ScenarioDto> list(@RequestParam(value = "packId", required = false) String packId) {
+        return repo.findAll().stream()
+            .filter(s -> packId == null || packId.isBlank() || packId.equals(s.packId()))
+            .map(ScenarioDto::from).toList();
     }
 
     @GetMapping("/{id}")
@@ -104,6 +107,8 @@ public class ScenarioController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         repo.delete(id);
+        // Without this a deleted scenario stayed executable (and callable as a sub-flow) until restart.
+        registry.unregister(id);
         return ResponseEntity.noContent().build();
     }
 

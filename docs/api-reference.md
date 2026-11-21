@@ -201,11 +201,81 @@ GET /datasets/{id}/export
 
 ---
 
+## Packs
+
+Provider packs: dictionaries, data sets, scenarios and session templates installed as one unit. The pack format,
+the name references and the update rules are in [Provider packs](packs.md).
+
+### List packs
+```
+GET /packs
+```
+Response:
+```json
+[
+  {
+    "id": "demo", "name": "Demo pack", "version": "1.0.0", "provider": "Demo", "description": "...",
+    "installedAt": "2026-11-21T10:00:00Z", "updatedAt": "2026-11-21T10:00:00Z",
+    "counts": { "scenarios": 2, "datasets": 1, "sessions": 1, "dictionaries": 1 }
+  }
+]
+```
+
+### Inspect a pack
+```
+POST /packs/inspect          (multipart/form-data, part "file": the zip)
+```
+Reads `pack.yaml` without installing anything, so a form can ask for the values:
+```json
+{
+  "id": "demo", "name": "Demo pack", "version": "1.0.0", "provider": "Demo", "engineMin": "0.8.0",
+  "description": "...",
+  "values": [
+    { "name": "SENDER", "description": "SenderCompID of the simulator", "required": true },
+    { "name": "PORT", "description": "...", "default": "9876", "required": false }
+  ],
+  "installedVersion": "0.9.0",
+  "installedValues": { "SENDER": "SIM", "PORT": "9876" }
+}
+```
+`installedVersion` and `installedValues` appear only when a pack with the same `id` is installed.
+
+### Import (install or update) a pack
+```
+POST /packs                  (multipart/form-data, parts "file": the zip, "values": a JSON object string)
+```
+Example `values`: `{"SENDER":"SIM","TARGET":"SUT"}`. Response `201`:
+```json
+{ "packId": "demo", "version": "1.0.0", "scenarios": 2, "datasets": 1, "sessions": 1, "dictionaries": 1,
+  "warnings": [] }
+```
+A pack with the same `id` is updated in place (objects matched by name keep their ids; objects no longer in the zip
+are removed). `400`: not a zip, bad `pack.yaml`, `engineMin` above this engine, missing values (all listed), a file
+that does not parse or a name reference that does not resolve (file and reference named), `values` that is not a
+JSON object. `409`: an execution of the pack is running (ids listed), or a data set name is taken outside the pack.
+Nothing is written when the import is refused.
+
+### Export a pack
+```
+GET /packs/{id}/export
+```
+`application/zip` attachment `<id>-<version>.zip`, in the pack layout, names instead of ids. `404` if unknown.
+
+### Delete a pack
+```
+DELETE /packs/{id}
+```
+`204`. Removes the pack's scenarios, data sets, sessions (disconnected first) and dictionaries. `409` while one of its
+executions runs; `404` if unknown.
+
+---
+
 ## Scenarios
 
 ### List scenarios
 ```
 GET /scenarios
+GET /scenarios?packId=demo   # only the scenarios that pack installed
 ```
 Response: `Scenario[]`
 
@@ -217,10 +287,13 @@ Response: `Scenario[]`
     "description": "Quote request/response",
     "version": "1.0",
     "sessionRef": "default",
-    "yamlDsl": "..."
+    "nodeCount": 5,
+    "packId": null
   }
 ]
 ```
+`packId` is the provider pack that installed the scenario, `null` otherwise. The list carries no `yamlDsl`; get one
+scenario for it.
 
 ### Get scenario
 ```
@@ -267,6 +340,8 @@ layout. Without a `name`, the copy is called `<name> (copy)`.
 ```
 DELETE /scenarios/{id}
 ```
+`204`. The scenario can no longer be executed or called as a sub-flow from that moment (it is removed from the
+engine's registry too, not only from the database).
 
 ### Execute scenario
 ```

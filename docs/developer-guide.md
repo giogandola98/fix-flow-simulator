@@ -184,7 +184,9 @@ record Scenario(
     String version,
     String sessionRef,
     List<ScenarioNode> nodes,
-    List<ScenarioEdge> edges
+    List<ScenarioEdge> edges,
+    // ... runtimePolicy, routing/correlation rules, variables, rawYaml, datasetRef
+    String packId              // provider pack that installed it; from the DB row, never from the YAML
 )
 ```
 
@@ -302,6 +304,9 @@ The engine's in-flight representation of a FIX message, carried between `FIXSess
 | `ExecutionRepositoryPort` | `ExecutionRepositoryAdapter` (JPA/H2) |
 | `ScenarioRepositoryPort` | `ScenarioRepositoryAdapter` (JPA/H2) |
 | `DataSetRepositoryPort` | `DataSetRepositoryAdapter` (JPA/H2) |
+| `FIXSessionRepositoryPort` | `FIXSessionRepositoryAdapter` (JPA/H2) |
+| `DictionaryStorePort` | `DictionaryStore` (dictionary folder, QuickFIX/J validation) |
+| `PackRepositoryPort` | `PackRepositoryAdapter` (JPA/H2) |
 | `FIXSessionPort` | `QuickFIXAdapter` (QuickFIX/J) |
 | `InboundMessageListener` | `MessageRouter` (engine internal) |
 
@@ -538,6 +543,32 @@ In-memory map of `UUID → Scenario`. Populated by `ScenarioRegistryInitializer`
 
 Parses a YAML DSL string (via Jackson `YAMLMapper`) into a `Scenario` domain record. Called by `ScenarioRepositoryAdapter` when saving a scenario with a non-empty `yamlDsl` field.
 
+### Provider packs
+
+`com.fixflow.engine.pack` (format: [packs.md](packs.md))
+
+- `PackReader` — zip or folder → `PackContents`; refuses entries outside `pack.yaml` + the four folders, `..`,
+  absolute paths, more than 64 MB uncompressed.
+- `PackManifestCodec` — `pack.yaml` ↔ `PackManifest` (core record, with its `values`).
+- `PackReferenceResolver` — works on the scenario YAML as a Jackson tree so other keys and their order survive:
+  names → ids on import (`sessionRef`, `datasetRef`, node `config.targetScenario` → `targetScenarioId`), back on
+  export; `${NAME}` substitution in session files (string scalars only).
+- `PackImporter` — `importPack(zip, values)` validates everything before the first write, then upserts by
+  `(packId, name)` and removes what the pack dropped; `uninstall(id)`. Dictionaries are stored as
+  `<packId>__<file>`. Both methods are `synchronized`.
+- `PackExecutionGuard` — the `409` check: `ExecutionManager.unfinishedExecutionsOf(scenarioIds)` (top-level
+  executions still `RUNNING`) plus `SessionExecutionRegistry.executionsFor(sessionId)` for the pack's sessions.
+- `PackExporter` — current state → zip (sorted entries, fixed entry time, so the same state exports to the same
+  bytes).
+
+The pack tag is a column on each object (`scenarios.pack_id`, `data_sets.pack_id`, `fix_sessions.pack_id`), never in
+the YAML; `Scenario.packId()` is filled from the row. A save without a tag keeps the row's tag. The engine version
+for `engineMin` is `fixflow.version`, filled from the Maven project version in `application.yml`.
+
+The test pack `fix-flow-engine/src/test/resources/packs/demo/` is generic: QuickFIX/J's FIX50SP2 dictionary with
+one extra field (`DemoCustomTag` 20900 on `QuoteRequest`), one CSV, two scenarios (one calls the other by name) and
+one session template.
+
 ### HotReloadService
 
 `com.fixflow.engine.fix.HotReloadService`
@@ -564,6 +595,9 @@ JPA entities live in `com.fixflow.adapters.persistence.entity`. Entity names map
 | `FIXSessionEntity` | `fix_session` | Session config; `connected` not persisted |
 | `ValidationErrorEntity` | `validation_error` | Per-field rule failures |
 | `DataSetEntity` | `data_sets` | Data set table: unique `name`, nullable `packId`, `columnsJson` / `rowsJson` CLOBs (JSON arrays of strings). CSV parsing and writing is `CsvCodec` in the engine module; the domain record is `DataSet` (`row(int)` gives column to value) |
+| `PackEntity` | `packs` | Installed provider packs: `id`, `name`, `version`, `provider`, `manifestYaml` CLOB (the parsed `pack.yaml` written back), `valuesJson` CLOB (values the pack was installed with), `installedAt`, `updatedAt` |
+
+`ScenarioEntity`, `DataSetEntity` and `FIXSessionEntity` carry a nullable `packId`: the pack that installed the row.
 
 Repository adapters (`ScenarioRepositoryAdapter`, `ExecutionRepositoryAdapter`, `FIXSessionRepositoryAdapter`) implement the core port interfaces by delegating to Spring Data JPA repositories.
 
@@ -697,7 +731,8 @@ Runs on `ApplicationReadyEvent`. Loads all scenarios from the DB and calls `Scen
 | Controller | Path prefix | Key operations |
 |-----------|-------------|----------------|
 | `SessionController` | `/api/v1/sessions` | CRUD, connect, disconnect |
-| `ScenarioController` | `/api/v1/scenarios` | CRUD, execute, import, export |
+| `ScenarioController` | `/api/v1/scenarios` | CRUD (`?packId=` filter; delete also unregisters), execute, import, export |
+| `PackController` | `/api/v1/packs` | list, inspect, import (install/update), export, delete |
 | `ExecutionController` | `/api/v1/executions` | list, get, stop, report |
 | `SystemController` | `/api/v1/system` | shutdown |
 | `HealthController` | `/api/v1/system` | health |

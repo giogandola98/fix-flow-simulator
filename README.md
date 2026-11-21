@@ -36,6 +36,7 @@ open http://localhost:8080
 - Group-aware placeholders: `{{node:id:g555.0:tag600}}`
 - Shutdown from the toolbar — no more killing the process
 - Hot reload scenarios without restarting FIX session
+- Provider packs: install a counterparty's dictionaries, data sets, scenarios and sessions from one zip, update in place, export, remove
 - H2 embedded database (no install required)
 
 ## Architecture
@@ -52,6 +53,7 @@ open http://localhost:8080
 - [DSL reference](docs/dsl-reference.md)
 - [API reference](docs/api-reference.md)
 - [User guide](docs/user-guide.md)
+- [Provider packs](docs/packs.md) — pack format (dictionaries, data sets, scenarios, session templates)
 
 ## License
 
