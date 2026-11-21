@@ -10,7 +10,7 @@ export function useExecutionSubscription(executionId: string | null): void {
   const setNodeStatus = useExecutionStore((s) => s.setNodeStatus);
   const updateStatus = useExecutionStore((s) => s.updateStatus);
   const setStartedAt = useExecutionStore((s) => s.setStartedAt);
-  const setEndedAt = useExecutionStore((s) => s.setEndedAt);
+  const finishExecution = useExecutionStore((s) => s.finishExecution);
   const setOperatorPrompt = useExecutionStore((s) => s.setOperatorPrompt);
   const refreshOperatorPrompt = useExecutionStore((s) => s.refreshOperatorPrompt);
 
@@ -30,7 +30,8 @@ export function useExecutionSubscription(executionId: string | null): void {
     const handleEvent = (event: ExecutionEvent) => {
       addEvent(event);
       if (event.type === 'EXECUTION_STARTED') {
-        setStartedAt(event.timestamp);
+        // An all-rows run keeps the start of its first row.
+        if (!useExecutionStore.getState().startedAt) setStartedAt(event.timestamp);
         // Monotonic status: never drop a finished run back to RUNNING. The persisted-event
         // backfill can replay EXECUTION_STARTED after the live EXECUTION_FINISHED has already
         // arrived; without this guard the status would be stranded at RUNNING and the Stop
@@ -43,10 +44,9 @@ export function useExecutionSubscription(executionId: string | null): void {
       if (event.type === 'OPERATOR_PROMPT' && event.nodeId) setNodeStatus(event.nodeId, 'running');
       if ((event.type === 'OPERATOR_PROMPT' || event.type === 'OPERATOR_ANSWERED') && !backfilling) refreshPrompt();
       if (event.type === 'EXECUTION_FINISHED') {
-        setOperatorPrompt(null);
         const status = (['PASSED', 'FAILED', 'STOPPED'] as const).find((s) => event.detail?.endsWith(s)) ?? 'FAILED';
-        updateStatus(status);
-        setEndedAt(event.timestamp);
+        // Ends the run, or moves an all-rows run on to its next row (this hook then resubscribes).
+        finishExecution(executionId, status, event.timestamp);
       }
     };
 
@@ -76,5 +76,5 @@ export function useExecutionSubscription(executionId: string | null): void {
       cancelled = true;
       if (disposer) disposer();
     };
-  }, [executionId, addEvent, addMessage, setNodeStatus, updateStatus, setStartedAt, setEndedAt, setOperatorPrompt, refreshOperatorPrompt]);
+  }, [executionId, addEvent, addMessage, setNodeStatus, updateStatus, setStartedAt, finishExecution, setOperatorPrompt, refreshOperatorPrompt]);
 }

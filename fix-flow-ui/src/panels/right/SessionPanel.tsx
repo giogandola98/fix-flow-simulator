@@ -82,11 +82,12 @@ export function SessionPanel() {
 
   const saveMutation = useMutation({
     mutationFn: async (values: FormValues) => {
-      // empty selection = built-in dictionary
+      // empty selection = built-in dictionary; '' (not null) so an update clears a stored one,
+      // since an absent/null dictionary on PUT keeps the stored value
       const req = {
         ...values,
-        appDataDictionary: values.appDataDictionary || null,
-        transportDataDictionary: values.transportDataDictionary || null,
+        appDataDictionary: values.appDataDictionary ?? '',
+        transportDataDictionary: values.transportDataDictionary ?? '',
       };
       return activeSession ? updateSession(activeSession.id, req) : createSession(req);
     },

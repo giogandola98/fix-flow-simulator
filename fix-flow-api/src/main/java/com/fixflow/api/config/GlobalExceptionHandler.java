@@ -13,6 +13,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -89,6 +90,19 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleBadRequestSpring(Exception ex) {
         return ResponseEntity.status(400).body(
             ErrorResponse.of(400, "Bad Request", ex.getMessage())
+        );
+    }
+
+    /**
+     * An upload larger than {@code spring.servlet.multipart.max-file-size} (or the request limit).
+     * The caller's file is too big, so 413 with the limit, not a 500.
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleTooLarge(MaxUploadSizeExceededException ex) {
+        long max = ex.getMaxUploadSize();
+        String limit = max > 0 ? max + " bytes" : "the configured multipart limit";
+        return ResponseEntity.status(413).body(
+            ErrorResponse.of(413, "Payload Too Large", "Upload exceeds the maximum size of " + limit)
         );
     }
 

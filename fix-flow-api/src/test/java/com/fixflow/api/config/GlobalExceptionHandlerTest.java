@@ -67,6 +67,15 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void handleTooLargeMaps413WithTheLimit() {
+        ResponseEntity<ErrorResponse> r = handler.handleTooLarge(
+            new org.springframework.web.multipart.MaxUploadSizeExceededException(1048576));
+        assertThat(r.getStatusCode().value()).isEqualTo(413);
+        assertThat(r.getBody().status()).isEqualTo(413);
+        assertThat(r.getBody().message()).contains("1048576 bytes");
+    }
+
+    @Test
     void handleMethodNotAllowedMaps405() {
         ResponseEntity<ErrorResponse> r = handler.handleMethodNotAllowed(
             new HttpRequestMethodNotSupportedException("DELETE"));
@@ -196,6 +205,14 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void uploadTooLargeReturns413() throws Exception {
+        mvc.perform(get("/t/toolarge"))
+            .andExpect(status().isPayloadTooLarge())
+            .andExpect(jsonPath("$.status").value(413))
+            .andExpect(jsonPath("$.message").value("Upload exceeds the maximum size of 2048 bytes"));
+    }
+
+    @Test
     void wrongMethodReturns405() throws Exception {
         // /t/getonly only supports GET
         mvc.perform(post("/t/getonly"))
@@ -230,6 +247,9 @@ class GlobalExceptionHandlerTest {
 
         @GetMapping("/t/uuid/{id}")
         String uuid(@org.springframework.web.bind.annotation.PathVariable java.util.UUID id) { return id.toString(); }
+
+        @GetMapping("/t/toolarge")
+        String tooLarge() { throw new org.springframework.web.multipart.MaxUploadSizeExceededException(2048); }
 
         @GetMapping("/t/getonly")
         String getOnly() { return "ok"; }

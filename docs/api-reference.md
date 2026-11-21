@@ -19,6 +19,7 @@ Every error carries the same body:
 | `404 Not Found` | unknown entity id — **and** an unknown path (e.g. `/api/sessions` without `/v1`) |
 | `405 Method Not Allowed` | path exists, verb does not |
 | `409 Conflict` | session busy / conflicting state |
+| `413 Payload Too Large` | a multipart upload larger than the configured limit (`spring.servlet.multipart.max-file-size`, Spring default 1 MB) — `message` gives the limit in bytes |
 | `500 Internal Server Error` | unhandled fault; `message` is always the fixed string `Internal server error` |
 | `503 Service Unavailable` | the embedded database is unusable and will stay that way until restart — `message` carries the cause. See `GET /system/health`. |
 
@@ -70,8 +71,8 @@ Body:
 | `heartbeatInterval` | yes | seconds (tag 108) |
 | `resetOnLogon` / `resetOnLogout` | no | reset sequence numbers; default `false` |
 | `autoConnect` | no | connect this session when the application starts (acceptors first, then initiators); absent = `false` on create, unchanged on update. The session response carries it |
-| `appDataDictionary` | no | name of an uploaded dictionary (see [Dictionaries](#dictionaries)) used as the application dictionary: `DataDictionary` for `FIX_42`/`FIX_44`, `AppDataDictionary` for `FIXT_11`. `null`/absent keeps the built-in one (`FIX42.xml`, `FIX44.xml`, `FIX50SP2.xml`) |
-| `transportDataDictionary` | no | `FIXT_11` only: transport dictionary; `null` keeps `FIXT11.xml` |
+| `appDataDictionary` | no | name of an uploaded dictionary (see [Dictionaries](#dictionaries)) used as the application dictionary: `DataDictionary` for `FIX_42`/`FIX_44`, `AppDataDictionary` for `FIXT_11`. On create `null`/absent/`""` means the built-in one (`FIX42.xml`, `FIX44.xml`, `FIX50SP2.xml`); on update `null`/absent keeps the stored value and `""` clears it back to the built-in one |
+| `transportDataDictionary` | no | `FIXT_11` only: transport dictionary; built-in `FIXT11.xml` when not set. Same create/update rules as `appDataDictionary` |
 
 A missing or unknown `mode` / `fixVersion` is answered `400 Bad Request` with the allowed values in
 `message`. The session response carries `appDataDictionary` and `transportDataDictionary` too.
@@ -109,7 +110,9 @@ DELETE /sessions/{id}
 PUT /sessions/{id}/connect
 ```
 A session whose `appDataDictionary` / `transportDataDictionary` names a dictionary that is not stored, or whose file
-is not valid QuickFIX/J XML, is answered `400` with the cause (e.g. `dictionary not found: MY.xml`).
+is not valid QuickFIX/J XML, is answered `400` with the cause (e.g. `dictionary not found: MY.xml`). The check runs
+before a running connector is touched: a reconnect of a connected session with a bad dictionary answers `400` and
+leaves the live session up.
 
 ### Disconnect
 ```
@@ -149,7 +152,8 @@ Response: `[{ "name": "MY.xml", "sizeBytes": 2048 }]`
 POST /dictionaries        (multipart/form-data, part "file")
 ```
 The file name is the dictionary name; an existing file with that name is replaced. The XML is parsed as a
-QuickFIX/J `DataDictionary` first: invalid XML or an unsafe name is `400`. Response `201`: `{ "name", "sizeBytes" }`.
+QuickFIX/J `DataDictionary` first: invalid XML or an unsafe name is `400`. A name containing `__` is `400` too: that
+form (`<packId>__<name>.xml`) is reserved for the dictionaries a pack installs. Response `201`: `{ "name", "sizeBytes" }`.
 
 ### Delete dictionary
 ```
@@ -163,7 +167,9 @@ DELETE /dictionaries/{name}
 
 Named tables of string values (a header of unique column names, rows of the same width), editable in the UI and
 meant to feed runs of a scenario row by row. A data set may carry a `packId` when it belongs to a provider pack.
-Names are unique: a duplicate is `409`.
+Names are unique: a duplicate is `409`, also when two requests race for one name (a unique index on the name, created at
+startup, rejects the second). A database that already holds duplicate names keeps working: the index is skipped with a
+WARN naming them, and a lookup by name answers the oldest of them.
 
 ### List data sets
 ```
@@ -183,7 +189,8 @@ POST   /datasets        { "name", "columns", "rows" }   -> 201
 PUT    /datasets/{id}   { "name", "columns", "rows" }   -> 200 (keeps id and packId)
 DELETE /datasets/{id}                                   -> 204
 ```
-`400` for a blank name, no or duplicate columns, or a row whose size differs from the column count.
+`400` for a blank name, no or duplicate columns, or a row whose size differs from the column count. A `packId` in the
+body is ignored: only the pack importer sets it.
 
 ### Import CSV
 ```
@@ -197,7 +204,8 @@ data set. A malformed file is `400` naming the line, e.g. `line 3: 2 values, hea
 ```
 GET /datasets/{id}/export
 ```
-`text/csv` (UTF-8, LF line ends, fields quoted only when needed), as an attachment named `<name>.csv`.
+`text/csv` (UTF-8, LF line ends, fields quoted only when needed), as an attachment named `<name>.csv`. In a
+one-column data set an empty value is written as `""`, so the row is not read back as a blank line and dropped.
 
 ---
 
@@ -367,6 +375,9 @@ Response: `202 Accepted`, `Location: /api/v1/executions/{executionId}` (the firs
 { "executionId": "exec-uuid", "executionIds": ["exec-uuid"] }
 ```
 `executionIds` lists every execution in row order (one element for a plain run); `executionId` is the first one.
+Rows still queued are already `RUNNING` and can be stopped by id (`POST /executions/{id}/stop`): a queued row is skipped
+when reached. There is no batch-stop endpoint; the GUI stops a batch by stopping each unfinished id, queued ones first.
+A stop that arrives while an execution is already finishing does not change its final status.
 
 ### Import scenario (YAML file)
 ```

@@ -278,6 +278,9 @@ public class ExecutionManager {
         synchronized (runLock) {
             ExecutionContext ctx = contexts.get(executionId);
             if (ctx == null) return; // already finished
+            // Already terminal: the row is inside finish(), between setting its final status and
+            // removing its context. Overwriting would turn a PASSED/FAILED run into STOPPED.
+            if (ctx.status() != ExecutionStatus.RUNNING) return;
             ctx.setStatus(ExecutionStatus.STOPPED);
             Thread worker = workers.get(executionId);
             if (worker != null) worker.interrupt();

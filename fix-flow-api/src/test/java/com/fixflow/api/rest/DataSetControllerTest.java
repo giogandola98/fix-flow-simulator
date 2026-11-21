@@ -13,6 +13,7 @@ import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfigurat
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
@@ -95,6 +96,39 @@ class DataSetControllerTest {
                 .content("{\"name\":\"d1\",\"columns\":[\"a\"],\"rows\":[]}"))
             .andExpect(status().isConflict());
         verify(repo, never()).save(any());
+    }
+
+    @Test
+    void createLosingTheNameRaceAtTheIndexReturns409() throws Exception {
+        // Two concurrent creates both pass the findByName check; the unique index rejects one.
+        when(repo.findByName("dup")).thenReturn(Optional.empty());
+        when(repo.save(any())).thenThrow(new DataIntegrityViolationException("uk_data_sets_name"));
+        mvc.perform(post("/api/v1/datasets").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"dup\",\"columns\":[\"a\"],\"rows\":[]}"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value("data set name already used: dup"));
+    }
+
+    @Test
+    void importLosingTheNameRaceAtTheIndexReturns409() throws Exception {
+        when(repo.findByName("rates")).thenReturn(Optional.empty());
+        when(repo.save(any())).thenThrow(new DataIntegrityViolationException("uk_data_sets_name"));
+        mvc.perform(multipart("/api/v1/datasets/import")
+                .file(new MockMultipartFile("file", "r.csv", "text/csv", "a\n1\n".getBytes()))
+                .param("name", "rates"))
+            .andExpect(status().isConflict());
+    }
+
+    @Test
+    void createIgnoresPackIdFromTheBody() throws Exception {
+        echoSave();
+        when(repo.findByName("d1")).thenReturn(Optional.empty());
+        mvc.perform(post("/api/v1/datasets").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"d1\",\"columns\":[\"a\"],\"rows\":[],\"packId\":\"evil\"}"))
+            .andExpect(status().isCreated());
+        ArgumentCaptor<DataSet> c = ArgumentCaptor.forClass(DataSet.class);
+        verify(repo).save(c.capture());
+        assertThat(c.getValue().packId()).isNull();
     }
 
     @Test

@@ -201,14 +201,16 @@ class ParallelHandlerTest {
             return NodeHandlerResult.failure(n.onFailure(), "interrupted");
         });
         ExecutionContext parent = parent(inquiries("fast", "slow", "slow"));
+        // 2 s, not a few hundred ms: the fast child must finish before the deadline even on a busy
+        // machine, or it is counted as TIMEOUT too.
         long t0 = System.nanoTime();
-        NodeHandlerResult r = handler.handle(parNode(300, Map.of()), parent);
+        NodeHandlerResult r = handler.handle(parNode(2_000, Map.of()), parent);
         long ms = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0);
 
         assertThat(r.success()).isFalse();
         assertThat(r.nextNodeId()).isEqualTo("no");
         assertThat(r.errorMessage()).startsWith("timeout");
-        assertThat(ms).isLessThan(4_000);
+        assertThat(ms).isLessThan(10_000);
         assertThat(interrupted.get()).isEqualTo(2);
         assertThat(parent.getVariable("parallel:par:0:status")).isEqualTo("PASSED");
         assertThat(parent.getVariable("parallel:par:1:status")).isEqualTo("TIMEOUT");

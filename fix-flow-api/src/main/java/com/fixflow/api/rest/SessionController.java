@@ -101,7 +101,10 @@ public class SessionController {
         return ResponseEntity.ok().build();
     }
 
-    /** {@code existing} keeps the fields the request does not carry (auto-connect, pack). */
+    /**
+     * {@code existing} keeps the fields the request does not carry (auto-connect, pack) and the
+     * dictionaries when the request leaves them out ({@code null}); an empty string clears one.
+     */
     private FIXSessionConfig toConfig(UUID id, FIXSessionRequest req, FIXSessionConfig existing) {
         return new FIXSessionConfig(
             id, req.name(),
@@ -110,7 +113,8 @@ public class SessionController {
             req.defaultApplVerID(), req.senderCompID(), req.targetCompID(),
             req.host(), req.port(), req.heartbeatInterval(),
             req.resetOnLogon(), req.resetOnLogout(),
-            blankToNull(req.appDataDictionary()), blankToNull(req.transportDataDictionary()),
+            dictionary(req.appDataDictionary(), existing == null ? null : existing.appDataDictionary()),
+            dictionary(req.transportDataDictionary(), existing == null ? null : existing.transportDataDictionary()),
             req.autoConnect() != null ? req.autoConnect() : existing != null && existing.autoConnect(),
             existing == null ? null : existing.packId()
         );
@@ -134,5 +138,9 @@ public class SessionController {
         }
     }
 
-    private static String blankToNull(String s) { return s == null || s.isBlank() ? null : s.trim(); }
+    /** Absent ({@code null}) keeps the stored dictionary, blank clears it, anything else replaces it. */
+    private static String dictionary(String requested, String stored) {
+        if (requested == null) return stored;
+        return requested.isBlank() ? null : requested.trim();
+    }
 }

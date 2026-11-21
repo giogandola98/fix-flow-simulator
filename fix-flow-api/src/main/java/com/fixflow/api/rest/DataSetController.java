@@ -5,6 +5,7 @@ import com.fixflow.api.rest.dto.DataSetDto;
 import com.fixflow.core.domain.dataset.DataSet;
 import com.fixflow.core.ports.outbound.DataSetRepositoryPort;
 import com.fixflow.engine.dataset.CsvCodec;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -35,9 +36,9 @@ public class DataSetController {
 
     @PostMapping
     public ResponseEntity<DataSetDto> create(@RequestBody DataSetDto body) {
-        DataSet ds = fromDto(null, body, null);
+        DataSet ds = fromDto(null, body, null); // packId from the body is ignored: only the pack importer sets it
         assertNameFree(ds.name(), null);
-        return ResponseEntity.status(201).body(DataSetDto.full(repo.save(ds)));
+        return ResponseEntity.status(201).body(DataSetDto.full(save(ds)));
     }
 
     @PutMapping("/{id}")
@@ -45,7 +46,7 @@ public class DataSetController {
         DataSet existing = load(id);
         DataSet ds = fromDto(id, body, existing.packId());
         assertNameFree(ds.name(), id);
-        return DataSetDto.full(repo.save(ds));
+        return DataSetDto.full(save(ds));
     }
 
     @DeleteMapping("/{id}")
@@ -62,7 +63,7 @@ public class DataSetController {
         String n = name != null && !name.isBlank() ? name : stripCsv(file.getOriginalFilename());
         assertNameFree(n, null);
         DataSet ds = CsvCodec.parse(n, new String(file.getBytes(), StandardCharsets.UTF_8));
-        return ResponseEntity.status(201).body(DataSetDto.full(repo.save(ds)));
+        return ResponseEntity.status(201).body(DataSetDto.full(save(ds)));
     }
 
     @GetMapping("/{id}/export")
@@ -79,6 +80,19 @@ public class DataSetController {
         return repo.findById(id).orElseThrow(() -> new NoSuchElementException("data set not found: " + id));
     }
 
+    /**
+     * The name check above is not atomic: two concurrent creates with one name both pass it, and
+     * the unique index on {@code data_sets(name)} rejects the second insert. That is a name clash,
+     * so it answers 409 like the check does, not 500.
+     */
+    private DataSet save(DataSet ds) {
+        try {
+            return repo.save(ds);
+        } catch (DataIntegrityViolationException e) {
+            throw new SessionConflictException("data set name already used: " + ds.name());
+        }
+    }
+
     private void assertNameFree(String name, UUID selfId) {
         repo.findByName(name).ifPresent(other -> {
             if (!other.id().equals(selfId)) {
@@ -90,7 +104,7 @@ public class DataSetController {
     private static DataSet fromDto(UUID id, DataSetDto b, String packId) {
         List<List<String>> rows = b.rows() == null ? List.of()
             : b.rows().stream().map(r -> r.stream().map(v -> v == null ? "" : v).toList()).toList();
-        return new DataSet(id, b.name(), b.columns(), rows, id == null ? b.packId() : packId);
+        return new DataSet(id, b.name(), b.columns(), rows, packId);
     }
 
     private static String stripCsv(String filename) {

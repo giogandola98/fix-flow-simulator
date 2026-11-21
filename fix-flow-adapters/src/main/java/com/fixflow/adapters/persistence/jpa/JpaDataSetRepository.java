@@ -7,5 +7,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface JpaDataSetRepository extends JpaRepository<DataSetEntity, UUID> {
-    Optional<DataSetEntity> findByName(String name);
+    /**
+     * First match by name, oldest first. Names are unique once {@code DataSetNameIndex} has
+     * created its index; a database that held duplicates before that still answers one
+     * deterministic row instead of failing on a non-unique result.
+     */
+    Optional<DataSetEntity> findFirstByNameOrderByCreatedAtAscIdAsc(String name);
 }

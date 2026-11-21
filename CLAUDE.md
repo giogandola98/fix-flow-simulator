@@ -90,7 +90,7 @@ fix-flow-ui        — React 18 + Vite + @xyflow/react v12 + Zustand + TanStack 
 
 ## API Facts
 
-- `POST /api/v1/scenarios/{id}/execute` returns `{ executionId }` — **not** `{ id }`
+- `POST /api/v1/scenarios/{id}/execute` returns `{ executionId, executionIds }` — **not** `{ id }`; `executionIds` lists every execution in row order (all-rows run), `executionId` is the first
 - `PUT /api/v1/sessions/{id}/connect` and `disconnect` return `void` — call `GET /{id}` to refresh state
 - `GET /api/v1/executions/{id}/messages` queries message table directly (`FIXMessageEntity`)
 - `ExecutionEventType` values: `EXECUTION_STARTED, EXECUTION_FINISHED, NODE_ENTERED, NODE_EXITED, MESSAGE_SENT, MESSAGE_RECEIVED, TIMEOUT, ERROR, SESSION_UP, SESSION_DOWN, OPERATOR_PROMPT, OPERATOR_ANSWERED`

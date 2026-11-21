@@ -122,6 +122,11 @@ Refusals:
 | `400` | not a zip, bad `pack.yaml`, `engineMin` above the engine, missing values, a file that does not parse (the message names it, a CSV also the line), an unresolved name reference |
 | `409` | an execution of one of the pack's scenarios is running, or any execution is running on one of the pack's sessions (the message lists the execution ids: stop them or wait); a data set name taken outside the pack |
 
+Known gap of the `409` check: it sees top-level executions of the pack's scenarios and executions on the pack's
+sessions. A pack scenario that runs **only as a child** (CALL_SCENARIO or PARALLEL) of a scenario outside the pack, on
+a session outside the pack, is not seen: the import or delete goes ahead while that child runs. Stop such runs before
+updating or removing the pack.
+
 Sessions: a pack session that is **connected** and whose configuration changed is disconnected, saved and connected
 again with the new configuration; an unchanged one is left connected and untouched. Import never connects a session
 that was not connected; `autoConnect: true` takes effect at the next start of the simulator (or connect it from the
@@ -138,6 +143,10 @@ ids, `<packId>__` taken off dictionary names, no scenario `id`. Session files ca
 fields, and `pack.yaml` gets those values as the `default`s, so the exported zip imports again without filling in the
 form. Exporting and re-importing gives the same objects; file names come from object names (characters outside
 `[A-Za-z0-9._-]` become `_`).
+
+> **Warning.** An export carries the values the pack was installed with — CompIDs, hosts, ports and every other
+> filled-in value — both as literals in the session files and as `default`s in `pack.yaml`. Never commit an exported
+> pack with real environment values to a repository: replace them with placeholders (or drop the `default`s) first.
 
 ## Delete
 
