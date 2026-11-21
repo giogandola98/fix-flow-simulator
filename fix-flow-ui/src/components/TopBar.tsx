@@ -29,7 +29,6 @@ export default function TopBar() {
   const setEdges = useScenarioStore((s) => s.setEdges);
   const applyAutoLayout = useScenarioStore((s) => s.applyAutoLayout);
   const activeSession = useSessionStore((s) => s.activeSession);
-  const activeExecutionId = useExecutionStore((s) => s.activeExecutionId);
   const executionStatus = useExecutionStore((s) => s.executionStatus);
   const updateStatus = useExecutionStore((s) => s.updateStatus);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -84,9 +83,14 @@ export default function TopBar() {
       setErrorMsg(null);
       // Atomic reset + new ID in one update — prevents null intermediate state
       // that would cause useExecutionSubscription to briefly unsubscribe
+      const ids = exec.executionIds?.length ? exec.executionIds : [exec.executionId];
       useExecutionStore.setState({
-        // An all-rows run starts several executions; the first one is shown.
-        activeExecutionId: exec.executionIds?.[0] ?? exec.executionId,
+        // An all-rows run starts one execution per row; they run in order and the GUI follows
+        // the one running now (finishExecution moves on to the next row).
+        activeExecutionId: ids[0],
+        executionIds: ids,
+        finishedStatuses: {},
+        operatorPrompt: null,
         executionStatus: 'RUNNING',
         events: [],
         messages: [],
@@ -104,8 +108,12 @@ export default function TopBar() {
 
   const stopMutation = useMutation({
     mutationFn: async () => {
-      if (!activeExecutionId) throw new Error('No active execution');
-      return stopExecution(activeExecutionId);
+      // Every row of the run that has not ended: the one running now and the ones still queued.
+      const ids = useExecutionStore.getState().unfinishedExecutionIds();
+      if (ids.length === 0) throw new Error('No active execution');
+      // Queued rows first, last to first, so the server skips them instead of starting the next
+      // one between two stops; the running row last.
+      for (const id of [...ids].reverse()) await stopExecution(id);
     },
     onSuccess: () => updateStatus('STOPPED'),
   });

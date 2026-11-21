@@ -28,6 +28,8 @@ import { getOperatorPrompt } from '../api/executions';
 const resetStore = () =>
   useExecutionStore.setState({
     activeExecutionId: null,
+    executionIds: [],
+    finishedStatuses: {},
     executionStatus: 'IDLE',
     events: [],
     messages: [],
@@ -143,5 +145,36 @@ describe('useExecutionSubscription', () => {
     const { unmount } = await mountAndReady();
     unmount();
     await waitFor(() => expect(disposer).toHaveBeenCalled());
+  });
+});
+
+describe('useExecutionSubscription all-rows batch', () => {
+  beforeEach(() => {
+    resetStore();
+    capturedOnEvent = null;
+    vi.mocked(getOperatorPrompt).mockReset();
+  });
+
+  it('follows the next row after the first finishes and shows its operator prompt', async () => {
+    useExecutionStore.setState({
+      activeExecutionId: 'exec-1', executionIds: ['exec-1', 'exec-2'], finishedStatuses: {},
+      executionStatus: 'RUNNING', operatorPrompt: null,
+    });
+    const prompt = { executionId: 'exec-2', nodeId: 'op', instruction: 'Check row 1' };
+    vi.mocked(getOperatorPrompt).mockImplementation((id: string) =>
+      Promise.resolve(id === 'exec-2' ? prompt : null));
+
+    // Same wiring as App: the hook follows the store's active id.
+    renderHook(() => useExecutionSubscription(useExecutionStore((s) => s.activeExecutionId)));
+    await waitFor(() => expect(capturedOnEvent).not.toBeNull());
+    const firstRowHandler = capturedOnEvent!;
+    capturedOnEvent = null;
+
+    firstRowHandler(evt('f1', 'EXECUTION_FINISHED', { detail: 'Execution finished with status PASSED' }));
+
+    await waitFor(() => expect(useExecutionStore.getState().operatorPrompt).toEqual(prompt));
+    expect(useExecutionStore.getState().activeExecutionId).toBe('exec-2');
+    expect(useExecutionStore.getState().executionStatus).toBe('RUNNING');
+    expect(getOperatorPrompt).toHaveBeenCalledWith('exec-2');
   });
 });

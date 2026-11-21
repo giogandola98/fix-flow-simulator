@@ -47,7 +47,7 @@ describe('SessionPanel data dictionary', () => {
     await waitFor(() => expect(sessionsApi.createSession).toHaveBeenCalled());
     expect(vi.mocked(sessionsApi.createSession).mock.calls[0][0]).toMatchObject({
       appDataDictionary: 'MY.xml',
-      transportDataDictionary: null,
+      transportDataDictionary: '',
     });
   });
 });
