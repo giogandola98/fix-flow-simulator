@@ -3,6 +3,7 @@ package com.fixflow.adapters;
 import com.fixflow.adapters.persistence.DataSetRepositoryAdapter;
 import com.fixflow.adapters.persistence.ExecutionRepositoryAdapter;
 import com.fixflow.adapters.persistence.FIXSessionRepositoryAdapter;
+import com.fixflow.adapters.persistence.PackRepositoryAdapter;
 import com.fixflow.adapters.persistence.ScenarioRepositoryAdapter;
 import com.fixflow.adapters.persistence.jpa.*;
 import com.fixflow.engine.scenario.ScenarioDslParser;
@@ -51,5 +52,10 @@ public class AdaptersTestBootConfig {
     @Bean
     DataSetRepositoryAdapter dataSetRepositoryAdapter(JpaDataSetRepository r) {
         return new DataSetRepositoryAdapter(r);
+    }
+
+    @Bean
+    PackRepositoryAdapter packRepositoryAdapter(JpaPackRepository r) {
+        return new PackRepositoryAdapter(r);
     }
 }

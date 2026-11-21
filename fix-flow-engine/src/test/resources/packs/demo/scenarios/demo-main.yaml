@@ -1,0 +1,23 @@
+name: demo-main
+description: Calls the send sub-flow by name.
+version: "1"
+sessionRef: demo-acceptor
+datasetRef: instruments
+nodes:
+  - id: start
+    name: Start
+    type: START
+    onSuccess: call
+  - id: call
+    name: Call send
+    type: CALL_SCENARIO
+    config:
+      targetScenario: demo-send-quote-request
+    onSuccess: end
+    onFailure: fail
+  - id: end
+    name: Pass
+    type: END_PASS
+  - id: fail
+    name: Fail
+    type: END_FAIL

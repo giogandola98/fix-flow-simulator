@@ -1,0 +1,13 @@
+name: demo-acceptor
+mode: ACCEPTOR
+fixVersion: FIXT_11
+defaultApplVerID: "9"
+senderCompID: ${SENDER}
+targetCompID: ${TARGET}
+host: 0.0.0.0
+port: ${PORT}
+heartbeatInterval: 30
+resetOnLogon: true
+resetOnLogout: true
+appDataDictionary: FIX50SP2-DEMO.xml
+autoConnect: false

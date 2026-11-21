@@ -1,0 +1,26 @@
+name: demo-send-quote-request
+description: Sends one QuoteRequest for the current row.
+version: "1"
+sessionRef: demo-acceptor
+datasetRef: instruments
+nodes:
+  - id: start
+    name: Start
+    type: START
+    onSuccess: send
+  - id: send
+    name: Send QuoteRequest
+    type: SEND_FIX
+    config:
+      msgType: R
+      fields:
+        "131": "{{row:isin}}"
+        "20900": demo
+    onSuccess: end
+    onFailure: fail
+  - id: end
+    name: Pass
+    type: END_PASS
+  - id: fail
+    name: Fail
+    type: END_FAIL

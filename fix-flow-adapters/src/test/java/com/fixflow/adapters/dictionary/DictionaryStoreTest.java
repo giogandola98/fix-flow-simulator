@@ -56,4 +56,19 @@ class DictionaryStoreTest {
         assertThatThrownBy(() -> store.resolve("../x.xml")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> store.delete("../x.xml")).isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void portMethodsValidateStoreAndReadBytes(@TempDir Path dir) {
+        DictionaryStore store = new DictionaryStore(dir.toString());
+        byte[] bytes = VALID.getBytes(StandardCharsets.UTF_8);
+
+        store.validate(bytes);
+        assertThatThrownBy(() -> store.validate("nope".getBytes(StandardCharsets.UTF_8)))
+            .isInstanceOf(IllegalArgumentException.class);
+
+        store.saveXml("demo__P.xml", bytes);
+        assertThat(store.list()).containsExactly("demo__P.xml");
+        assertThat(store.read("demo__P.xml")).hasValueSatisfying(b -> assertThat(b).isEqualTo(bytes));
+        assertThat(store.read("OTHER.xml")).isEmpty();
+    }
 }

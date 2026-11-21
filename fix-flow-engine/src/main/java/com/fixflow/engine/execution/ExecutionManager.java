@@ -296,6 +296,18 @@ public class ExecutionManager {
         return contexts.get(executionId);
     }
 
+    /**
+     * Top-level executions of any of {@code scenarioIds} that have not finished yet, including
+     * rows of an {@code allRows} batch still waiting their turn.
+     */
+    public List<UUID> unfinishedExecutionsOf(java.util.Set<UUID> scenarioIds) {
+        if (scenarioIds == null || scenarioIds.isEmpty()) return List.of();
+        return contexts.values().stream()
+                .filter(c -> c.status() == ExecutionStatus.RUNNING && scenarioIds.contains(c.scenario().id()))
+                .map(ExecutionContext::executionId)
+                .toList();
+    }
+
     private void runScenario(ExecutionContext ctx) {
         // Per-node persistence/eventing lives in the walker's StepListener so that nodes executed
         // inside a LOOP sub-block are recorded exactly like top-level nodes.

@@ -1,5 +1,6 @@
 package com.fixflow.adapters.dictionary;
 
+import com.fixflow.core.ports.outbound.DictionaryStorePort;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import quickfix.ConfigError;
@@ -22,7 +23,7 @@ import java.util.stream.Stream;
  * Names are restricted to a flat {@code [A-Za-z0-9._-]+.xml} form so a name can never leave the folder.
  */
 @Component
-public class DictionaryStore {
+public class DictionaryStore implements DictionaryStorePort {
 
     private static final Pattern NAME = Pattern.compile("[A-Za-z0-9._-]+\\.xml");
 
@@ -32,6 +33,7 @@ public class DictionaryStore {
         this.dir = Path.of(dir).toAbsolutePath().normalize();
     }
 
+    @Override
     public List<String> list() {
         if (!Files.isDirectory(dir)) return List.of();
         try (Stream<Path> files = Files.list(dir)) {
@@ -54,11 +56,7 @@ public class DictionaryStore {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-        try {
-            new DataDictionary(new ByteArrayInputStream(bytes));
-        } catch (ConfigError | RuntimeException e) {
-            throw new IllegalArgumentException("not a valid QuickFIX/J data dictionary: " + e.getMessage(), e);
-        }
+        validate(bytes);
         try {
             Files.createDirectories(dir);
             Path target = dir.resolve(name);
@@ -71,12 +69,38 @@ public class DictionaryStore {
         }
     }
 
+    @Override
+    public void validate(byte[] xml) {
+        try {
+            new DataDictionary(new ByteArrayInputStream(xml));
+        } catch (ConfigError | RuntimeException e) {
+            throw new IllegalArgumentException("not a valid QuickFIX/J data dictionary: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void saveXml(String name, byte[] xml) {
+        save(name, new ByteArrayInputStream(xml));
+    }
+
+    @Override
+    public Optional<byte[]> read(String name) {
+        return resolve(name).map(p -> {
+            try {
+                return Files.readAllBytes(p);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        });
+    }
+
     public Optional<Path> resolve(String name) {
         checkName(name);
         Path p = dir.resolve(name);
         return Files.isRegularFile(p) ? Optional.of(p) : Optional.empty();
     }
 
+    @Override
     public void delete(String name) {
         checkName(name);
         try {
