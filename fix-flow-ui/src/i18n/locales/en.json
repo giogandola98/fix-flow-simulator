@@ -67,7 +67,11 @@
     "duplicateTitle": "Duplicate",
     "deleteTitle": "Delete",
     "noScenarios": "No scenarios",
-    "noMatch": "No scenarios match \"{{search}}\""
+    "noMatch": "No scenarios match \"{{search}}\"",
+    "packFilter": "Filter by pack",
+    "allPacks": "All scenarios",
+    "noPack": "Not from a pack",
+    "packBadge": "pack {{pack}}"
   },
   "datasets": {
     "open": "Data sets",
@@ -91,6 +95,30 @@
     "removeColumn": "Remove column",
     "renameColumn": "Column name",
     "pack": "pack: {{pack}}",
+    "failed": "Operation failed: {{message}}"
+  },
+  "packs": {
+    "open": "Packs",
+    "title": "Provider packs",
+    "close": "Close",
+    "import": "Import pack",
+    "install": "Install",
+    "update": "Update",
+    "cancel": "Cancel",
+    "export": "Export",
+    "delete": "Delete",
+    "deleteConfirm": "Delete pack \"{{name}}\" with all its scenarios, data sets, sessions and dictionaries?",
+    "none": "No packs installed",
+    "name": "Pack",
+    "version": "Version",
+    "provider": "Provider",
+    "contents": "Contents",
+    "installedAt": "Installed",
+    "counts": "{{scenarios}} scenarios · {{datasets}} data sets · {{sessions}} sessions · {{dictionaries}} dictionaries",
+    "imported": "Pack {{id}} {{version}} imported:",
+    "replaces": "Replaces the installed version {{version}}",
+    "noValues": "This pack needs no values.",
+    "required": "Required: {{names}}",
     "failed": "Operation failed: {{message}}"
   },
   "palette": {

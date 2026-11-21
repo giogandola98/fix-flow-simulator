@@ -67,7 +67,11 @@
     "duplicateTitle": "Duplica",
     "deleteTitle": "Elimina",
     "noScenarios": "Nessuno scenario",
-    "noMatch": "Nessuno scenario corrisponde a \"{{search}}\""
+    "noMatch": "Nessuno scenario corrisponde a \"{{search}}\"",
+    "packFilter": "Filtra per pack",
+    "allPacks": "Tutti gli scenari",
+    "noPack": "Non da un pack",
+    "packBadge": "pack {{pack}}"
   },
   "datasets": {
     "open": "Set di dati",
@@ -91,6 +95,30 @@
     "removeColumn": "Rimuovi colonna",
     "renameColumn": "Nome colonna",
     "pack": "pack: {{pack}}",
+    "failed": "Operazione fallita: {{message}}"
+  },
+  "packs": {
+    "open": "Pack",
+    "title": "Pack dei provider",
+    "close": "Chiudi",
+    "import": "Importa pack",
+    "install": "Installa",
+    "update": "Aggiorna",
+    "cancel": "Annulla",
+    "export": "Esporta",
+    "delete": "Elimina",
+    "deleteConfirm": "Eliminare il pack \"{{name}}\" con tutti i suoi scenari, set di dati, sessioni e dizionari?",
+    "none": "Nessun pack installato",
+    "name": "Pack",
+    "version": "Versione",
+    "provider": "Provider",
+    "contents": "Contenuto",
+    "installedAt": "Installato",
+    "counts": "{{scenarios}} scenari · {{datasets}} set di dati · {{sessions}} sessioni · {{dictionaries}} dizionari",
+    "imported": "Pack {{id}} {{version}} importato:",
+    "replaces": "Sostituisce la versione installata {{version}}",
+    "noValues": "Questo pack non richiede valori.",
+    "required": "Obbligatori: {{names}}",
     "failed": "Operazione fallita: {{message}}"
   },
   "palette": {

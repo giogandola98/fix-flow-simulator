@@ -19,6 +19,8 @@ export interface ScenarioEdge { from: string; to: string; label: string; sourceH
 export interface Scenario {
   id: string; name: string; description: string; version: string;
   sessionRef: string; nodeCount: number; yamlDsl?: string | null;
+  /** Provider pack that installed the scenario. */
+  packId?: string | null;
 }
 
 export interface ScenarioCreateRequest { name: string; description: string; sessionRef: string; yamlDsl: string; }

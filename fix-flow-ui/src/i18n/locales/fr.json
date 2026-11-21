@@ -67,7 +67,11 @@
     "duplicateTitle": "Dupliquer",
     "deleteTitle": "Supprimer",
     "noScenarios": "Aucun scénario",
-    "noMatch": "Aucun scénario ne correspond à « {{search}} »"
+    "noMatch": "Aucun scénario ne correspond à « {{search}} »",
+    "packFilter": "Filtrer par pack",
+    "allPacks": "Tous les scénarios",
+    "noPack": "Hors pack",
+    "packBadge": "pack {{pack}}"
   },
   "datasets": {
     "open": "Jeux de données",
@@ -91,6 +95,30 @@
     "removeColumn": "Supprimer la colonne",
     "renameColumn": "Nom de la colonne",
     "pack": "pack : {{pack}}",
+    "failed": "Échec de l'opération : {{message}}"
+  },
+  "packs": {
+    "open": "Packs",
+    "title": "Packs de fournisseurs",
+    "close": "Fermer",
+    "import": "Importer un pack",
+    "install": "Installer",
+    "update": "Mettre à jour",
+    "cancel": "Annuler",
+    "export": "Exporter",
+    "delete": "Supprimer",
+    "deleteConfirm": "Supprimer le pack « {{name}} » avec tous ses scénarios, jeux de données, sessions et dictionnaires ?",
+    "none": "Aucun pack installé",
+    "name": "Pack",
+    "version": "Version",
+    "provider": "Fournisseur",
+    "contents": "Contenu",
+    "installedAt": "Installé",
+    "counts": "{{scenarios}} scénarios · {{datasets}} jeux de données · {{sessions}} sessions · {{dictionaries}} dictionnaires",
+    "imported": "Pack {{id}} {{version}} importé :",
+    "replaces": "Remplace la version installée {{version}}",
+    "noValues": "Ce pack ne demande aucune valeur.",
+    "required": "Obligatoires : {{names}}",
     "failed": "Échec de l'opération : {{message}}"
   },
   "palette": {
