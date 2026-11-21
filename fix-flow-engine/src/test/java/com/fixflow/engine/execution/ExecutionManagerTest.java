@@ -406,4 +406,40 @@ class ExecutionManagerTest {
                 .containsExactly(ExecutionStatus.STOPPED, ExecutionStatus.STOPPED, ExecutionStatus.PASSED);
         assertThat(h.started).containsExactly("A", "B", "C");
     }
+
+    @Test
+    void parallel_node_runs_one_child_per_row_of_the_bound_data_set() {
+        List<String> seen = new CopyOnWriteArrayList<>();
+        ProgrammableHandler rec = new ProgrammableHandler(NodeType.SEND_FIX, (n, c) -> {
+            seen.add(c.row().get("Isin"));
+            return NodeHandlerResult.success(n.onSuccess());
+        });
+        NodeDispatcher childDispatcher = new NodeDispatcher(List.of(new StartHandler(), new EndHandler(), rec));
+        NodeDispatcher parentDispatcher = new NodeDispatcher(List.of(new StartHandler(), new EndHandler(),
+                new ParallelHandler(registry, new ScenarioExecutor(childDispatcher), new VariableResolver())));
+        MemDataSets ds = new MemDataSets();
+        DataSet d = ds.save(rows("rs", "A", "B", "C"));
+        ExecutionManagerPersistenceTest.FakePublisher publisher = new ExecutionManagerPersistenceTest.FakePublisher();
+        ExecutionManager mgr = new ExecutionManager(registry, new NodeWalker(parentDispatcher), null, publisher,
+                null, ds);
+
+        Scenario child = scenario("child", start("s"),
+                node("s", NodeType.SEND_FIX).onSuccess("e").build(), Fixtures.endPass("e"));
+        registry.register(child);
+        Scenario parent = scenario("parent", start("par"),
+                node("par", NodeType.PARALLEL).cfg("targetScenarioId", child.id().toString())
+                        .onSuccess("end").build(),
+                Fixtures.endPass("end"));
+        registry.register(parent);
+
+        List<UUID> ids = mgr.start(parent.id(), UUID.randomUUID(), new ExecutionInputs(d.id(), null, false, Map.of()));
+        awaitDone(mgr, ids);
+        assertThat(mgr.getStatus(ids.get(0))).isEqualTo(ExecutionStatus.PASSED);
+        assertThat(seen).containsExactlyInAnyOrder("A", "B", "C");
+        assertThat(publisher.published)
+                .filteredOn(e -> e.type() == com.fixflow.core.domain.execution.ExecutionEventType.NODE_EXITED
+                        && "par".equals(e.nodeId()))
+                .extracting(e -> e.detail())
+                .containsExactly("3/3 children passed");
+    }
 }

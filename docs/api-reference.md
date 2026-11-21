@@ -338,6 +338,9 @@ GET /executions/{id}/events
 ```
 Response: the execution's event log (`EXECUTION_STARTED`, `NODE_ENTERED`, `NODE_EXITED`,
 `MESSAGE_SENT`, `MESSAGE_RECEIVED`, `TIMEOUT`, `ERROR`, `EXECUTION_FINISHED`, …) in order.
+Child runs of `CALL_SCENARIO` and `PARALLEL` have no event log of their own; a `PARALLEL` node reports
+for its children in its `NODE_EXITED` detail (`"<passed>/<total> children passed"`), and every inbound
+message on the session is recorded against the parent execution.
 
 ### Execution FIX messages
 ```

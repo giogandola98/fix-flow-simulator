@@ -351,7 +351,7 @@ ExecutionStatus getStatus(UUID executionId)
 ExecutionContext getContext(UUID executionId)
 ```
 
-**Execution inputs.** `ExecutionInputs(datasetId, rowIndex, allRows, vars)` is validated before anything starts. A context is built per row: scenario `variables` defaults first, then `inputs.vars`, then the data set row (`ctx.row()`, `ctx.rowIndex()`, read by `{{row:..}}` through `VariableResolver.RowPlugin`). The data set is `inputs.datasetId`, else the scenario's `datasetRef` (id or name) looked up in `DataSetRepositoryPort`; the port is optional (null in the unit-test constructors means no data sets). With `allRows` the rows run one after another on one virtual thread (`runBatch`); every row ends in its own status, rows still queued when one is stopped are skipped, not interrupted. `CallScenarioHandler` copies the parent's row into the child context.
+**Execution inputs.** `ExecutionInputs(datasetId, rowIndex, allRows, vars)` is validated before anything starts. A context is built per row: scenario `variables` defaults first, then `inputs.vars`, then the data set row (`ctx.row()`, `ctx.rowIndex()`, read by `{{row:..}}` through `VariableResolver.RowPlugin`). The data set is `inputs.datasetId`, else the scenario's `datasetRef` (id or name) looked up in `DataSetRepositoryPort`; the port is optional (null in the unit-test constructors means no data sets). With `allRows` the rows run one after another on one virtual thread (`runBatch`); every row ends in its own status, rows still queued when one is stopped are skipped, not interrupted. The whole data set is also bound to every context (`ctx.dataSet()`), so a PARALLEL node can read all its rows. `ChildRunner` (shared by `CallScenarioHandler` and `ParallelHandler`) builds child contexts: fresh execution id, parent session, the given row (CALL_SCENARIO: the parent's), the parent's data set, `call:depth` + 1 (max 5), `inputVars`; `StepListener.NOOP`, not registered in `SessionExecutionRegistry`.
 
 **Execution loop** (`runScenario`):
 
@@ -429,6 +429,8 @@ record NodeHandlerResult(
 | `RetryHandler` / `LoopHandler` | Executes sub-graph `maxAttempts` times with `delayMs` between attempts. |
 | `WaitHandler` / `DelayHandler` | `Thread.sleep(timeout.toMillis())`. Returns `onSuccess`. |
 | `HttpRequestHandler` | Issues HTTP request via `java.net.http.HttpClient`. Stores response body in context. |
+| `CallScenarioHandler` | Runs the target scenario synchronously through `ChildRunner`; copies `outputVars` back. |
+| `ParallelHandler` | Runs one child per selected data set row through `ChildRunner`, concurrently on a per-node virtual-thread executor capped by a `Semaphore(maxConcurrency)`; waits for all within the node timeout, then `shutdownNow()` interrupts the rest (their `ExpectFIXHandler` cancels its waiter on interrupt) and waits up to 5 s for them to unwind. Sets `parallel:<id>:passed/failed/<row>:status`. |
 | `EndHandler` / `EndFailHandler` | Returns `success=true/false` with `nextNodeId=null`. |
 
 ### CorrelationEngine
@@ -446,11 +448,20 @@ correlation:
 
 The engine resolves `fromNode`'s stored message, extracts `targetTag`, then checks whether the inbound message's `sourceTag` equals that value. If `correlation` is absent, any message of the right `msgType` matches.
 
+**Selection among waiters.** `onMessage` considers every waiter of the session (EXPECT_FIX
+`CorrelationWaiter`s and ROUTE_FIX `MultiRouteWaiter`s together) whose matchers all hold, and
+completes the one with the most matchers; ties go to the earliest registered (each waiter carries
+a registration sequence number `seq`). A ROUTE_FIX waiter scores the matcher count of its first
+matching rule, 0 for its default rule. Selection and removal run under one lock so two messages
+handled at once can never both take the same waiter; completion happens outside the lock. This is
+what lets PARALLEL children wait on one session for the same MsgType, each on its own correlation
+value.
+
 ### MessageBuffer
 
 `com.fixflow.engine.fix.MessageBuffer`
 
-Thread-safe queue of inbound FIX messages. `ExpectFIXHandler` and `RouteFIXHandler` poll this buffer with backoff. `MessageRouter` (implements `InboundMessageListener`) feeds messages into it as they arrive from QuickFIX/J.
+Thread-safe queue of inbound FIX messages. `ExpectFIXHandler` and `RouteFIXHandler` poll this buffer with backoff. `MessageRouter` (implements `InboundMessageListener`) feeds messages into it as they arrive from QuickFIX/J. `poll(sessionId, matcher)` runs one caller at a time per session (it locks that session's deque): the matcher consumes the message by completing a correlation waiter, so two executions draining the same session at once (e.g. PARALLEL children) must never both take one buffered message.
 
 ### ValidationEngine
 

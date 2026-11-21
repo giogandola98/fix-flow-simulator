@@ -11,6 +11,7 @@ import { WaitNode } from './WaitNode';
 import { HttpRequestNode } from './HttpRequestNode';
 import { RouteFIXNode } from './RouteFIXNode';
 import { CallScenarioNode } from './CallScenarioNode';
+import { ParallelNode } from './ParallelNode';
 
 export const nodeTypes: NodeTypes = {
   START: StartNode,
@@ -29,4 +30,5 @@ export const nodeTypes: NodeTypes = {
   HTTP_REQUEST: HttpRequestNode,
   ROUTE_FIX: RouteFIXNode,
   CALL_SCENARIO: CallScenarioNode,
+  PARALLEL: ParallelNode,
 };

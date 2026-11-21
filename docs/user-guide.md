@@ -348,6 +348,28 @@ Pauses execution for a fixed number of milliseconds, then always continues on th
 
 **Stopped propagation:** If the child is stopped (e.g. execution cancelled), the parent is also stopped immediately.
 
+#### Parallel
+
+**Purpose:** Runs another scenario once per row of the execution's data set, all at the same time on the same FIX session — for example one RFQ inquiry per row, each child waiting for the quotes that carry its own inquiry id. The node passes when every child passes. It sits in the **Flow Control** group of the palette.
+
+**Canvas appearance:** Teal border (`#14b8a6`). Shows the child scenario name and which rows run. Has a success handle and a red failure handle.
+
+**Config fields:**
+
+| Field | Description |
+|---|---|
+| **Child scenario** | The scenario to run for each row. |
+| **Rows** | *All rows* (default) or *Selected rows*: 0-based row indexes, comma separated (e.g. `0, 2, 5`). |
+| **Max concurrent children** | How many children run at once (default 10); the others wait their turn. |
+| **Input Variables** | Copied from the parent into every child, as in Call Scenario. Each child also reads its own row with `{{row:Column}}`. |
+| **Timeout** | Covers the whole node. When it expires, children still running are stopped and count as failed (`TIMEOUT`). |
+
+**Data set:** run the parent with a data set (the *Data set* choice in the run dialog, or the scenario's data set). Without one the node fails.
+
+**Correlation:** in the child, give the Expect FIX both the MsgType and a correlation on the row value, e.g. tag `20117` = `{{row:inquiry}}`. When several children wait for the same MsgType, each message goes to the waiter whose conditions it matches with the most conditions; a waiter with no conditions only gets what nobody else wants.
+
+**Results:** the parent gets `parallel:<nodeId>:passed`, `parallel:<nodeId>:failed` and `parallel:<nodeId>:<row>:status` (usable as `{{var:...}}`), and the event log shows `"<passed>/<total> children passed"`. Child runs have no event log of their own.
+
 **Typical use case:** Extract a reusable sub-flow (e.g. a RFQ handshake) into a separate scenario and call it from multiple parent scenarios.
 
 ---

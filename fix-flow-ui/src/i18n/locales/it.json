@@ -117,6 +117,7 @@
       "DELAY": "Ritardo",
       "HTTP_REQUEST": "Richiesta HTTP",
       "CALL_SCENARIO": "Chiama Scenario",
+      "PARALLEL": "Parallelo",
       "END_PASS": "Fine OK",
       "END_FAIL": "Fine Errore",
       "TIMEOUT": "Timeout",
@@ -127,7 +128,8 @@
       "LOOP": "Esegue un sottografo esattamente N volte; tutte le iterazioni devono riuscire.",
       "WAIT": "Blocca fino al timeout; azione configurabile (continua / fallisce / salta).",
       "DELAY": "Pausa fissa (ms). Continua sempre al successo — nessuna diramazione.",
-      "CALL_SCENARIO": "Esegue un altro scenario come sotto-flusso sincrono riutilizzabile."
+      "CALL_SCENARIO": "Esegue un altro scenario come sotto-flusso sincrono riutilizzabile.",
+      "PARALLEL": "Esegue lo scenario figlio per ogni riga del data set, in parallelo; passa se passano tutti i figli."
     }
   },
   "bottomPanel": {
@@ -283,6 +285,18 @@
       "from": "Da",
       "to": "A",
       "noScenarios": "-- seleziona scenario --"
+    },
+    "parallel": {
+      "desc": "Esegue lo scenario figlio una volta per ogni riga selezionata del data set dell'esecuzione, tutte contemporaneamente su questa sessione. Passa quando passano tutti i figli. Il timeout copre l'intero nodo.",
+      "targetScenario": "Scenario figlio",
+      "noScenario": "-- seleziona scenario --",
+      "rows": "Righe",
+      "allRows": "Tutte le righe",
+      "selectedRows": "Righe selezionate",
+      "rowsHint": "Indici di riga a partire da 0, separati da virgola",
+      "rowsSummary": "righe {{rows}}",
+      "maxConcurrency": "Massimo figli in parallelo",
+      "inputVarsHint": "Copiate dal padre in ogni figlio. Ogni figlio vede anche la propria riga (segnaposto row:Colonna)."
     }
   },
   "executionReport": {

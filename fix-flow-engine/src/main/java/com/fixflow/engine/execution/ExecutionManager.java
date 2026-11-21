@@ -159,6 +159,7 @@ public class ExecutionManager {
                 if (def != null && def.defaultValue() != null) ctx.setVariable(name, def.defaultValue());
             });
             in.vars().forEach(ctx::setVariable);
+            ctx.setDataSet(dataSet);
             if (rows.get(i) != null) {
                 ctx.setRow(rows.get(i));
                 ctx.setRowIndex(rowIndexes.get(i));
@@ -364,6 +365,13 @@ public class ExecutionManager {
                 } else if (node.type() == NodeType.DECISION) {
                     String matchedLabel = ctx.getVariable("node:" + node.id() + ":matchedBranchLabel");
                     if (matchedLabel != null) exitDetail = "Routed via branch: " + matchedLabel;
+                } else if (node.type() == NodeType.PARALLEL) {
+                    String passed = ctx.getVariable("parallel:" + node.id() + ":passed");
+                    String failed = ctx.getVariable("parallel:" + node.id() + ":failed");
+                    if (passed != null && failed != null) {
+                        exitDetail = passed + "/" + (Integer.parseInt(passed) + Integer.parseInt(failed))
+                                + " children passed";
+                    }
                 }
                 emitAndPersist(ctx.executionId(), ExecutionEventType.NODE_EXITED, node.id(), exitDetail);
             } else {
