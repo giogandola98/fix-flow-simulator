@@ -42,6 +42,7 @@
       "heartbeat": "Intervallo heartbeat (sec)",
       "resetOnLogon": "Reset al Logon",
       "resetOnLogout": "Reset al Logout",
+      "autoConnect": "Connetti all'avvio",
       "dataDictionary": "Data dictionary",
       "appDataDictionary": "Data dictionary applicativo",
       "transportDataDictionary": "Data dictionary di trasporto"

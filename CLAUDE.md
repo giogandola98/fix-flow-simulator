@@ -148,7 +148,7 @@ java -Dfixflow.browser.auto-open=false -Dfixflow.no-relaunch=true \
 `GET /api/v1/system/health` reports the store: 200 `UP`, or 503 `DOWN` with the cause. While
 down, every other endpoint answers 503 (not 500) with the same cause.
 
-**Session connect on restart** — QuickFIX/J connectors not persisted. After restart, call `PUT /api/v1/sessions/{id}/connect` for each session. ACCEPTOR must connect before INITIATOR.
+**Session connect on restart** — QuickFIX/J connectors not persisted. Sessions with `autoConnect` are connected by `SessionAutoConnector` on `ApplicationReadyEvent` (ACCEPTORs first, failures logged). Others: call `PUT /api/v1/sessions/{id}/connect` after restart; ACCEPTOR must connect before INITIATOR.
 
 **Loopback FIX testing** — ACCEPTOR (SERVER/CLIENT, port 9001) + INITIATOR (CLIENT/SERVER, port 9001) both in same app instance. Acceptor shows `connected=false` waiting for logon — expected. Initiator shows `connected=true` once logon completes.
 

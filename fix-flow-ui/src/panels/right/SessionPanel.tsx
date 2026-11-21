@@ -26,7 +26,7 @@ type FormValues = FIXSessionCreateRequest;
 const DEFAULTS: FormValues = {
   name: 'default', mode: 'INITIATOR', fixVersion: 'FIX_44', defaultApplVerID: 'FIX.5.0SP2',
   senderCompID: 'CLIENT', targetCompID: 'SERVER', host: 'localhost', port: 9876,
-  heartbeatInterval: 30, resetOnLogon: true, resetOnLogout: false,
+  heartbeatInterval: 30, resetOnLogon: true, resetOnLogout: false, autoConnect: false,
   appDataDictionary: '', transportDataDictionary: '',
 };
 
@@ -71,6 +71,7 @@ export function SessionPanel() {
         targetCompID: activeSession.targetCompID, host: activeSession.host, port: activeSession.port,
         heartbeatInterval: activeSession.heartbeatInterval,
         resetOnLogon: activeSession.resetOnLogon, resetOnLogout: activeSession.resetOnLogout,
+        autoConnect: activeSession.autoConnect ?? false,
         appDataDictionary: activeSession.appDataDictionary ?? '',
         transportDataDictionary: activeSession.transportDataDictionary ?? '',
       });
@@ -262,6 +263,7 @@ export function SessionPanel() {
             </Field>
             <label className="flex items-center gap-2"><input type="checkbox" {...register('resetOnLogon')} /> {t('session.fields.resetOnLogon')}</label>
             <label className="flex items-center gap-2"><input type="checkbox" {...register('resetOnLogout')} /> {t('session.fields.resetOnLogout')}</label>
+            <label className="flex items-center gap-2"><input type="checkbox" {...register('autoConnect')} /> {t('session.fields.autoConnect')}</label>
             <div className="flex gap-1">
               <button type="submit" className="flex-1 px-2 py-1 rounded bg-gray-700 hover:bg-gray-600">{t('session.save')}</button>
               {connected ? (

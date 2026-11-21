@@ -150,7 +150,7 @@ For loopback testing (simulator talks to itself), create one ACCEPTOR and one IN
 
 The **Active session** dropdown lets you switch between saved sessions. The currently selected session is used for all FIX blocks in the running scenario.
 
-> **Note:** After restarting the application, sessions must be reconnected manually — click Connect for each session you need.
+> **Note:** After restarting the application, a session is reconnected automatically only if **Connect at startup** is ticked in its form (acceptors connect before initiators; a session that fails to connect is logged and the others still start). Sessions without the flag must be reconnected manually — click Connect.
 
 ---
 
@@ -735,7 +735,7 @@ To test without an external counterparty:
 - **INITIATOR**: verify Host and Port match the acceptor's settings; ensure the acceptor is running
 - **ACCEPTOR**: the status shows DISCONNECTED while waiting for an initiator — this is normal
 - **CompID mismatch**: SenderCompID on one side must match TargetCompID on the other
-- **After app restart**: reconnect each session manually (connections are not persisted across restarts)
+- **After app restart**: sessions with **Connect at startup** ticked reconnect on their own; reconnect the others manually (connections are not persisted across restarts)
 
 ### Blocks are invisible after reload (visibility: hidden)
 

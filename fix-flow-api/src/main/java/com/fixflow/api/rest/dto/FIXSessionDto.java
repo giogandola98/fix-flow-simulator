@@ -8,7 +8,7 @@ public record FIXSessionDto(
     String senderCompID, String targetCompID, String host, int port,
     int heartbeatInterval, boolean resetOnLogon, boolean resetOnLogout,
     String appDataDictionary, String transportDataDictionary,
-    boolean connected
+    boolean autoConnect, boolean connected
 ) {
     public static FIXSessionDto from(FIXSessionConfig c, boolean connected) {
         return new FIXSessionDto(
@@ -16,7 +16,7 @@ public record FIXSessionDto(
             c.senderCompID(), c.targetCompID(), c.host(), c.port(),
             c.heartbeatInterval(), c.resetOnLogon(), c.resetOnLogout(),
             c.appDataDictionary(), c.transportDataDictionary(),
-            connected
+            c.autoConnect(), connected
         );
     }
 }

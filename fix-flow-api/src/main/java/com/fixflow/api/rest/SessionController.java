@@ -111,7 +111,8 @@ public class SessionController {
             req.host(), req.port(), req.heartbeatInterval(),
             req.resetOnLogon(), req.resetOnLogout(),
             blankToNull(req.appDataDictionary()), blankToNull(req.transportDataDictionary()),
-            existing != null && existing.autoConnect(), existing == null ? null : existing.packId()
+            req.autoConnect() != null ? req.autoConnect() : existing != null && existing.autoConnect(),
+            existing == null ? null : existing.packId()
         );
     }
 
