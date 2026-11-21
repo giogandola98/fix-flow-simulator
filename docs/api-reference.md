@@ -159,6 +159,48 @@ DELETE /dictionaries/{name}
 
 ---
 
+## Data sets
+
+Named tables of string values (a header of unique column names, rows of the same width), editable in the UI and
+meant to feed runs of a scenario row by row. A data set may carry a `packId` when it belongs to a provider pack.
+Names are unique: a duplicate is `409`.
+
+### List data sets
+```
+GET /datasets
+```
+Response: `[{ "id", "name", "packId", "columns": ["a","b"], "rowCount": 2 }]` (no rows).
+
+### Get data set
+```
+GET /datasets/{id}
+```
+Full body: `{ "id", "name", "packId", "columns", "rows": [["1","2"]], "rowCount" }`. `404` if unknown.
+
+### Create / update / delete
+```
+POST   /datasets        { "name", "columns", "rows" }   -> 201
+PUT    /datasets/{id}   { "name", "columns", "rows" }   -> 200 (keeps id and packId)
+DELETE /datasets/{id}                                   -> 204
+```
+`400` for a blank name, no or duplicate columns, or a row whose size differs from the column count.
+
+### Import CSV
+```
+POST /datasets/import        (multipart/form-data, parts "file" and "name")
+```
+RFC 4180 CSV with a header row; a UTF-8 BOM is stripped, CRLF and LF are accepted, fields may be quoted
+(commas, doubled quotes, newlines). `name` defaults to the file name without `.csv`. Response `201`: the full
+data set. A malformed file is `400` naming the line, e.g. `line 3: 2 values, header has 3`; nothing is stored.
+
+### Export CSV
+```
+GET /datasets/{id}/export
+```
+`text/csv` (UTF-8, LF line ends, fields quoted only when needed), as an attachment named `<name>.csv`.
+
+---
+
 ## Scenarios
 
 ### List scenarios
