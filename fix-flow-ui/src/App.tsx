@@ -4,6 +4,7 @@ import FlowCanvas from './canvas/FlowCanvas';
 import LeftPanel from './panels/left/LeftPanel';
 import RightPanel from './panels/right/RightPanel';
 import BottomPanel from './panels/bottom/BottomPanel';
+import DataSetPage from './panels/datasets/DataSetPage';
 import { useExecutionStore } from './store/executionStore';
 import { useExecutionSubscription } from './hooks/useExecutionSubscription';
 
@@ -71,6 +72,7 @@ export default function App() {
         <RightPanel />
       </div>
       <BottomPanel />
+      <DataSetPage />
     </div>
   );
 }

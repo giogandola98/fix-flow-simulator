@@ -301,6 +301,7 @@ The engine's in-flight representation of a FIX message, carried between `FIXSess
 | `EventPublisherPort` | `StompEventPublisher` (STOMP over WebSocket) |
 | `ExecutionRepositoryPort` | `ExecutionRepositoryAdapter` (JPA/H2) |
 | `ScenarioRepositoryPort` | `ScenarioRepositoryAdapter` (JPA/H2) |
+| `DataSetRepositoryPort` | `DataSetRepositoryAdapter` (JPA/H2) |
 | `FIXSessionPort` | `QuickFIXAdapter` (QuickFIX/J) |
 | `InboundMessageListener` | `MessageRouter` (engine internal) |
 
@@ -547,6 +548,7 @@ JPA entities live in `com.fixflow.adapters.persistence.entity`. Entity names map
 | `FIXMessageEntity` | `fix_message` | Raw FIX string + direction |
 | `FIXSessionEntity` | `fix_session` | Session config; `connected` not persisted |
 | `ValidationErrorEntity` | `validation_error` | Per-field rule failures |
+| `DataSetEntity` | `data_sets` | Data set table: unique `name`, nullable `packId`, `columnsJson` / `rowsJson` CLOBs (JSON arrays of strings). CSV parsing and writing is `CsvCodec` in the engine module; the domain record is `DataSet` (`row(int)` gives column to value) |
 
 Repository adapters (`ScenarioRepositoryAdapter`, `ExecutionRepositoryAdapter`, `FIXSessionRepositoryAdapter`) implement the core port interfaces by delegating to Spring Data JPA repositories.
 

@@ -625,6 +625,21 @@ edges:
 
 ---
 
+## Data sets
+
+A **data set** is a named table of values (columns and rows) kept by the simulator, for runs that take their
+values from a table. Open the page with the **Data sets** button at the bottom of the left panel.
+
+- **Import CSV**: pick a `.csv` file (header row first; commas, quoted fields and Excel exports with a BOM are fine).
+  The data set takes the file name. A file whose rows are shorter or longer than the header, or with a repeated
+  column name, is refused and the message names the line.
+- **+ New**: creates an empty data set with one column.
+- **Edit**: click a cell to change it; rename columns in the header; **+ Row** / **+ Column** add, the **x** buttons
+  remove. Press **Save** to store the changes. Names must be unique.
+- **Export CSV** downloads the data set; **Delete** removes it.
+
+---
+
 ## 12. FIX Session Configuration Guide
 
 ### All session fields
