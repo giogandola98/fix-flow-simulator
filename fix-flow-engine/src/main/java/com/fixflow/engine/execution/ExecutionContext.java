@@ -1,5 +1,6 @@
 package com.fixflow.engine.execution;
 
+import com.fixflow.core.domain.dataset.DataSet;
 import com.fixflow.core.domain.execution.ExecutionStatus;
 import com.fixflow.core.domain.scenario.Scenario;
 
@@ -27,6 +28,8 @@ public class ExecutionContext {
     /** Data set row bound to this run (column to value), or null when none. */
     private volatile Map<String, String> row;
     private volatile int rowIndex = -1;
+    /** The data set bound to this run (all its rows), or null when none. Read by PARALLEL. */
+    private volatile DataSet dataSet;
     /** The most recent INBOUND message of this run, whichever node received it. */
     private volatile FIXMessageData lastInboundMessage;
 
@@ -56,6 +59,9 @@ public class ExecutionContext {
     /** 0-based index of the bound row, or -1 when none. */
     public int rowIndex() { return rowIndex; }
     public void setRowIndex(int rowIndex) { this.rowIndex = rowIndex; }
+    /** The data set bound to the run, or null when it has none. */
+    public DataSet dataSet() { return dataSet; }
+    public void setDataSet(DataSet dataSet) { this.dataSet = dataSet; }
 
     public Map<String, String> variables() { return variables; }
     public void setVariable(String k, String v) { variables.put(k, v); }

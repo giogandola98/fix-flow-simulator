@@ -85,4 +85,29 @@ class MessageBufferTest {
         Optional<FIXMessageData> polled = buffer.poll("s1", f -> true);
         assertThat(polled.get().flatFields()).doesNotContainKey(99);
     }
+
+    @Test
+    void concurrent_polls_never_hand_one_message_to_two_matchers() throws Exception {
+        // Two executions draining one session at once (PARALLEL children): the matcher consumes
+        // the message (it completes a waiter), so it must run at most once per buffered message.
+        MessageBuffer buffer = new MessageBuffer();
+        buffer.park("s1", FIXMessageData.ofFields(Fixtures.fields(35, "S")));
+        java.util.concurrent.CountDownLatch bothPolling = new java.util.concurrent.CountDownLatch(2);
+        java.util.concurrent.atomic.AtomicInteger consumed = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.function.Predicate<FIXMessageData> consuming = m -> {
+            bothPolling.countDown();
+            try { bothPolling.await(300, java.util.concurrent.TimeUnit.MILLISECONDS); }
+            catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            consumed.incrementAndGet();
+            return true;
+        };
+        try (var pool = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var a = pool.submit(() -> buffer.poll("s1", consuming));
+            var b = pool.submit(() -> buffer.poll("s1", consuming));
+            long present = java.util.stream.Stream.of(a.get(), b.get()).filter(Optional::isPresent).count();
+            assertThat(present).isEqualTo(1);
+        }
+        assertThat(consumed.get()).isEqualTo(1);
+        assertThat(buffer.size("s1")).isZero();
+    }
 }

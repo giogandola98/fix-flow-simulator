@@ -41,20 +41,25 @@ public class MessageBuffer {
         Deque<BufferedMessage> deque = buffers.get(sessionId);
         if (deque == null) return Optional.empty();
 
-        Instant now = Instant.now();
-        Iterator<BufferedMessage> it = deque.iterator();
-        while (it.hasNext()) {
-            BufferedMessage m = it.next();
-            if (now.toEpochMilli() - m.parkedAt().toEpochMilli() > ttlMs) {
-                it.remove();
-                continue;
+        // One poll per session at a time: the matcher consumes the message (it completes a
+        // correlation waiter), so two executions draining the same session concurrently must not
+        // both test — and both consume — the same buffered message before either removes it.
+        synchronized (deque) {
+            Instant now = Instant.now();
+            Iterator<BufferedMessage> it = deque.iterator();
+            while (it.hasNext()) {
+                BufferedMessage m = it.next();
+                if (now.toEpochMilli() - m.parkedAt().toEpochMilli() > ttlMs) {
+                    it.remove();
+                    continue;
+                }
+                if (matcher.test(m.message())) {
+                    it.remove();
+                    return Optional.of(m.message());
+                }
             }
-            if (matcher.test(m.message())) {
-                it.remove();
-                return Optional.of(m.message());
-            }
+            return Optional.empty();
         }
-        return Optional.empty();
     }
 
     public void pause() { paused.set(true); }

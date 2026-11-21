@@ -33,6 +33,7 @@ edges: []
 | `DECISION` | Evaluate a condition expression; branch on true/false. |
 | `ROUTE_FIX` | Wait for inbound FIX; route to first matching rule. |
 | `CALL_SCENARIO` | Synchronously execute another scenario as a reusable sub-flow. |
+| `PARALLEL` | Run another scenario once per data set row, concurrently on the same session; pass when all children pass. |
 | `BRANCH` | Alias for `DECISION`. |
 | `RETRY` / `LOOP` | Retry a sub-graph N times with delay. |
 | `WAIT` / `DELAY` / `TIMEOUT` | Pause for a duration. |
@@ -155,6 +156,21 @@ A `correlation` block that names no `fromNode` and no `expectedValue` carries no
 ignored — including the empty `correlation: {}` that older editor exports contain. A block that
 does name a `fromNode` whose message has no such tag at run time fails the node immediately, with
 the reason, rather than waiting for the timeout.
+
+### Several waiters on one session
+
+Several executions — or the children of a `PARALLEL` node — can wait on the same session at the
+same time, even for the same MsgType. Each inbound message goes to exactly one waiter:
+
+1. only waiters whose conditions **all** hold are candidates;
+2. the candidate with the **most conditions** wins — `{35: S, 20117: INQ2}` beats `{35: S}`,
+   which beats a waiter with no conditions at all;
+3. on a tie, the waiter registered **first** wins.
+
+A waiter with no conditions therefore only receives what no more specific waiter wants. A
+`ROUTE_FIX` node takes part with the conditions of its first matching rule; its default rule (no
+matchers) counts as zero conditions. A message that arrives before any waiter wants it is buffered
+and offered again each time a waiter registers.
 
 ## VALIDATE config
 
@@ -300,7 +316,7 @@ config:
       targetNodeId: unexpected-msg
 ```
 
-Rules evaluated top-to-bottom; first match wins. Matcher values support `{{node:id:tagN}}` placeholders resolved at execution time. After routing, matched rule label appears in the `NODE_EXITED` event detail.
+Within one node, rules are evaluated top-to-bottom; first match wins (across waiters, see [Several waiters on one session](#several-waiters-on-one-session)). Matcher values support `{{node:id:tagN}}` placeholders resolved at execution time. After routing, matched rule label appears in the `NODE_EXITED` event detail.
 
 ## CALL_SCENARIO config
 
@@ -326,6 +342,59 @@ Executes another scenario synchronously as a sub-flow. The child inherits the pa
 
 **STOPPED propagation:** If the child is stopped (e.g. the execution is cancelled), the parent execution is also stopped immediately.
 
+## PARALLEL config
+
+Runs another scenario once per selected row of the execution's data set, all at the same time
+on the parent's FIX session, and waits for all of them. Each child run is bound to its own row, so
+an `EXPECT_FIX` in the child can correlate on a value of that row while its siblings wait for the
+same MsgType (see [Several waiters on one session](#several-waiters-on-one-session)).
+
+```yaml
+- id: inquiries
+  name: All inquiries
+  type: PARALLEL
+  config:
+    targetScenarioId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"   # UUID of the child scenario
+    rows: all              # "all" (default) or a list of 0-based row indexes, e.g. [0, 2, 5]
+    inputVars:             # copied from the parent into every child, as in CALL_SCENARIO
+      - from: "var:dealer"
+        to: "dealer"
+    maxConcurrency: 10     # children running at once (default 10); the rest wait their turn
+  timeout: { value: 60, unit: SECONDS, onTimeout: FAIL }   # covers the whole node
+  onSuccess: all-done
+  onFailure: some-failed
+```
+
+The child scenario then waits for its own message, e.g.
+
+```yaml
+  type: EXPECT_FIX
+  config:
+    msgType: S
+    correlation: { sourceTag: 20117, expectedValue: "{{row:inquiry}}" }
+```
+
+| aspect | behaviour |
+|---|---|
+| data set | the one bound to the execution (`datasetId` in the execute request, else the scenario's `datasetRef`); without one the node fails |
+| rows | `all`, or a list of indexes; an index out of range fails the node before any child starts |
+| child run | own execution id, parent's session, its row (`{{row:..}}`, `{{row:#}}`), only the `inputVars`; no events of its own and no output variables |
+| result | `onSuccess` when every child ends `PASSED`, else `onFailure` |
+| timeout | covers the whole node. When it expires, the children still running are interrupted (their waiting nodes cancel their correlation waiters) and count as failed with status `TIMEOUT`; `onTimeout: FAIL`/`RETRY` → `onFailure`, `CONTINUE` → `onSuccess`, `JUMP` → `jumpTo`. Without a timeout the node waits as long as its children do |
+| stop | stopping the execution interrupts every child |
+| depth | shares the CALL_SCENARIO depth limit of 5 |
+
+Variables set on the parent:
+
+| variable | value |
+|---|---|
+| `parallel:<nodeId>:passed` | number of children that ended `PASSED` |
+| `parallel:<nodeId>:failed` | number of the others |
+| `parallel:<nodeId>:<row>:status` | `PASSED`, `FAILED`, `STOPPED` or `TIMEOUT` for row index `<row>` |
+
+The node's `NODE_EXITED` event detail is `"<passed>/<total> children passed"`; when the node fails,
+its `ERROR` event carries the same text (prefixed `timeout: ` after a timeout).
+
 ## Variable syntax
 
 | placeholder | meaning |
@@ -347,7 +416,7 @@ Executes another scenario synchronously as a sub-flow. The child inherits the pa
 | `{{node:id:gNNN.i:tagM}}` | tag M of entry `i` (0-based) of group NNN on node `id` |
 | `{{node:id:gNNN.i:tagM:offset:+2d}}` | same, with a date offset applied |
 
-Placeholders are also resolved in the expected values of `EXPECT_FIX` (`msgType`, correlation `expectedValue`, legacy `expectedValue`), so `{{row:..}}` and `{{var:..}}` can be matched on the wire. A `CALL_SCENARIO` child run sees the same data set row as its parent.
+Placeholders are also resolved in the expected values of `EXPECT_FIX` (`msgType`, correlation `expectedValue`, legacy `expectedValue`), so `{{row:..}}` and `{{var:..}}` can be matched on the wire. A `CALL_SCENARIO` child run sees the same data set row as its parent; each `PARALLEL` child sees its own row.
 
 Offset format: `[+-](\d+)[smhd]` (seconds, minutes, hours, days).
 

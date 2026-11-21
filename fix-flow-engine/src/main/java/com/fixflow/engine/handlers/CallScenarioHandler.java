@@ -19,20 +19,15 @@ import java.util.UUID;
 @Component
 public class CallScenarioHandler implements NodeHandler {
 
-    private static final int MAX_DEPTH = 5;
-    private static final String DEPTH_KEY = "call:depth";
-
     private final ScenarioRegistry registry;
-    private final ScenarioExecutorPort executor;
-    private final VariableResolver resolver;
+    private final ChildRunner children;
 
     @Autowired
     public CallScenarioHandler(ScenarioRegistry registry,
                                @Lazy ScenarioExecutorPort executor,
                                VariableResolver resolver) {
         this.registry = registry;
-        this.executor = executor;
-        this.resolver = resolver;
+        this.children = new ChildRunner(executor, resolver);
     }
 
     @Override
@@ -58,28 +53,13 @@ public class CallScenarioHandler implements NodeHandler {
             return NodeHandlerResult.failure(node.onFailure(), "Scenario not found: " + targetId);
         }
 
-        int depth = parseDepth(ctx.getVariable(DEPTH_KEY));
-        int childDepth = depth + 1;
-        if (childDepth > MAX_DEPTH) {
-            return NodeHandlerResult.failure(node.onFailure(),
-                    "Max call depth exceeded (" + MAX_DEPTH + ")");
+        ExecutionContext childCtx;
+        try {
+            childCtx = children.run(target, ctx, ctx.row(), readVarList(node.config(), "inputVars"));
+        } catch (ChildRunner.MaxDepthExceededException e) {
+            return NodeHandlerResult.failure(node.onFailure(), e.getMessage());
         }
-
-        ExecutionContext childCtx = new ExecutionContext(UUID.randomUUID(), target, ctx.sessionId());
-        childCtx.setRow(ctx.row());
-        childCtx.setRowIndex(ctx.rowIndex());
-        childCtx.setVariable(DEPTH_KEY, String.valueOf(childDepth));
-
-        List<Map<String, String>> inputVars = readVarList(node.config(), "inputVars");
-        for (Map<String, String> entry : inputVars) {
-            String from = entry.get("from");
-            String to = entry.get("to");
-            if (from == null || to == null) continue;
-            String resolved = resolver.resolveAll("{{" + from + "}}", ctx);
-            childCtx.setVariable(to, resolved);
-        }
-
-        ExecutionStatus childStatus = executor.execute(target, childCtx);
+        ExecutionStatus childStatus = childCtx.status();
 
         if (childStatus == ExecutionStatus.STOPPED) {
             ctx.setStatus(ExecutionStatus.STOPPED);
@@ -103,14 +83,8 @@ public class CallScenarioHandler implements NodeHandler {
                 "Sub-scenario ended with FAIL: " + target.name());
     }
 
-    private static int parseDepth(String value) {
-        if (value == null) return 0;
-        try { return Integer.parseInt(value); }
-        catch (NumberFormatException e) { return 0; }
-    }
-
     @SuppressWarnings("unchecked")
-    private static List<Map<String, String>> readVarList(Map<String, Object> config, String key) {
+    static List<Map<String, String>> readVarList(Map<String, Object> config, String key) {
         Object raw = config.get(key);
         if (raw instanceof List<?> list) {
             return (List<Map<String, String>>) list;

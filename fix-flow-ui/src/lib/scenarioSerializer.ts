@@ -101,7 +101,21 @@ function parseGroups(groups: YamlGroupSpec[]): Array<Record<string, unknown>> {
   }));
 }
 
+/**
+ * PARALLEL `rows`: the engine accepts `"all"` or a list of 0-based row indexes. A missing value
+ * is written as `"all"` so the YAML says what runs; a comma separated string (hand-written YAML)
+ * is read as a list.
+ */
+function normalizeParallelRows(rows: unknown): 'all' | number[] {
+  if (Array.isArray(rows)) return rows.map((r) => Number(r)).filter((n) => Number.isInteger(n) && n >= 0);
+  if (typeof rows === 'string' && rows.trim() !== '' && rows.trim().toLowerCase() !== 'all') {
+    return rows.split(',').map((s) => s.trim()).filter((s) => /^\d+$/.test(s)).map(Number);
+  }
+  return 'all';
+}
+
 function serializeConfig(type: NodeType, config: Record<string, unknown>): Record<string, unknown> {
+  if (type === 'PARALLEL') return { ...config, rows: normalizeParallelRows(config.rows) };
   if (type === 'SEND_FIX') {
     const out = { ...config };
     if (Array.isArray(config.fields)) {
@@ -127,6 +141,7 @@ function serializeConfig(type: NodeType, config: Record<string, unknown>): Recor
 }
 
 function parseConfig(type: NodeType, config: Record<string, unknown>): Record<string, unknown> {
+  if (type === 'PARALLEL' && config.rows !== undefined) return { ...config, rows: normalizeParallelRows(config.rows) };
   if (type === 'SEND_FIX') {
     const out = { ...config };
     if (config.fields != null && !Array.isArray(config.fields)) {

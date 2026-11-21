@@ -92,10 +92,17 @@ public class MessageRouter implements InboundMessageListener {
             return;
         }
         boolean consumed = correlation.onMessage(sessionId, message);
-        if (!consumed) buffer.park(sessionId, message);
-        record(sessionId, executions, message, consumed
-                ? "matched by a waiting block"
-                : "no block was waiting for it — buffered");
+        if (consumed) {
+            record(sessionId, executions, message, "matched by a waiting block");
+            return;
+        }
+        buffer.park(sessionId, message);
+        record(sessionId, executions, message, "no block was waiting for it — buffered");
+        // A waiter may have registered — and drained an empty buffer — between the miss above and
+        // the park: nobody would drain for it again, so drain once more now. Recorded first so a
+        // message with no execution to attribute it to is still logged when the drain consumes it.
+        // poll is serialised per session, so the message can still be consumed only once.
+        drain(sessionId);
     }
 
     public void drain(String sessionId) {

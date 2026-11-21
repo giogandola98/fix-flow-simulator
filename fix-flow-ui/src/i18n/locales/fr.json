@@ -117,6 +117,7 @@
       "DELAY": "Délai",
       "HTTP_REQUEST": "Requête HTTP",
       "CALL_SCENARIO": "Appel Scénario",
+      "PARALLEL": "Parallèle",
       "END_PASS": "Fin OK",
       "END_FAIL": "Fin Erreur",
       "TIMEOUT": "Timeout",
@@ -127,7 +128,8 @@
       "LOOP": "Exécute un sous-graphe exactement N fois ; toutes les itérations doivent réussir.",
       "WAIT": "Bloque jusqu'au timeout ; action configurable (continuer / échouer / sauter).",
       "DELAY": "Pause fixe (ms). Continue toujours au succès — pas de branchement.",
-      "CALL_SCENARIO": "Exécute un autre scénario comme sous-flux synchrone réutilisable."
+      "CALL_SCENARIO": "Exécute un autre scénario comme sous-flux synchrone réutilisable.",
+      "PARALLEL": "Exécute le scénario enfant pour chaque ligne du jeu de données, en parallèle ; réussit si tous les enfants réussissent."
     }
   },
   "bottomPanel": {
@@ -283,6 +285,18 @@
       "from": "De",
       "to": "Vers",
       "noScenarios": "-- sélectionner scénario --"
+    },
+    "parallel": {
+      "desc": "Exécute le scénario enfant une fois par ligne sélectionnée du jeu de données de l'exécution, toutes en même temps sur cette session. Réussit quand tous les enfants réussissent. Le délai couvre tout le nœud.",
+      "targetScenario": "Scénario enfant",
+      "noScenario": "-- sélectionner scénario --",
+      "rows": "Lignes",
+      "allRows": "Toutes les lignes",
+      "selectedRows": "Lignes sélectionnées",
+      "rowsHint": "Index de ligne à partir de 0, séparés par des virgules",
+      "rowsSummary": "lignes {{rows}}",
+      "maxConcurrency": "Enfants simultanés max",
+      "inputVarsHint": "Copiées du parent dans chaque enfant. Chaque enfant voit aussi sa propre ligne (marqueurs row:Colonne)."
     }
   },
   "executionReport": {

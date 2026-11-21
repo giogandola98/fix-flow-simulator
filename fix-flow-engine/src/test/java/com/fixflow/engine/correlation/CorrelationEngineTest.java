@@ -111,4 +111,93 @@ class CorrelationEngineTest {
         assertThatThrownBy(() -> engine.registerMulti("m1", SESSION, List.of()))
                 .isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    void two_waiters_same_type_message_goes_to_matching_one() {
+        CompletableFuture<FIXMessageData> a = engine.registerAll("exec-A", SESSION, Map.of(35, "S", 20117, "1"));
+        CompletableFuture<FIXMessageData> b = engine.registerAll("exec-B", SESSION, Map.of(35, "S", 20117, "2"));
+        assertThat(engine.onMessage(SESSION, Fixtures.fields(35, "S", 20117, "2"))).isTrue();
+        assertThat(b).isCompleted();
+        assertThat(a).isNotDone();
+        assertThat(engine.onMessage(SESSION, Fixtures.fields(35, "S", 20117, "1"))).isTrue();
+        assertThat(a).isCompleted();
+    }
+
+    @Test
+    void specific_waiter_wins_over_catch_all() {
+        // Catch-alls registered first, under several ids so map iteration order cannot hide the bug:
+        // registration order alone must not hand them the message.
+        List<CompletableFuture<FIXMessageData>> catchAlls = new java.util.ArrayList<>();
+        for (String id : List.of("exec-any", "a", "zz", "q7", "m")) catchAlls.add(engine.registerAll(id, SESSION, Map.of()));
+        CompletableFuture<FIXMessageData> any = catchAlls.get(0);
+        CompletableFuture<FIXMessageData> specific =
+                engine.registerAll("exec-specific", SESSION, Map.of(35, "S", 20117, "2"));
+        assertThat(engine.onMessage(SESSION, Fixtures.fields(35, "S", 20117, "2"))).isTrue();
+        assertThat(specific).isCompleted();
+        assertThat(catchAlls).noneMatch(CompletableFuture::isDone);
+        // The catch-all still takes what nobody else matches.
+        assertThat(engine.onMessage(SESSION, Fixtures.fields(35, "S", 20117, "9"))).isTrue();
+        assertThat(any).isCompleted();
+    }
+
+    @Test
+    void specific_waiter_wins_over_catch_all_registered_after_it() {
+        CompletableFuture<FIXMessageData> specific =
+                engine.registerAll("exec-specific", SESSION, Map.of(35, "S", 20117, "2"));
+        CompletableFuture<FIXMessageData> any = engine.registerAll("exec-any", SESSION, Map.of());
+        engine.onMessage(SESSION, Fixtures.fields(35, "S", 20117, "2"));
+        assertThat(specific).isCompleted();
+        assertThat(any).isNotDone();
+    }
+
+    @Test
+    void equally_specific_waiters_go_in_registration_order() {
+        // Ids chosen so that hash iteration order differs from registration order.
+        String[] ids = {"z9", "a1", "m5", "b2", "y8"};
+        List<CompletableFuture<FIXMessageData>> futures = new java.util.ArrayList<>();
+        for (String id : ids) futures.add(engine.registerAll(id, SESSION, Map.of(35, "S")));
+        for (int i = 0; i < ids.length; i++) {
+            engine.onMessage(SESSION, Fixtures.fields(35, "S"));
+            assertThat(futures.get(i)).as("waiter %s", ids[i]).isCompleted();
+            for (int j = i + 1; j < ids.length; j++) assertThat(futures.get(j)).isNotDone();
+        }
+    }
+
+    @Test
+    void route_rule_and_single_waiter_compete_on_matcher_count() {
+        CompletableFuture<CorrelationEngine.RoutedResult> route = engine.registerMulti("exec-route:route:n", SESSION,
+                List.of(new CorrelationEngine.RoutingRule("r1", "quote", Map.of(35, "S", 20117, "7"), "t1"),
+                        new CorrelationEngine.RoutingRule("rd", "default", Map.of(), "tDefault")));
+        CompletableFuture<FIXMessageData> single = engine.registerAll("exec-single", SESSION, Map.of(35, "S"));
+        // 20117=7: the route's 2-matcher rule beats the single 1-matcher waiter.
+        engine.onMessage(SESSION, Fixtures.fields(35, "S", 20117, "7"));
+        assertThat(route).isCompleted();
+        assertThat(route.join().matchedRuleId()).isEqualTo("r1");
+        assertThat(single).isNotDone();
+
+        CompletableFuture<CorrelationEngine.RoutedResult> route2 = engine.registerMulti("exec-route2:route:n", SESSION,
+                List.of(new CorrelationEngine.RoutingRule("rd", "default", Map.of(), "tDefault")));
+        // A default rule counts 0: the single 35=S waiter wins.
+        engine.onMessage(SESSION, Fixtures.fields(35, "S"));
+        assertThat(single).isCompleted();
+        assertThat(route2).isNotDone();
+    }
+
+    @Test
+    void concurrent_messages_complete_each_waiter_once() {
+        int n = 50;
+        List<CompletableFuture<FIXMessageData>> futures = new java.util.ArrayList<>();
+        for (int i = 0; i < n; i++) futures.add(engine.registerAll("e" + i, SESSION, Map.of(35, "S")));
+        java.util.concurrent.atomic.AtomicInteger consumed = new java.util.concurrent.atomic.AtomicInteger();
+        try (var pool = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            for (int i = 0; i < n * 2; i++) {
+                pool.submit(() -> {
+                    if (engine.onMessage(SESSION, Fixtures.fields(35, "S"))) consumed.incrementAndGet();
+                });
+            }
+        }
+        assertThat(consumed.get()).isEqualTo(n);
+        assertThat(futures).allMatch(CompletableFuture::isDone);
+        assertThat(engine.pendingCount()).isZero();
+    }
 }

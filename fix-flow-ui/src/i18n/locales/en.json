@@ -117,6 +117,7 @@
       "DELAY": "Delay",
       "HTTP_REQUEST": "HTTP Request",
       "CALL_SCENARIO": "Call Scenario",
+      "PARALLEL": "Parallel",
       "END_PASS": "End Pass",
       "END_FAIL": "End Fail",
       "TIMEOUT": "Timeout",
@@ -127,7 +128,8 @@
       "LOOP": "Execute a subgraph exactly N times; all iterations must succeed.",
       "WAIT": "Block until timeout; configurable on-timeout action (proceed / fail / jump).",
       "DELAY": "Fixed sleep (ms). Always continues on success — no branching.",
-      "CALL_SCENARIO": "Execute another scenario as a reusable synchronous sub-flow."
+      "CALL_SCENARIO": "Execute another scenario as a reusable synchronous sub-flow.",
+      "PARALLEL": "Run the target scenario once per data set row, concurrently; passes when all children pass."
     }
   },
   "bottomPanel": {
@@ -283,6 +285,18 @@
       "from": "From",
       "to": "To",
       "noScenarios": "-- select scenario --"
+    },
+    "parallel": {
+      "desc": "Runs the target scenario once per selected row of the execution's data set, all at the same time on this session. Passes when every child passes. The timeout covers the whole node.",
+      "targetScenario": "Child scenario",
+      "noScenario": "-- select scenario --",
+      "rows": "Rows",
+      "allRows": "All rows",
+      "selectedRows": "Selected rows",
+      "rowsHint": "0-based row indexes, comma separated",
+      "rowsSummary": "rows {{rows}}",
+      "maxConcurrency": "Max concurrent children",
+      "inputVarsHint": "Copied from the parent into every child. Each child also sees its own row (row:Column placeholders)."
     }
   },
   "executionReport": {
