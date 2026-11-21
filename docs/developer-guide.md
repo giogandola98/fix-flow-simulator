@@ -344,11 +344,14 @@ Package root: `com.fixflow.engine`
 Central orchestrator. Spring `@Service`. Uses `Executors.newVirtualThreadPerTaskExecutor()` — each execution runs on its own virtual thread.
 
 ```java
-UUID start(UUID scenarioId, UUID sessionId)
+UUID start(UUID scenarioId, UUID sessionId)                       // = start(.., ExecutionInputs.none()).get(0)
+List<UUID> start(UUID scenarioId, UUID sessionId, ExecutionInputs inputs)
 void stop(UUID executionId)
 ExecutionStatus getStatus(UUID executionId)
 ExecutionContext getContext(UUID executionId)
 ```
+
+**Execution inputs.** `ExecutionInputs(datasetId, rowIndex, allRows, vars)` is validated before anything starts. A context is built per row: scenario `variables` defaults first, then `inputs.vars`, then the data set row (`ctx.row()`, `ctx.rowIndex()`, read by `{{row:..}}` through `VariableResolver.RowPlugin`). The data set is `inputs.datasetId`, else the scenario's `datasetRef` (id or name) looked up in `DataSetRepositoryPort`; the port is optional (null in the unit-test constructors means no data sets). With `allRows` the rows run one after another on one virtual thread (`runBatch`); every row ends in its own status, rows still queued when one is stopped are skipped, not interrupted. `CallScenarioHandler` copies the parent's row into the child context.
 
 **Execution loop** (`runScenario`):
 

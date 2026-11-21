@@ -487,6 +487,15 @@ In any block's properties, scroll down to **Variable Reference** and click it to
 
 Click **Run** (or **Esegui**) in the top bar. The button is greyed out if no session is connected.
 
+The **Run scenario** dialog opens:
+
+- **Data set**: optional. The scenario's own `datasetRef` is preselected. Its values are used in the scenario as `{{row:Column}}`.
+- **Row**: which row of the data set to use (row 0 by default); the first columns of each row are shown.
+- **All rows**: one execution per row, one after another. A failed row does not stop the next one. The canvas shows the first execution; the others are listed by the API (`executionIds`).
+- **+ Variable**: name/value pairs passed to the run as `{{var:name}}`, overriding the scenario's defaults.
+
+Press **Start** to run (an unsaved scenario is saved first).
+
 ### During execution
 
 - The currently executing block **pulses green**

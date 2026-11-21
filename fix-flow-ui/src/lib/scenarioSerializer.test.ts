@@ -333,3 +333,23 @@ describe('branch edges drawn from a named handle', () => {
     expect(parsed.edges).toEqual(edges);
   });
 });
+
+describe('scenario level settings round trip', () => {
+  it('keeps datasetRef, variables and runtimePolicy', () => {
+    const full: ScenarioMeta = {
+      ...meta,
+      datasetRef: 'My Rows',
+      runtimePolicy: 'SEQUENTIAL',
+      variables: { qty: { type: 'string', defaultValue: '100' } },
+    };
+    const parsed = parseFromYaml(serializeToYaml([], [], full));
+    expect(parsed.meta).toEqual(full);
+  });
+
+  it('omits them when absent', () => {
+    const doc = yaml.load(serializeToYaml([], [], meta)) as Record<string, unknown>;
+    expect(doc).not.toHaveProperty('datasetRef');
+    expect(doc).not.toHaveProperty('variables');
+    expect(doc).not.toHaveProperty('runtimePolicy');
+  });
+});

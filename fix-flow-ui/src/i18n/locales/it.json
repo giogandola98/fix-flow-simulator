@@ -293,5 +293,19 @@
     "exportPdf": "PDF",
     "exportPdfBusy": "PDF...",
     "exportPdfTitle": "Esporta il diagramma in PDF"
+  },
+  "runDialog": {
+    "title": "Esegui scenario",
+    "dataset": "Data set",
+    "noDataset": "(nessuno)",
+    "row": "Riga",
+    "allRows": "Tutte le righe",
+    "allRowsHint": "Un'esecuzione per riga, {{count}} in totale, una dopo l'altra",
+    "addVar": "+ Variabile",
+    "varName": "Nome variabile",
+    "varValue": "Valore variabile",
+    "removeVar": "Rimuovi variabile",
+    "cancel": "Annulla",
+    "start": "Avvia"
   }
 }

@@ -293,5 +293,19 @@
     "exportPdf": "PDF",
     "exportPdfBusy": "PDF...",
     "exportPdfTitle": "Export the flowchart as a PDF"
+  },
+  "runDialog": {
+    "title": "Run scenario",
+    "dataset": "Data set",
+    "noDataset": "(none)",
+    "row": "Row",
+    "allRows": "All rows",
+    "allRowsHint": "One execution per row, {{count}} in total, one after another",
+    "addVar": "+ Variable",
+    "varName": "Variable name",
+    "varValue": "Variable value",
+    "removeVar": "Remove variable",
+    "cancel": "Cancel",
+    "start": "Start"
   }
 }

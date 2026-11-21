@@ -66,6 +66,8 @@ public class CallScenarioHandler implements NodeHandler {
         }
 
         ExecutionContext childCtx = new ExecutionContext(UUID.randomUUID(), target, ctx.sessionId());
+        childCtx.setRow(ctx.row());
+        childCtx.setRowIndex(ctx.rowIndex());
         childCtx.setVariable(DEPTH_KEY, String.valueOf(childDepth));
 
         List<Map<String, String>> inputVars = readVarList(node.config(), "inputVars");
