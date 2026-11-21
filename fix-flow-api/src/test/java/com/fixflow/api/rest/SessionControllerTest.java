@@ -272,4 +272,34 @@ class SessionControllerTest {
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.id").value(id.toString()));
     }
+
+    @Test
+    void autoConnectIsExposedAndStored() throws Exception {
+        when(sessionRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        FIXSessionRequest req = new FIXSessionRequest("s1", "ACCEPTOR", "FIX_44", null,
+            "SENDER", "TARGET", "localhost", 9999, 30, true, true, null, null, true);
+        mvc.perform(post("/api/v1/sessions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(req)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.autoConnect").value(true));
+    }
+
+    @Test
+    void absentAutoConnectIsFalseOnCreateAndUnchangedOnUpdate() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(sessionRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        mvc.perform(post("/api/v1/sessions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(request("FIX_44"))))
+            .andExpect(jsonPath("$.autoConnect").value(false));
+
+        FIXSessionConfig stored = new FIXSessionConfig(id, "s1", FIXMode.ACCEPTOR, FIXVersion.FIX_44,
+            null, "SENDER", "TARGET", "localhost", 9999, 30, true, true, null, null, true, null);
+        when(sessionRepo.findById(id)).thenReturn(Optional.of(stored));
+        mvc.perform(put("/api/v1/sessions/" + id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(request("FIX_44"))))
+            .andExpect(jsonPath("$.autoConnect").value(true));
+    }
 }

@@ -69,6 +69,7 @@ Body:
 | `port` | yes | TCP port to connect to (INITIATOR) or listen on (ACCEPTOR) |
 | `heartbeatInterval` | yes | seconds (tag 108) |
 | `resetOnLogon` / `resetOnLogout` | no | reset sequence numbers; default `false` |
+| `autoConnect` | no | connect this session when the application starts (acceptors first, then initiators); absent = `false` on create, unchanged on update. The session response carries it |
 | `appDataDictionary` | no | name of an uploaded dictionary (see [Dictionaries](#dictionaries)) used as the application dictionary: `DataDictionary` for `FIX_42`/`FIX_44`, `AppDataDictionary` for `FIXT_11`. `null`/absent keeps the built-in one (`FIX42.xml`, `FIX44.xml`, `FIX50SP2.xml`) |
 | `transportDataDictionary` | no | `FIXT_11` only: transport dictionary; `null` keeps `FIXT11.xml` |
 

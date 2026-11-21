@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SessionPanel } from './SessionPanel';
 import * as sessionsApi from '../../api/sessions';
 import * as dictionariesApi from '../../api/dictionaries';
+import { useSessionStore } from '../../store/sessionStore';
 
 vi.mock('../../api/sessions');
 vi.mock('../../api/dictionaries');
@@ -48,5 +49,27 @@ describe('SessionPanel data dictionary', () => {
       appDataDictionary: 'MY.xml',
       transportDataDictionary: null,
     });
+  });
+});
+
+describe('SessionPanel auto-connect', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useSessionStore.getState().setActiveSession(null);
+  });
+
+  it('saves the Connect at startup checkbox', async () => {
+    vi.mocked(sessionsApi.getSessions).mockResolvedValue([]);
+    vi.mocked(dictionariesApi.getDictionaries).mockResolvedValue([]);
+    vi.mocked(sessionsApi.createSession).mockResolvedValue({
+      id: 's-2', name: 'default', mode: 'INITIATOR', fixVersion: 'FIX_44', defaultApplVerID: '',
+      senderCompID: 'CLIENT', targetCompID: 'SERVER', host: 'localhost', port: 9876,
+      heartbeatInterval: 30, resetOnLogon: true, resetOnLogout: false, connected: false, autoConnect: true,
+    });
+    renderPanel();
+    await userEvent.click(await screen.findByLabelText(/session.fields.autoConnect/));
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+    await waitFor(() => expect(sessionsApi.createSession).toHaveBeenCalled());
+    expect(vi.mocked(sessionsApi.createSession).mock.calls[0][0]).toMatchObject({ autoConnect: true });
   });
 });

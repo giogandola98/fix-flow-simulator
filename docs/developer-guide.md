@@ -1095,8 +1095,9 @@ Sessions are created via the GUI or `POST /api/v1/sessions`. QuickFIX/J handles 
 | `resetOnLogout` | bool | Reset state on logout |
 | `appDataDictionary` | string, optional | Name of a stored dictionary (`DictionaryStore`, folder `fixflow.dictionaries.dir`, default `./dictionaries`) used as `DataDictionary` (FIX 4.x) or `AppDataDictionary` (FIXT.1.1); null = built-in classpath dictionary |
 | `transportDataDictionary` | string, optional | FIXT.1.1 `TransportDataDictionary`; null = `FIXT11.xml` |
+| `autoConnect` | bool, optional | Connected at startup by `SessionAutoConnector` (`ApplicationReadyEvent`): acceptors first, a failure is logged and does not stop the others |
 
-`FIXSessionConfig` also carries `autoConnect` and `packId`; they are persisted but not yet exposed in the REST DTOs.
+`FIXSessionConfig` also carries `packId`, persisted but not exposed in the REST DTOs.
 `QuickFIXAdapter.buildSettings` resolves a dictionary name through `DictionaryStore.resolve` and sets its absolute path
 (QuickFIX/J resolves a setting as URL, then file, then classpath). A missing or unparsable file throws
 `IllegalArgumentException`, which `GlobalExceptionHandler` answers as 400.
