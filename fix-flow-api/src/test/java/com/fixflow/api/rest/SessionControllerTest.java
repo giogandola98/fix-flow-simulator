@@ -286,6 +286,31 @@ class SessionControllerTest {
     }
 
     @Test
+    void absentDictionariesAreKeptOnUpdateAndEmptyStringClears() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(sessionRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        FIXSessionConfig stored = new FIXSessionConfig(id, "s1", FIXMode.ACCEPTOR, FIXVersion.FIX_44,
+            null, "SENDER", "TARGET", "localhost", 9999, 30, true, true, "app.xml", "tr.xml", false, null);
+        when(sessionRepo.findById(id)).thenReturn(Optional.of(stored));
+
+        mvc.perform(put("/api/v1/sessions/" + id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(request("FIX_44"))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.appDataDictionary").value("app.xml"))
+            .andExpect(jsonPath("$.transportDataDictionary").value("tr.xml"));
+
+        FIXSessionRequest clear = new FIXSessionRequest("s1", "ACCEPTOR", "FIX_44", null,
+            "SENDER", "TARGET", "localhost", 9999, 30, true, true, "", " ");
+        mvc.perform(put("/api/v1/sessions/" + id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(clear)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.appDataDictionary").doesNotExist())
+            .andExpect(jsonPath("$.transportDataDictionary").doesNotExist());
+    }
+
+    @Test
     void absentAutoConnectIsFalseOnCreateAndUnchangedOnUpdate() throws Exception {
         UUID id = UUID.randomUUID();
         when(sessionRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));

@@ -67,4 +67,14 @@ class SessionAutoConnectorTest {
         verify(manager).connect(on);
         verify(manager, times(1)).connect(any());
     }
+
+    @Test
+    void failing_session_lookup_is_logged_not_thrown() {
+        // An exception from an ApplicationReadyEvent listener would abort startup.
+        when(repo.findAll()).thenThrow(new IllegalStateException("database unavailable"));
+
+        org.assertj.core.api.Assertions.assertThatCode(connector::connectAll).doesNotThrowAnyException();
+
+        verify(manager, never()).connect(any());
+    }
 }

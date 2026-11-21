@@ -285,6 +285,37 @@ class QuickFIXAdapterTest {
         assertThat(adapter.isConnected(id)).isFalse();
     }
 
+    @Test
+    void reconnectWithBadDictionaryFailsAndKeepsTheLiveConnector(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        int port = freePort();
+        QuickFIXAdapter adapter = new QuickFIXAdapter(newApplication(), new DictionaryStore(dir.toString()));
+        UUID id = UUID.randomUUID();
+        FIXSessionConfig good = new FIXSessionConfig(id, "acc", FIXMode.ACCEPTOR,
+                FIXVersion.FIX_44, null, "SERVER", "CLIENT", "localhost", port, 30, false, false);
+        FIXSessionConfig bad = new FIXSessionConfig(id, "acc", FIXMode.ACCEPTOR,
+                FIXVersion.FIX_44, null, "SERVER", "CLIENT", "localhost", port, 30, false, false,
+                "MISSING.xml", null, false, null);
+        try {
+            adapter.connect(good);
+            @SuppressWarnings("unchecked")
+            Map<UUID, Connector> connectors = (Map<UUID, Connector>) readField(adapter, "connectors");
+            @SuppressWarnings("unchecked")
+            Map<UUID, SessionID> sessions = (Map<UUID, SessionID>) readField(adapter, "sessions");
+            Connector live = connectors.get(id);
+            SessionID liveSid = sessions.get(id);
+
+            assertThatThrownBy(() -> adapter.connect(bad))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("dictionary not found: MISSING.xml");
+
+            assertThat(connectors.get(id)).isSameAs(live);
+            assertThat(sessions.get(id)).isEqualTo(liveSid);
+            assertThat(quickfix.Session.lookupSession(liveSid)).isNotNull();
+        } finally {
+            adapter.disconnect(id);
+        }
+    }
+
     private static int freePort() throws Exception {
         try (ServerSocket s = new ServerSocket(0)) {
             return s.getLocalPort();

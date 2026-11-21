@@ -46,7 +46,7 @@ public class DataSetRepositoryAdapter implements DataSetRepositoryPort {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<DataSet> findByName(String name) { return repo.findByName(name).map(this::toDomain); }
+    public Optional<DataSet> findByName(String name) { return repo.findFirstByNameOrderByCreatedAtAscIdAsc(name).map(this::toDomain); }
 
     @Override
     @Transactional(readOnly = true)

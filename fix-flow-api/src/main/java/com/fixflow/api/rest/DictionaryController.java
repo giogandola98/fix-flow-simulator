@@ -39,6 +39,12 @@ public class DictionaryController {
     @PostMapping(consumes = "multipart/form-data")
     public ResponseEntity<DictionaryDto> upload(@RequestParam("file") MultipartFile file) throws IOException {
         String name = file.getOriginalFilename();
+        // "<packId>__<name>.xml" is how the pack importer stores a pack's dictionaries; an upload
+        // with that shape could overwrite or impersonate one.
+        if (name != null && name.contains("__")) {
+            throw new IllegalArgumentException(
+                "invalid dictionary name '" + name + "': '__' is reserved for pack dictionaries");
+        }
         Path saved;
         try (InputStream in = file.getInputStream()) {
             saved = store.save(name, in);

@@ -62,6 +62,15 @@ public class QuickFIXAdapter implements FIXSessionPort {
 
     @Override
     public void connect(FIXSessionConfig config) {
+        // Settings first: a missing or invalid dictionary throws here (400) while the live session,
+        // if any, is still untouched. Only a config that builds replaces the running connector.
+        SessionSettings settings;
+        try {
+            settings = buildSettings(config);
+        } catch (ConfigError e) {
+            throw new IllegalStateException("Failed to start FIX session " + config.id(), e);
+        }
+
         // Stop and remove any existing connector for this session before creating a new one.
         // Without this, reconnect orphans the old running connector and creates a duplicate QFJ session.
         Connector existing = connectors.remove(config.id());
@@ -72,7 +81,6 @@ public class QuickFIXAdapter implements FIXSessionPort {
         }
 
         try {
-            SessionSettings settings = buildSettings(config);
             MessageStoreFactory storeFactory = new MemoryStoreFactory();
             LogFactory logFactory = new ScreenLogFactory(settings);
             MessageFactory messageFactory = new DefaultMessageFactory();

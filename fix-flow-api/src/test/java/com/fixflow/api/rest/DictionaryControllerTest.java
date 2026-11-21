@@ -77,6 +77,15 @@ class DictionaryControllerTest {
     }
 
     @Test
+    void uploadNameWithDoubleUnderscoreIsReservedForPacks() throws Exception {
+        mvc.perform(multipart("/api/v1/dictionaries")
+                .file(new MockMultipartFile("file", "acme__FIX44.xml", "application/xml", "<fix/>".getBytes())))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("__")));
+        org.mockito.Mockito.verifyNoInteractions(store);
+    }
+
+    @Test
     void uploadInvalidXmlReturns400() throws Exception {
         when(store.save(eq("A.xml"), any(InputStream.class)))
             .thenThrow(new IllegalArgumentException("not a valid QuickFIX/J dictionary"));

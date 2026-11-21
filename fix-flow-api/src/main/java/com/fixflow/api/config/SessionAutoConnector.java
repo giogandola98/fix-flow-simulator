@@ -10,6 +10,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Comparator;
 
 /**
@@ -32,10 +33,18 @@ public class SessionAutoConnector {
 
     @EventListener(ApplicationReadyEvent.class)
     void connectAll() {
-        var sessions = sessionRepo.findAll().stream()
-            .filter(FIXSessionConfig::autoConnect)
-            .sorted(Comparator.comparingInt((FIXSessionConfig c) -> c.mode() == FIXMode.ACCEPTOR ? 0 : 1))
-            .toList();
+        List<FIXSessionConfig> sessions;
+        try {
+            sessions = sessionRepo.findAll().stream()
+                .filter(FIXSessionConfig::autoConnect)
+                .sorted(Comparator.comparingInt((FIXSessionConfig c) -> c.mode() == FIXMode.ACCEPTOR ? 0 : 1))
+                .toList();
+        } catch (Exception e) {
+            // Thrown from an ApplicationReadyEvent listener it would abort startup; the sessions
+            // can still be connected by hand once the store is readable.
+            log.warn("Auto-connect skipped: cannot read sessions: {}", e.toString(), e);
+            return;
+        }
         for (FIXSessionConfig cfg : sessions) {
             try {
                 manager.connect(cfg);

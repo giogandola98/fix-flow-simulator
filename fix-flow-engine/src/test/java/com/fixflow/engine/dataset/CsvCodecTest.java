@@ -80,4 +80,12 @@ class CsvCodecTest {
         String csv = "a,b\n\"x,y\",\"q\"\"\"\n\"l1\nl2\",\n";
         assertThat(CsvCodec.write(CsvCodec.parse("d", csv))).isEqualTo(csv);
     }
+
+    @Test
+    void oneColumnEmptyValueSurvivesExportAndImport() {
+        DataSet ds = new DataSet(null, "d", List.of("a"), List.of(List.of("x"), List.of(""), List.of("y")), null);
+        String csv = CsvCodec.write(ds);
+        assertThat(csv).isEqualTo("a\nx\n\"\"\ny\n");
+        assertThat(CsvCodec.parse("d", csv).rows()).containsExactly(List.of("x"), List.of(""), List.of("y"));
+    }
 }

@@ -98,7 +98,11 @@ public final class CsvCodec {
         for (int i = 0; i < values.size(); i++) {
             if (i > 0) sb.append(',');
             String v = values.get(i);
-            if (v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r")) {
+            if (values.size() == 1 && v.isEmpty()) {
+                // A lone empty value would be a blank line, which parse() skips: quote it so a
+                // one-column row with an empty value survives export and re-import.
+                sb.append("\"\"");
+            } else if (v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r")) {
                 sb.append('"').append(v.replace("\"", "\"\"")).append('"');
             } else {
                 sb.append(v);

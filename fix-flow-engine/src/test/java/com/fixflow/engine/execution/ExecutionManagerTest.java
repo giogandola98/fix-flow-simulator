@@ -150,6 +150,24 @@ class ExecutionManagerTest {
     }
 
     @Test
+    void stopArrivingWhileTheRunIsFinishingKeepsPassed() {
+        // finish() publishes EXECUTION_FINISHED before the context is removed; a stop landing in
+        // that window must not turn the final PASSED into STOPPED.
+        NodeDispatcher d = new NodeDispatcher(List.of(new StartHandler(), new EndHandler()));
+        Scenario s = scenario("pass", start("end"), Fixtures.endPass("end"));
+        registry.register(s);
+        java.util.concurrent.atomic.AtomicReference<ExecutionManager> ref = new java.util.concurrent.atomic.AtomicReference<>();
+        com.fixflow.core.ports.outbound.EventPublisherPort stopOnFinish = e -> {
+            if (e.type() == com.fixflow.core.domain.execution.ExecutionEventType.EXECUTION_FINISHED) {
+                ref.get().stop(e.executionId());
+            }
+        };
+        ExecutionManager mgr = new ExecutionManager(registry, new NodeWalker(d), null, stopOnFinish);
+        ref.set(mgr);
+        assertThat(runToCompletion(mgr, s.id())).isEqualTo(ExecutionStatus.PASSED);
+    }
+
+    @Test
     void completedStatusLookupAfterContextRemoved() {
         NodeDispatcher d = new NodeDispatcher(List.of(new StartHandler(), new EndHandler()));
         Scenario s = scenario("pass", start("end"), Fixtures.endPass("end"));
