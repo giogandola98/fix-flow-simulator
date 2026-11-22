@@ -6,6 +6,10 @@ import { useScenarioStore } from '../../store/scenarioStore';
 import { parseFromYaml } from '../../lib/scenarioSerializer';
 import { Scenario } from '../../types';
 
+/** Pack filter values that are not pack ids ([a-z0-9-]+ never contains '_'). */
+const ALL_PACKS = '__all__';
+const NO_PACK = '__none__';
+
 export function ScenarioList() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -19,6 +23,7 @@ export function ScenarioList() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [search, setSearch] = useState('');
+  const [packFilter, setPackFilter] = useState(ALL_PACKS);
   const renameRef = useRef<HTMLInputElement>(null);
 
   const { data } = useQuery({
@@ -102,7 +107,13 @@ export function ScenarioList() {
   };
 
   const q = search.trim().toLowerCase();
-  const filtered = (data ?? []).filter((s) => !q || s.name.toLowerCase().includes(q));
+  const packIds = [...new Set((data ?? []).map((s) => s.packId).filter((p): p is string => !!p))].sort();
+  // A pack that is no longer installed falls back to "all", so the list never stays empty behind a hidden filter.
+  const activePack = packFilter === NO_PACK || packIds.includes(packFilter) ? packFilter : ALL_PACKS;
+  const filtered = (data ?? []).filter((s) =>
+    (!q || s.name.toLowerCase().includes(q))
+    && (activePack === ALL_PACKS
+      || (activePack === NO_PACK ? !s.packId : s.packId === activePack)));
 
   return (
     // h-full matters: the parent is a plain block, so without it this column is as tall as its
@@ -126,6 +137,19 @@ export function ScenarioList() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        {packIds.length > 0 && (
+          <select
+            data-testid="scenario-pack-filter"
+            aria-label={t('scenarios.packFilter')}
+            className="w-full bg-[#0f1117] border border-[#2a2d3a] rounded px-2 py-1 text-xs mb-2 text-gray-200 focus:outline-none focus:border-blue-500"
+            value={activePack}
+            onChange={(e) => setPackFilter(e.target.value)}
+          >
+            <option value={ALL_PACKS}>{t('scenarios.allPacks')}</option>
+            <option value={NO_PACK}>{t('scenarios.noPack')}</option>
+            {packIds.map((p) => <option key={p} value={p}>{t('scenarios.packBadge', { pack: p })}</option>)}
+          </select>
+        )}
       </div>
       <div
         data-testid="scenario-list"
@@ -158,7 +182,9 @@ export function ScenarioList() {
                 onClick={() => selectMutation.mutate(s)}
               >
                 <div className="font-medium truncate">{s.name}</div>
-                <div className="text-[10px] opacity-70">v{s.version} · {s.nodeCount} nodes</div>
+                <div className="text-[10px] opacity-70">
+                  v{s.version} · {s.nodeCount} nodes{s.packId ? ` · ${t('scenarios.packBadge', { pack: s.packId })}` : ''}
+                </div>
               </button>
             )}
             {renamingId !== s.id && (

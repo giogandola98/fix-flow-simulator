@@ -100,3 +100,30 @@ describe('ScenarioList layout', () => {
     expect(screen.getByText('Bulk 39')).toBeInTheDocument();
   });
 });
+
+describe('ScenarioList pack filter', () => {
+  const own = { ...scenario, id: 'own', name: 'mine' };
+  const packed = { ...scenario, id: 'p1', name: 'demo-main', packId: 'demo' };
+
+  it('is hidden while no scenario comes from a pack', async () => {
+    vi.mocked(api.getScenarios).mockResolvedValue([own] as never);
+    renderList();
+    await screen.findByText('mine');
+    expect(screen.queryByTestId('scenario-pack-filter')).toBeNull();
+  });
+
+  it('narrows the list to one pack or to scenarios outside packs', async () => {
+    vi.mocked(api.getScenarios).mockResolvedValue([own, packed] as never);
+    renderList();
+    await screen.findByText('demo-main');
+    const filter = screen.getByTestId('scenario-pack-filter');
+
+    await userEvent.selectOptions(filter, 'demo');
+    expect(screen.getByText('demo-main')).toBeInTheDocument();
+    expect(screen.queryByText('mine')).toBeNull();
+
+    await userEvent.selectOptions(filter, '__none__');
+    expect(screen.getByText('mine')).toBeInTheDocument();
+    expect(screen.queryByText('demo-main')).toBeNull();
+  });
+});

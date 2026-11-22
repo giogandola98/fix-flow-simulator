@@ -15,3 +15,4 @@ graphify-out/.graphify_python
 graphify-out/.graphify_root
 graphify-out/.graphify_incremental.json
 graphify-out/cache/
+/dictionaries/

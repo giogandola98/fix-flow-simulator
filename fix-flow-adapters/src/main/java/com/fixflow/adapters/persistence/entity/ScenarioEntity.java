@@ -22,6 +22,9 @@ public class ScenarioEntity {
     @Column(columnDefinition = "CLOB")
     private String yamlDsl;
 
+    /** Provider pack that installed the scenario; null for scenarios created in the engine. */
+    private String packId;
+
     @Column(nullable = false)
     private Instant createdAt;
 
@@ -46,6 +49,8 @@ public class ScenarioEntity {
     public void setVersion(String version) { this.version = version; }
     public String getYamlDsl() { return yamlDsl; }
     public void setYamlDsl(String yamlDsl) { this.yamlDsl = yamlDsl; }
+    public String getPackId() { return packId; }
+    public void setPackId(String packId) { this.packId = packId; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 }

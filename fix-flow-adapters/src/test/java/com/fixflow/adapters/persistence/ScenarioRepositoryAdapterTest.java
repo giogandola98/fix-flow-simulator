@@ -173,4 +173,27 @@ class ScenarioRepositoryAdapterTest {
         adapter.save(scenario(id, "with-id", "1.0"));
         assertThat(adapter.findById(id).orElseThrow().id()).isEqualTo(id);
     }
+
+    @Test
+    void packIdIsStoredOnTheRowAndKeptByASaveWithoutOne() {
+        UUID id = UUID.randomUUID();
+        adapter.save(scenario(id, "packed", "1").withIdAndPack(id, "demo"));
+        assertThat(adapter.findById(id).orElseThrow().packId()).isEqualTo("demo");
+        assertThat(adapter.findAll()).singleElement().extracting(Scenario::packId).isEqualTo("demo");
+
+        Scenario edited = adapter.save(scenario(id, "packed-edited", "2"));
+        assertThat(edited.packId()).isEqualTo("demo");
+        assertThat(adapter.findById(id).orElseThrow().packId()).isEqualTo("demo");
+        assertThat(adapter.findById(id).orElseThrow().name()).isEqualTo("packed-edited");
+    }
+
+    @Test
+    void datasetRefSurvivesWhenTheYamlCarriesNoId() {
+        UUID id = UUID.randomUUID();
+        String yaml = "name: no-id\ndatasetRef: instruments\nnodes:\n  - id: s\n    type: START\n";
+        adapter.save(new Scenario(id, "no-id", null, "1", null, null, null, null, null, null, null, yaml));
+        Scenario loaded = adapter.findById(id).orElseThrow();
+        assertThat(loaded.id()).isEqualTo(id);
+        assertThat(loaded.datasetRef()).isEqualTo("instruments");
+    }
 }

@@ -1,0 +1,14 @@
+id: demo
+name: Demo pack
+version: 1.0.0
+provider: Demo
+engineMin: "0.8.0"
+description: Generic pack used by the engine's tests.
+values:
+  - name: SENDER
+    description: SenderCompID of the simulator
+  - name: TARGET
+    description: TargetCompID of the system under test
+  - name: PORT
+    description: Port the acceptor listens on
+    default: "9876"

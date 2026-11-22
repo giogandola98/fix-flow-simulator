@@ -1,4 +1,4 @@
-export type NodeType = 'START' | 'SEND_FIX' | 'EXPECT_FIX' | 'VALIDATE' | 'WAIT' | 'TIMEOUT' | 'DECISION' | 'BRANCH' | 'RETRY' | 'LOOP' | 'DELAY' | 'END' | 'END_PASS' | 'END_FAIL' | 'HTTP_REQUEST' | 'ROUTE_FIX' | 'CALL_SCENARIO';
+export type NodeType = 'START' | 'SEND_FIX' | 'EXPECT_FIX' | 'VALIDATE' | 'WAIT' | 'TIMEOUT' | 'DECISION' | 'BRANCH' | 'RETRY' | 'LOOP' | 'DELAY' | 'END' | 'END_PASS' | 'END_FAIL' | 'HTTP_REQUEST' | 'ROUTE_FIX' | 'CALL_SCENARIO' | 'PARALLEL' | 'OPERATOR';
 export type ExecutionStatus = 'RUNNING' | 'PASSED' | 'FAILED' | 'STOPPED';
 export type FIXVersion = 'FIX_42' | 'FIX_44' | 'FIXT_11';
 export type FIXMode = 'INITIATOR' | 'ACCEPTOR';
@@ -19,6 +19,8 @@ export interface ScenarioEdge { from: string; to: string; label: string; sourceH
 export interface Scenario {
   id: string; name: string; description: string; version: string;
   sessionRef: string; nodeCount: number; yamlDsl?: string | null;
+  /** Provider pack that installed the scenario. */
+  packId?: string | null;
 }
 
 export interface ScenarioCreateRequest { name: string; description: string; sessionRef: string; yamlDsl: string; }
@@ -28,14 +30,16 @@ export interface FIXSessionConfig {
   id: string; name: string; mode: FIXMode; fixVersion: FIXVersion;
   defaultApplVerID: string; senderCompID: string; targetCompID: string;
   host: string; port: number; heartbeatInterval: number;
-  resetOnLogon: boolean; resetOnLogout: boolean; connected: boolean;
+  resetOnLogon: boolean; resetOnLogout: boolean; connected: boolean; autoConnect?: boolean;
+  appDataDictionary?: string | null; transportDataDictionary?: string | null;
 }
 
 export interface FIXSessionCreateRequest {
   name: string; mode: string; fixVersion: string; defaultApplVerID: string;
   senderCompID: string; targetCompID: string; host: string; port: number;
   heartbeatInterval: number;
-  resetOnLogon: boolean; resetOnLogout: boolean;
+  resetOnLogon: boolean; resetOnLogout: boolean; autoConnect?: boolean;
+  appDataDictionary?: string | null; transportDataDictionary?: string | null;
 }
 
 export interface Execution {

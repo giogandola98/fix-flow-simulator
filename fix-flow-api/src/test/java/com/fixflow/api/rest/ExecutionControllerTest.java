@@ -66,16 +66,40 @@ class ExecutionControllerTest {
         UUID scenarioId = UUID.randomUUID();
         UUID sessionId = UUID.randomUUID();
         UUID execId = UUID.randomUUID();
-        when(manager.start(eq(scenarioId), eq(sessionId))).thenReturn(execId);
+        when(manager.start(eq(scenarioId), eq(sessionId), any(com.fixflow.engine.execution.ExecutionInputs.class)))
+            .thenReturn(List.of(execId));
 
         mvc.perform(post("/api/v1/scenarios/" + scenarioId + "/execute")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(json.writeValueAsString(new StartExecutionRequest(sessionId))))
+                .content(json.writeValueAsString(new StartExecutionRequest(sessionId, null, null, null, null))))
             .andExpect(status().isAccepted())
             .andExpect(header().string("Location", "/api/v1/executions/" + execId))
             .andExpect(jsonPath("$.executionId").value(execId.toString()));
 
-        verify(manager).start(scenarioId, sessionId);
+        verify(manager).start(scenarioId, sessionId, com.fixflow.engine.execution.ExecutionInputs.none());
+    }
+
+    @Test
+    void execute_with_all_rows_returns_ids() throws Exception {
+        UUID scenarioId = UUID.randomUUID();
+        UUID dataset = UUID.randomUUID();
+        UUID a = UUID.randomUUID();
+        UUID b = UUID.randomUUID();
+        when(manager.start(eq(scenarioId), any(), any(com.fixflow.engine.execution.ExecutionInputs.class)))
+            .thenReturn(List.of(a, b));
+
+        mvc.perform(post("/api/v1/scenarios/" + scenarioId + "/execute")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(
+                    new StartExecutionRequest(null, dataset, null, true, Map.of("k", "v")))))
+            .andExpect(status().isAccepted())
+            .andExpect(header().string("Location", "/api/v1/executions/" + a))
+            .andExpect(jsonPath("$.executionId").value(a.toString()))
+            .andExpect(jsonPath("$.executionIds[0]").value(a.toString()))
+            .andExpect(jsonPath("$.executionIds[1]").value(b.toString()));
+
+        verify(manager).start(scenarioId, null,
+            new com.fixflow.engine.execution.ExecutionInputs(dataset, null, true, Map.of("k", "v")));
     }
 
     @Test

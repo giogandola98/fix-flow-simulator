@@ -37,7 +37,7 @@ public class SessionController {
 
     @PostMapping
     public ResponseEntity<FIXSessionDto> create(@RequestBody FIXSessionRequest req) {
-        FIXSessionConfig cfg = toConfig(UUID.randomUUID(), req);
+        FIXSessionConfig cfg = toConfig(UUID.randomUUID(), req, null);
         FIXSessionConfig saved = sessionRepo.save(cfg);
         return ResponseEntity.status(201).body(FIXSessionDto.from(saved, false));
     }
@@ -65,7 +65,7 @@ public class SessionController {
         if (connected && existing.fixVersion() != newVersion) {
             throw new SessionConflictException("Disconnect session before changing FIX version");
         }
-        FIXSessionConfig updated = sessionRepo.save(toConfig(id, req));
+        FIXSessionConfig updated = sessionRepo.save(toConfig(id, req, existing));
         return FIXSessionDto.from(updated, connected);
     }
 
@@ -101,14 +101,22 @@ public class SessionController {
         return ResponseEntity.ok().build();
     }
 
-    private FIXSessionConfig toConfig(UUID id, FIXSessionRequest req) {
+    /**
+     * {@code existing} keeps the fields the request does not carry (auto-connect, pack) and the
+     * dictionaries when the request leaves them out ({@code null}); an empty string clears one.
+     */
+    private FIXSessionConfig toConfig(UUID id, FIXSessionRequest req, FIXSessionConfig existing) {
         return new FIXSessionConfig(
             id, req.name(),
             parseEnum(FIXMode.class, "mode", req.mode()),
             parseEnum(FIXVersion.class, "fixVersion", req.fixVersion()),
             req.defaultApplVerID(), req.senderCompID(), req.targetCompID(),
             req.host(), req.port(), req.heartbeatInterval(),
-            req.resetOnLogon(), req.resetOnLogout()
+            req.resetOnLogon(), req.resetOnLogout(),
+            dictionary(req.appDataDictionary(), existing == null ? null : existing.appDataDictionary()),
+            dictionary(req.transportDataDictionary(), existing == null ? null : existing.transportDataDictionary()),
+            req.autoConnect() != null ? req.autoConnect() : existing != null && existing.autoConnect(),
+            existing == null ? null : existing.packId()
         );
     }
 
@@ -128,5 +136,11 @@ public class SessionController {
             throw new IllegalArgumentException(
                 "Invalid " + field + " '" + value + "'. Allowed values: " + allowed, e);
         }
+    }
+
+    /** Absent ({@code null}) keeps the stored dictionary, blank clears it, anything else replaces it. */
+    private static String dictionary(String requested, String stored) {
+        if (requested == null) return stored;
+        return requested.isBlank() ? null : requested.trim();
     }
 }

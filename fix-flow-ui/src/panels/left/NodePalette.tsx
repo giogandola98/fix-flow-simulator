@@ -24,6 +24,8 @@ const GROUPS: Array<{ titleKey: string; items: PaletteItem[] }> = [
       { type: 'ROUTE_FIX' },
       { type: 'RETRY', descKey: 'palette.descriptions.RETRY' },
       { type: 'LOOP', descKey: 'palette.descriptions.LOOP' },
+      { type: 'PARALLEL', descKey: 'palette.descriptions.PARALLEL' },
+      { type: 'OPERATOR', descKey: 'palette.descriptions.OPERATOR' },
       { type: 'WAIT', descKey: 'palette.descriptions.WAIT' },
       { type: 'DELAY', descKey: 'palette.descriptions.DELAY' },
     ],

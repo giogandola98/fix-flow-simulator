@@ -40,6 +40,7 @@ public class VariableResolver {
             new GroupFieldPlugin(),
             new DateOffsetPlugin(),
             new NodeFieldPlugin(),
+            new RowPlugin(),
             new VarPlugin()
         );
     }
@@ -195,6 +196,23 @@ public class VariableResolver {
             if (fields == null) throw new IllegalStateException("No stored message for node: " + nodeId);
             String v = fields.get(tag);
             return v == null ? "" : v;
+        }
+    }
+
+    /** {@code {{row:Column}}} reads the bound data set row; {@code {{row:#}}} is its 0-based index. */
+    static final class RowPlugin implements VariableResolverPlugin {
+        public boolean supports(String e) { return e.startsWith("row:"); }
+        public String resolve(String e, ExecutionContext c) {
+            String column = e.substring("row:".length());
+            Map<String, String> row = c.row();
+            if (row == null) {
+                throw new IllegalArgumentException("{{row:" + column + "}} used but no data set row is bound");
+            }
+            if (column.equals("#")) return Integer.toString(c.rowIndex());
+            if (!row.containsKey(column)) {
+                throw new IllegalArgumentException("Data set has no column '" + column + "'; columns: " + row.keySet());
+            }
+            return row.get(column);
         }
     }
 

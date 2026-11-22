@@ -2,6 +2,7 @@ package com.fixflow.api.config;
 
 import com.fixflow.api.exception.SessionConflictException;
 import com.fixflow.api.rest.dto.ErrorResponse;
+import com.fixflow.engine.pack.PackConflictException;
 import com.fixflow.engine.scenario.ScenarioParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -91,6 +93,19 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * An upload larger than {@code spring.servlet.multipart.max-file-size} (or the request limit).
+     * The caller's file is too big, so 413 with the limit, not a 500.
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleTooLarge(MaxUploadSizeExceededException ex) {
+        long max = ex.getMaxUploadSize();
+        String limit = max > 0 ? max + " bytes" : "the configured multipart limit";
+        return ResponseEntity.status(413).body(
+            ErrorResponse.of(413, "Payload Too Large", "Upload exceeds the maximum size of " + limit)
+        );
+    }
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex) {
         return ResponseEntity.status(405).body(
@@ -98,8 +113,8 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler(SessionConflictException.class)
-    public ResponseEntity<ErrorResponse> handleConflict(SessionConflictException ex) {
+    @ExceptionHandler({SessionConflictException.class, PackConflictException.class})
+    public ResponseEntity<ErrorResponse> handleConflict(RuntimeException ex) {
         return ResponseEntity.status(409).body(
             ErrorResponse.of(409, "Conflict", ex.getMessage())
         );

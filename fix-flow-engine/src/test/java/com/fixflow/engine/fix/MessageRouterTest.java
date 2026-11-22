@@ -69,4 +69,28 @@ class MessageRouterTest {
         assertThat(buffer.size(SESSION)).isEqualTo(1);
         assertThat(correlation.pendingCount()).isEqualTo(1); // waiter still pending
     }
+
+    @Test
+    void waiter_registering_between_the_miss_and_the_park_still_gets_the_message() {
+        // Reproduces the window between "no waiter matched" and "parked": a waiter registers and
+        // drains in that window (its drain finds nothing yet), and nobody drains after it.
+        CompletableFuture<?>[] late = new CompletableFuture<?>[1];
+        MessageBuffer racing = new MessageBuffer() {
+            boolean first = true;
+            @Override
+            public void park(String sessionId, FIXMessageData message) {
+                if (first) {
+                    first = false;
+                    late[0] = correlation.register("exec-late", SESSION, new CorrelationRule(11, "n", 11, 0), "ORD1");
+                    router.drain(SESSION);
+                }
+                super.park(sessionId, message);
+            }
+        };
+        router = new MessageRouter(correlation, racing);
+        router.onMessage(SESSION, Fixtures.fields(11, "ORD1"));
+        assertThat(late[0]).isCompleted();
+        assertThat(racing.size(SESSION)).isZero();
+        assertThat(correlation.pendingCount()).isZero();
+    }
 }

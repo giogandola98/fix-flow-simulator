@@ -29,6 +29,7 @@
     "delete": "Elim.",
     "deleteConfirm": "Eliminare la sessione \"{{name}}\"?",
     "disconnectBeforeFIXVersion": "Disconnettersi prima di cambiare la versione FIX",
+    "builtInDictionary": "Predefinito",
     "fields": {
       "name": "Nome",
       "mode": "Modalità",
@@ -40,7 +41,11 @@
       "port": "Porta",
       "heartbeat": "Intervallo heartbeat (sec)",
       "resetOnLogon": "Reset al Logon",
-      "resetOnLogout": "Reset al Logout"
+      "resetOnLogout": "Reset al Logout",
+      "autoConnect": "Connetti all'avvio",
+      "dataDictionary": "Data dictionary",
+      "appDataDictionary": "Data dictionary applicativo",
+      "transportDataDictionary": "Data dictionary di trasporto"
     },
     "hints": {
       "mode": "INITIATOR si connette a una controparte. ACCEPTOR ascolta le connessioni FIX in entrata.",
@@ -49,7 +54,8 @@
       "targetCompID": "CompID della controparte — identifica il lato remoto (tag 56).",
       "host": "IP o hostname dell'ACCEPTOR. Rilevante solo per la modalità INITIATOR.",
       "port": "Porta TCP. L'ACCEPTOR ascolta; l'INITIATOR si connette.",
-      "heartbeat": "Secondi tra i messaggi heartbeat (tag FIX 108). Standard: 30."
+      "heartbeat": "Secondi tra i messaggi heartbeat (tag FIX 108). Standard: 30.",
+      "dictionary": "XML opzionale caricato nella cartella dei dictionary (POST /api/v1/dictionaries). Predefinito usa il dictionary incluso per la versione FIX."
     }
   },
   "scenarios": {
@@ -61,7 +67,59 @@
     "duplicateTitle": "Duplica",
     "deleteTitle": "Elimina",
     "noScenarios": "Nessuno scenario",
-    "noMatch": "Nessuno scenario corrisponde a \"{{search}}\""
+    "noMatch": "Nessuno scenario corrisponde a \"{{search}}\"",
+    "packFilter": "Filtra per pack",
+    "allPacks": "Tutti gli scenari",
+    "noPack": "Non da un pack",
+    "packBadge": "pack {{pack}}"
+  },
+  "datasets": {
+    "open": "Set di dati",
+    "title": "Set di dati",
+    "close": "Chiudi",
+    "new": "+ Nuovo",
+    "newName": "nuovo-set-di-dati",
+    "import": "Importa CSV",
+    "export": "Esporta CSV",
+    "save": "Salva",
+    "delete": "Elimina",
+    "deleteConfirm": "Eliminare il set di dati \"{{name}}\"?",
+    "none": "Nessun set di dati",
+    "select": "Seleziona o importa un set di dati",
+    "name": "Nome",
+    "rows": "{{count}} righe",
+    "addRow": "+ Riga",
+    "addColumn": "+ Colonna",
+    "newColumn": "colonna",
+    "removeRow": "Rimuovi riga",
+    "removeColumn": "Rimuovi colonna",
+    "renameColumn": "Nome colonna",
+    "pack": "pack: {{pack}}",
+    "failed": "Operazione fallita: {{message}}"
+  },
+  "packs": {
+    "open": "Pack",
+    "title": "Pack dei provider",
+    "close": "Chiudi",
+    "import": "Importa pack",
+    "install": "Installa",
+    "update": "Aggiorna",
+    "cancel": "Annulla",
+    "export": "Esporta",
+    "delete": "Elimina",
+    "deleteConfirm": "Eliminare il pack \"{{name}}\" con tutti i suoi scenari, set di dati, sessioni e dizionari?",
+    "none": "Nessun pack installato",
+    "name": "Pack",
+    "version": "Versione",
+    "provider": "Provider",
+    "contents": "Contenuto",
+    "installedAt": "Installato",
+    "counts": "{{scenarios}} scenari · {{datasets}} set di dati · {{sessions}} sessioni · {{dictionaries}} dizionari",
+    "imported": "Pack {{id}} {{version}} importato:",
+    "replaces": "Sostituisce la versione installata {{version}}",
+    "noValues": "Questo pack non richiede valori.",
+    "required": "Obbligatori: {{names}}",
+    "failed": "Operazione fallita: {{message}}"
   },
   "palette": {
     "title": "Palette",
@@ -87,17 +145,21 @@
       "DELAY": "Ritardo",
       "HTTP_REQUEST": "Richiesta HTTP",
       "CALL_SCENARIO": "Chiama Scenario",
+      "PARALLEL": "Parallelo",
       "END_PASS": "Fine OK",
       "END_FAIL": "Fine Errore",
       "TIMEOUT": "Timeout",
-      "BRANCH": "Diramazione"
+      "BRANCH": "Diramazione",
+      "OPERATOR": "Operatore"
     },
     "descriptions": {
       "RETRY": "Riesegue un sottografo fino a N volte; si ferma al primo successo.",
       "LOOP": "Esegue un sottografo esattamente N volte; tutte le iterazioni devono riuscire.",
       "WAIT": "Blocca fino al timeout; azione configurabile (continua / fallisce / salta).",
       "DELAY": "Pausa fissa (ms). Continua sempre al successo — nessuna diramazione.",
-      "CALL_SCENARIO": "Esegue un altro scenario come sotto-flusso sincrono riutilizzabile."
+      "CALL_SCENARIO": "Esegue un altro scenario come sotto-flusso sincrono riutilizzabile.",
+      "PARALLEL": "Esegue lo scenario figlio per ogni riga del data set, in parallelo; passa se passano tutti i figli.",
+      "OPERATOR": "Si ferma finché una persona non ha eseguito un passo in un altro sistema e lo conferma o lo boccia qui."
     }
   },
   "bottomPanel": {
@@ -253,6 +315,25 @@
       "from": "Da",
       "to": "A",
       "noScenarios": "-- seleziona scenario --"
+    },
+    "parallel": {
+      "desc": "Esegue lo scenario figlio una volta per ogni riga selezionata del data set dell'esecuzione, tutte contemporaneamente su questa sessione. Passa quando passano tutti i figli. Il timeout copre l'intero nodo.",
+      "targetScenario": "Scenario figlio",
+      "noScenario": "-- seleziona scenario --",
+      "rows": "Righe",
+      "allRows": "Tutte le righe",
+      "selectedRows": "Righe selezionate",
+      "rowsHint": "Indici di riga a partire da 0, separati da virgola",
+      "rowsSummary": "righe {{rows}}",
+      "maxConcurrency": "Massimo figli in parallelo",
+      "inputVarsHint": "Copiate dal padre in ogni figlio. Ogni figlio vede anche la propria riga (segnaposto row:Colonna)."
+    },
+    "operator": {
+      "desc": "Mostra l'istruzione a chi esegue lo scenario e attende la risposta. Conferma segue success, errore segue failure; la nota è salvata come operator:<nodeId>:note. Timeout predefinito 10 minuti.",
+      "instruction": "Istruzione",
+      "instructionHint": "I segnaposto come {{var:x}} o {{row:Colonna}} sono risolti all'apertura del prompt.",
+      "confirmLabel": "Etichetta pulsante conferma",
+      "failLabel": "Etichetta pulsante errore"
     }
   },
   "executionReport": {
@@ -263,5 +344,26 @@
     "exportPdf": "PDF",
     "exportPdfBusy": "PDF...",
     "exportPdfTitle": "Esporta il diagramma in PDF"
+  },
+  "runDialog": {
+    "title": "Esegui scenario",
+    "dataset": "Data set",
+    "noDataset": "(nessuno)",
+    "row": "Riga",
+    "allRows": "Tutte le righe",
+    "allRowsHint": "Un'esecuzione per riga, {{count}} in totale, una dopo l'altra",
+    "addVar": "+ Variabile",
+    "varName": "Nome variabile",
+    "varValue": "Valore variabile",
+    "removeVar": "Rimuovi variabile",
+    "cancel": "Annulla",
+    "start": "Avvia"
+  },
+  "operator": {
+    "title": "Azione dell'operatore richiesta",
+    "note": "Nota (facoltativa)",
+    "confirm": "Fatto",
+    "fail": "Fallito",
+    "error": "Impossibile inviare la risposta"
   }
 }

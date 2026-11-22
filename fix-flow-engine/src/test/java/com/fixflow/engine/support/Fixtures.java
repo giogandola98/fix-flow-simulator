@@ -30,6 +30,13 @@ public final class Fixtures {
                 Arrays.asList(nodes), edges, Map.of(), null);
     }
 
+    public static Scenario scenario(String name, String datasetRef, Map<String, VariableDef> variables,
+                                    ScenarioNode... nodes) {
+        return new Scenario(UUID.randomUUID(), name, "desc", "1", "sess",
+                RuntimePolicy.PARALLEL, List.of(), List.of(),
+                Arrays.asList(nodes), List.of(), variables, null, datasetRef);
+    }
+
     public static ExecutionContext ctx(Scenario s) {
         return new ExecutionContext(UUID.randomUUID(), s, UUID.randomUUID());
     }

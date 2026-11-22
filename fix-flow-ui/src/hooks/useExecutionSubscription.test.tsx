@@ -18,14 +18,18 @@ vi.mock('../app/wsClient', () => ({
 vi.mock('../api/executions', () => ({
   getExecutionEvents: vi.fn(() => Promise.resolve([])),
   getExecutionMessages: vi.fn(() => Promise.resolve([])),
+  getOperatorPrompt: vi.fn(() => Promise.resolve(null)),
 }));
 
 import { useExecutionSubscription } from './useExecutionSubscription';
 import { useExecutionStore } from '../store/executionStore';
+import { getOperatorPrompt } from '../api/executions';
 
 const resetStore = () =>
   useExecutionStore.setState({
     activeExecutionId: null,
+    executionIds: [],
+    finishedStatuses: {},
     executionStatus: 'IDLE',
     events: [],
     messages: [],
@@ -99,6 +103,34 @@ describe('useExecutionSubscription', () => {
     }
   });
 
+  it('reads the open prompt on OPERATOR_PROMPT and clears it on OPERATOR_ANSWERED', async () => {
+    await mountAndReady();
+    const prompt = { executionId: 'child-1', nodeId: 'op', instruction: 'do it' };
+    vi.mocked(getOperatorPrompt).mockResolvedValueOnce(prompt);
+    capturedOnEvent!(evt('o1', 'OPERATOR_PROMPT', { nodeId: 'op', detail: 'do it' }));
+    await waitFor(() => expect(useExecutionStore.getState().operatorPrompt).toEqual(prompt));
+    expect(useExecutionStore.getState().nodeStatuses.op).toBe('running');
+
+    vi.mocked(getOperatorPrompt).mockResolvedValueOnce(null);
+    capturedOnEvent!(evt('o2', 'OPERATOR_ANSWERED', { nodeId: 'op', detail: 'ok: ' }));
+    await waitFor(() => expect(useExecutionStore.getState().operatorPrompt).toBeNull());
+  });
+
+  it('OPERATOR_ANSWERED with detail timeout clears the prompt', async () => {
+    await mountAndReady();
+    useExecutionStore.setState({ operatorPrompt: { executionId: 'exec-1', nodeId: 'op', instruction: 'x' } });
+    vi.mocked(getOperatorPrompt).mockResolvedValueOnce(null);
+    capturedOnEvent!(evt('t1', 'OPERATOR_ANSWERED', { nodeId: 'op', detail: 'timeout' }));
+    await waitFor(() => expect(useExecutionStore.getState().operatorPrompt).toBeNull());
+  });
+
+  it('EXECUTION_FINISHED drops an open prompt', async () => {
+    await mountAndReady();
+    useExecutionStore.setState({ operatorPrompt: { executionId: 'exec-1', nodeId: 'op', instruction: 'x' } });
+    capturedOnEvent!(evt('f1', 'EXECUTION_FINISHED', { detail: 'finished with status STOPPED' }));
+    expect(useExecutionStore.getState().operatorPrompt).toBeNull();
+  });
+
   it('updates node runtime status from NODE_ENTERED / NODE_EXITED / ERROR', async () => {
     await mountAndReady();
     capturedOnEvent!(evt('n1', 'NODE_ENTERED', { nodeId: 'a' }));
@@ -113,5 +145,36 @@ describe('useExecutionSubscription', () => {
     const { unmount } = await mountAndReady();
     unmount();
     await waitFor(() => expect(disposer).toHaveBeenCalled());
+  });
+});
+
+describe('useExecutionSubscription all-rows batch', () => {
+  beforeEach(() => {
+    resetStore();
+    capturedOnEvent = null;
+    vi.mocked(getOperatorPrompt).mockReset();
+  });
+
+  it('follows the next row after the first finishes and shows its operator prompt', async () => {
+    useExecutionStore.setState({
+      activeExecutionId: 'exec-1', executionIds: ['exec-1', 'exec-2'], finishedStatuses: {},
+      executionStatus: 'RUNNING', operatorPrompt: null,
+    });
+    const prompt = { executionId: 'exec-2', nodeId: 'op', instruction: 'Check row 1' };
+    vi.mocked(getOperatorPrompt).mockImplementation((id: string) =>
+      Promise.resolve(id === 'exec-2' ? prompt : null));
+
+    // Same wiring as App: the hook follows the store's active id.
+    renderHook(() => useExecutionSubscription(useExecutionStore((s) => s.activeExecutionId)));
+    await waitFor(() => expect(capturedOnEvent).not.toBeNull());
+    const firstRowHandler = capturedOnEvent!;
+    capturedOnEvent = null;
+
+    firstRowHandler(evt('f1', 'EXECUTION_FINISHED', { detail: 'Execution finished with status PASSED' }));
+
+    await waitFor(() => expect(useExecutionStore.getState().operatorPrompt).toEqual(prompt));
+    expect(useExecutionStore.getState().activeExecutionId).toBe('exec-2');
+    expect(useExecutionStore.getState().executionStatus).toBe('RUNNING');
+    expect(getOperatorPrompt).toHaveBeenCalledWith('exec-2');
   });
 });

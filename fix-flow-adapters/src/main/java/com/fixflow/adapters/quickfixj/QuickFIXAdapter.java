@@ -5,13 +5,16 @@ import com.fixflow.core.domain.session.FIXMode;
 import com.fixflow.core.domain.session.FIXSessionConfig;
 import com.fixflow.core.ports.outbound.FIXSessionPort;
 import com.fixflow.core.ports.outbound.InboundMessageListener;
+import com.fixflow.adapters.dictionary.DictionaryStore;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import quickfix.*;
 import quickfix.Message;
 
+import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,8 +32,17 @@ public class QuickFIXAdapter implements FIXSessionPort {
     private final Map<UUID, Connector> connectors = new ConcurrentHashMap<>();
     private final Map<UUID, SessionID> sessions = new ConcurrentHashMap<>();
 
-    public QuickFIXAdapter(QuickFIXApplicationAdapter application) {
+    private final DictionaryStore dictionaries;
+
+    @Autowired
+    public QuickFIXAdapter(QuickFIXApplicationAdapter application, DictionaryStore dictionaries) {
         this.application = application;
+        this.dictionaries = dictionaries;
+    }
+
+    /** Uses the default dictionary folder; for callers that do not inject a store. */
+    public QuickFIXAdapter(QuickFIXApplicationAdapter application) {
+        this(application, new DictionaryStore("./dictionaries"));
     }
 
     @Override
@@ -50,6 +62,15 @@ public class QuickFIXAdapter implements FIXSessionPort {
 
     @Override
     public void connect(FIXSessionConfig config) {
+        // Settings first: a missing or invalid dictionary throws here (400) while the live session,
+        // if any, is still untouched. Only a config that builds replaces the running connector.
+        SessionSettings settings;
+        try {
+            settings = buildSettings(config);
+        } catch (ConfigError e) {
+            throw new IllegalStateException("Failed to start FIX session " + config.id(), e);
+        }
+
         // Stop and remove any existing connector for this session before creating a new one.
         // Without this, reconnect orphans the old running connector and creates a duplicate QFJ session.
         Connector existing = connectors.remove(config.id());
@@ -60,7 +81,6 @@ public class QuickFIXAdapter implements FIXSessionPort {
         }
 
         try {
-            SessionSettings settings = buildSettings(config);
             MessageStoreFactory storeFactory = new MemoryStoreFactory();
             LogFactory logFactory = new ScreenLogFactory(settings);
             MessageFactory messageFactory = new DefaultMessageFactory();
@@ -253,17 +273,36 @@ public class QuickFIXAdapter implements FIXSessionPort {
         if (cfg.fixVersion() == com.fixflow.core.domain.session.FIXVersion.FIXT_11) {
             settings.setString(sid, "DefaultApplVerID",
                     cfg.defaultApplVerID() == null ? "9" : cfg.defaultApplVerID());
-            settings.setString(sid, "AppDataDictionary", "FIX50SP2.xml");
-            settings.setString(sid, "TransportDataDictionary", "FIXT11.xml");
+            settings.setString(sid, "AppDataDictionary",
+                    dictionaryOrDefault(cfg.appDataDictionary(), "FIX50SP2.xml"));
+            settings.setString(sid, "TransportDataDictionary",
+                    dictionaryOrDefault(cfg.transportDataDictionary(), "FIXT11.xml"));
         } else {
             String dict = switch (cfg.fixVersion()) {
                 case FIX_42 -> "FIX42.xml";
                 case FIX_44 -> "FIX44.xml";
                 default -> "FIX44.xml";
             };
-            settings.setString(sid, "DataDictionary", dict);
+            settings.setString(sid, "DataDictionary", dictionaryOrDefault(cfg.appDataDictionary(), dict));
         }
         return settings;
+    }
+
+    /**
+     * A stored dictionary name resolves to its absolute path (QuickFIX/J tries URL, file, then classpath);
+     * null keeps the built-in classpath dictionary. A missing or unparsable file is a configuration error
+     * (IllegalArgumentException, reported as 400), not a runtime fault.
+     */
+    private String dictionaryOrDefault(String name, String builtIn) {
+        if (name == null || name.isBlank()) return builtIn;
+        Path path = dictionaries.resolve(name)
+                .orElseThrow(() -> new IllegalArgumentException("dictionary not found: " + name));
+        try {
+            new DataDictionary(path.toAbsolutePath().toString());
+        } catch (ConfigError | RuntimeException e) {
+            throw new IllegalArgumentException("dictionary not valid: " + name + ": " + e.getMessage(), e);
+        }
+        return path.toAbsolutePath().toString();
     }
 
     private SessionID sessionIdFromConfig(FIXSessionConfig cfg) {

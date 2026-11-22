@@ -37,8 +37,12 @@ public class ScenarioRepositoryAdapter implements ScenarioRepositoryPort {
         e.setName(scenario.name());
         e.setVersion(scenario.version());
         e.setYamlDsl(scenario.rawYaml() != null ? scenario.rawYaml() : parser.toYaml(scenario));
+        // The pack tag lives on the row, not in the YAML: a save without one (an edit through the
+        // scenario API) keeps the row's tag, so an edited pack scenario stays part of its pack.
+        if (scenario.packId() != null) e.setPackId(scenario.packId());
         scenarioRepo.save(e);
-        return scenario;
+        return e.getPackId() == null || e.getPackId().equals(scenario.packId())
+                ? scenario : scenario.withIdAndPack(scenario.id(), e.getPackId());
     }
 
     @Override
@@ -63,15 +67,12 @@ public class ScenarioRepositoryAdapter implements ScenarioRepositoryPort {
      * writes but hand-authored or imported YAML often does not. Trusting the document therefore
      * handed out a different identity on every read, unrelated to the row it came from, so the
      * scenario could not be fetched, updated, executed or deleted by the id the API had just
-     * listed (issue #94). The row id is the only stable one; it wins.
+     * listed (issue #94). The row id is the only stable one; it wins. The pack tag also comes
+     * from the row.
      */
     private Scenario toDomain(ScenarioEntity e) {
         Scenario parsed = parser.parseYaml(e.getYamlDsl());
-        if (e.getId() == null || e.getId().equals(parsed.id())) return parsed;
-        return new Scenario(
-                e.getId(), parsed.name(), parsed.description(), parsed.version(), parsed.sessionRef(),
-                parsed.runtimePolicy(), parsed.routingRules(), parsed.correlationRules(),
-                parsed.nodes(), parsed.edges(), parsed.variables(), parsed.rawYaml());
+        return parsed.withIdAndPack(e.getId() != null ? e.getId() : parsed.id(), e.getPackId());
     }
 
     @Override

@@ -333,3 +333,52 @@ describe('branch edges drawn from a named handle', () => {
     expect(parsed.edges).toEqual(edges);
   });
 });
+
+describe('scenario level settings round trip', () => {
+  it('keeps datasetRef, variables and runtimePolicy', () => {
+    const full: ScenarioMeta = {
+      ...meta,
+      datasetRef: 'My Rows',
+      runtimePolicy: 'SEQUENTIAL',
+      variables: { qty: { type: 'string', defaultValue: '100' } },
+    };
+    const parsed = parseFromYaml(serializeToYaml([], [], full));
+    expect(parsed.meta).toEqual(full);
+  });
+
+  it('omits them when absent', () => {
+    const doc = yaml.load(serializeToYaml([], [], meta)) as Record<string, unknown>;
+    expect(doc).not.toHaveProperty('datasetRef');
+    expect(doc).not.toHaveProperty('variables');
+    expect(doc).not.toHaveProperty('runtimePolicy');
+  });
+});
+
+describe('PARALLEL config', () => {
+  const par = (config: Record<string, unknown>): ScenarioNode[] => [
+    { id: 'p', name: 'Inquiries', type: 'PARALLEL', config },
+  ];
+
+  it('round-trips target, row list, input vars and max concurrency', () => {
+    const config = {
+      targetScenarioId: '11111111-1111-1111-1111-111111111111',
+      rows: [0, 2],
+      inputVars: [{ from: 'var:dealer', to: 'dealer' }],
+      maxConcurrency: 4,
+    };
+    const yamlStr = serializeToYaml(par(config), [], meta);
+    const doc = yaml.load(yamlStr) as { nodes: Array<{ config: Record<string, unknown> }> };
+    expect(doc.nodes[0].config.rows).toEqual([0, 2]);
+    expect(parseFromYaml(yamlStr).nodes[0].config).toEqual(config);
+  });
+
+  it('writes "all" when no rows are chosen and accepts a comma separated list from hand-written YAML', () => {
+    const doc = yaml.load(serializeToYaml(par({ targetScenarioId: 'x' }), [], meta)) as {
+      nodes: Array<{ config: Record<string, unknown> }>;
+    };
+    expect(doc.nodes[0].config.rows).toBe('all');
+
+    const hand = yaml.dump({ ...meta, nodes: [{ id: 'p', name: 'P', type: 'PARALLEL', config: { rows: '1, 3' } }] });
+    expect(parseFromYaml(hand).nodes[0].config.rows).toEqual([1, 3]);
+  });
+});

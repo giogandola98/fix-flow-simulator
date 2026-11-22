@@ -13,6 +13,10 @@ export interface ScenarioMeta {
   description: string;
   version: string;
   sessionRef: string;
+  /** Scenario level settings the editor does not edit; carried through load and save untouched. */
+  datasetRef?: string;
+  runtimePolicy?: string;
+  variables?: Record<string, { type?: string; defaultValue?: string }>;
 }
 
 interface YamlNode {
@@ -97,7 +101,21 @@ function parseGroups(groups: YamlGroupSpec[]): Array<Record<string, unknown>> {
   }));
 }
 
+/**
+ * PARALLEL `rows`: the engine accepts `"all"` or a list of 0-based row indexes. A missing value
+ * is written as `"all"` so the YAML says what runs; a comma separated string (hand-written YAML)
+ * is read as a list.
+ */
+function normalizeParallelRows(rows: unknown): 'all' | number[] {
+  if (Array.isArray(rows)) return rows.map((r) => Number(r)).filter((n) => Number.isInteger(n) && n >= 0);
+  if (typeof rows === 'string' && rows.trim() !== '' && rows.trim().toLowerCase() !== 'all') {
+    return rows.split(',').map((s) => s.trim()).filter((s) => /^\d+$/.test(s)).map(Number);
+  }
+  return 'all';
+}
+
 function serializeConfig(type: NodeType, config: Record<string, unknown>): Record<string, unknown> {
+  if (type === 'PARALLEL') return { ...config, rows: normalizeParallelRows(config.rows) };
   if (type === 'SEND_FIX') {
     const out = { ...config };
     if (Array.isArray(config.fields)) {
@@ -123,6 +141,7 @@ function serializeConfig(type: NodeType, config: Record<string, unknown>): Recor
 }
 
 function parseConfig(type: NodeType, config: Record<string, unknown>): Record<string, unknown> {
+  if (type === 'PARALLEL' && config.rows !== undefined) return { ...config, rows: normalizeParallelRows(config.rows) };
   if (type === 'SEND_FIX') {
     const out = { ...config };
     if (config.fields != null && !Array.isArray(config.fields)) {
@@ -152,8 +171,12 @@ export function serializeToYaml(
   edges: ScenarioEdge[],
   meta: ScenarioMeta,
 ): string {
+  const { datasetRef, runtimePolicy, variables, ...core } = meta;
   const doc: YamlDoc = {
-    ...meta,
+    ...core,
+    ...(runtimePolicy ? { runtimePolicy } : {}),
+    ...(datasetRef ? { datasetRef } : {}),
+    ...(variables && Object.keys(variables).length > 0 ? { variables } : {}),
     nodes: nodes.map((n) => {
       // A branch edge counts whether it was drawn from an anonymous handle (older nodes, whose
       // single source handle has no id) or from one named after the branch. Requiring NO handle
@@ -213,6 +236,9 @@ export function parseFromYaml(yamlStr: string): {
     description: doc.description ?? '',
     version: String(doc.version ?? '1.0'),
     sessionRef: doc.sessionRef ?? '',
+    ...(doc.runtimePolicy ? { runtimePolicy: doc.runtimePolicy } : {}),
+    ...(doc.datasetRef ? { datasetRef: doc.datasetRef } : {}),
+    ...(doc.variables ? { variables: doc.variables } : {}),
   };
   const nodes: ScenarioNode[] = (doc.nodes ?? []).map((n, idx) => ({
     id: n.id,
@@ -243,4 +269,26 @@ export function parseFromYaml(yamlStr: string): {
   }
 
   return { nodes, edges, meta };
+}
+
+/**
+ * Meta for saving the open scenario: its id/name/... plus the settings the editor does not
+ * edit (datasetRef, variables, runtimePolicy), read back from the stored YAML so a save does
+ * not drop them.
+ */
+export function metaForSave(s: {
+  id: string; name: string; description: string; version: string; sessionRef: string;
+  yamlDsl?: string | null;
+}): ScenarioMeta {
+  const stored = s.yamlDsl ? parseFromYaml(s.yamlDsl).meta : null;
+  return {
+    id: s.id,
+    name: s.name,
+    description: s.description,
+    version: s.version,
+    sessionRef: s.sessionRef,
+    ...(stored?.runtimePolicy ? { runtimePolicy: stored.runtimePolicy } : {}),
+    ...(stored?.datasetRef ? { datasetRef: stored.datasetRef } : {}),
+    ...(stored?.variables ? { variables: stored.variables } : {}),
+  };
 }

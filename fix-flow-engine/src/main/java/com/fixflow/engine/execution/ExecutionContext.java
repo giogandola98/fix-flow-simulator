@@ -1,5 +1,6 @@
 package com.fixflow.engine.execution;
 
+import com.fixflow.core.domain.dataset.DataSet;
 import com.fixflow.core.domain.execution.ExecutionStatus;
 import com.fixflow.core.domain.scenario.Scenario;
 
@@ -24,6 +25,11 @@ public class ExecutionContext {
     private volatile String currentNodeId;
     private final Map<String, String> variables = new ConcurrentHashMap<>();
     private final Map<String, FIXMessageData> nodeMessages = new ConcurrentHashMap<>();
+    /** Data set row bound to this run (column to value), or null when none. */
+    private volatile Map<String, String> row;
+    private volatile int rowIndex = -1;
+    /** The data set bound to this run (all its rows), or null when none. Read by PARALLEL. */
+    private volatile DataSet dataSet;
     /** The most recent INBOUND message of this run, whichever node received it. */
     private volatile FIXMessageData lastInboundMessage;
 
@@ -44,8 +50,37 @@ public class ExecutionContext {
     public void setNodeEventEmitter(BiConsumer<ExecutionEventType, String> emitter) { this.nodeEventEmitter = emitter; }
     public void emitNodeEvent(ExecutionEventType type, String nodeId) { nodeEventEmitter.accept(type, nodeId); }
 
+    /** Emits a node event that carries its own detail text. */
+    @FunctionalInterface
+    public interface NodeDetailEmitter { void emit(ExecutionEventType type, String nodeId, String detail); }
+
+    private volatile NodeDetailEmitter nodeDetailEmitter;
+    public void setNodeDetailEmitter(NodeDetailEmitter emitter) { this.nodeDetailEmitter = emitter; }
+    public NodeDetailEmitter nodeDetailEmitter() { return nodeDetailEmitter; }
+
+    /** Emits with a detail; without a detail emitter it falls back to the plain event. */
+    public void emitNodeEvent(ExecutionEventType type, String nodeId, String detail) {
+        NodeDetailEmitter e = nodeDetailEmitter;
+        if (e != null) e.emit(type, nodeId, detail); else nodeEventEmitter.accept(type, nodeId);
+    }
+
+    /** Executions this run is nested under (CALL_SCENARIO/PARALLEL), nearest parent last; empty at top level. */
+    private volatile java.util.List<UUID> ancestors = java.util.List.of();
+    public java.util.List<UUID> ancestors() { return ancestors; }
+    public void setAncestors(java.util.List<UUID> ancestors) { this.ancestors = java.util.List.copyOf(ancestors); }
+
     public StepListener stepListener() { return stepListener; }
     public void setStepListener(StepListener listener) { this.stepListener = listener == null ? StepListener.NOOP : listener; }
+
+    /** The bound data set row, or null when the run has none. */
+    public Map<String, String> row() { return row; }
+    public void setRow(Map<String, String> row) { this.row = row == null ? null : Map.copyOf(row); }
+    /** 0-based index of the bound row, or -1 when none. */
+    public int rowIndex() { return rowIndex; }
+    public void setRowIndex(int rowIndex) { this.rowIndex = rowIndex; }
+    /** The data set bound to the run, or null when it has none. */
+    public DataSet dataSet() { return dataSet; }
+    public void setDataSet(DataSet dataSet) { this.dataSet = dataSet; }
 
     public Map<String, String> variables() { return variables; }
     public void setVariable(String k, String v) { variables.put(k, v); }

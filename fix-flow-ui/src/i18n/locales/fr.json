@@ -29,6 +29,7 @@
     "delete": "Suppr.",
     "deleteConfirm": "Supprimer la session « {{name}} » ?",
     "disconnectBeforeFIXVersion": "Se déconnecter avant de changer la version FIX",
+    "builtInDictionary": "Par défaut",
     "fields": {
       "name": "Nom",
       "mode": "Mode",
@@ -40,7 +41,11 @@
       "port": "Port",
       "heartbeat": "Intervalle heartbeat (sec)",
       "resetOnLogon": "Réinitialiser au Logon",
-      "resetOnLogout": "Réinitialiser au Logout"
+      "resetOnLogout": "Réinitialiser au Logout",
+      "autoConnect": "Connecter au démarrage",
+      "dataDictionary": "Data dictionary",
+      "appDataDictionary": "Data dictionary applicatif",
+      "transportDataDictionary": "Data dictionary de transport"
     },
     "hints": {
       "mode": "INITIATOR se connecte à une contrepartie. ACCEPTOR écoute les connexions FIX entrantes.",
@@ -49,7 +54,8 @@
       "targetCompID": "CompID de la contrepartie — identifie le côté distant (tag 56).",
       "host": "IP ou nom d'hôte de l'ACCEPTOR. Pertinent uniquement en mode INITIATOR.",
       "port": "Port TCP. L'ACCEPTOR écoute ; l'INITIATOR se connecte.",
-      "heartbeat": "Secondes entre les messages heartbeat (tag FIX 108). Standard : 30."
+      "heartbeat": "Secondes entre les messages heartbeat (tag FIX 108). Standard : 30.",
+      "dictionary": "XML optionnel déposé dans le dossier des dictionnaires (POST /api/v1/dictionaries). Par défaut utilise le dictionnaire intégré à la version FIX."
     }
   },
   "scenarios": {
@@ -61,7 +67,59 @@
     "duplicateTitle": "Dupliquer",
     "deleteTitle": "Supprimer",
     "noScenarios": "Aucun scénario",
-    "noMatch": "Aucun scénario ne correspond à « {{search}} »"
+    "noMatch": "Aucun scénario ne correspond à « {{search}} »",
+    "packFilter": "Filtrer par pack",
+    "allPacks": "Tous les scénarios",
+    "noPack": "Hors pack",
+    "packBadge": "pack {{pack}}"
+  },
+  "datasets": {
+    "open": "Jeux de données",
+    "title": "Jeux de données",
+    "close": "Fermer",
+    "new": "+ Nouveau",
+    "newName": "nouveau-jeu-de-donnees",
+    "import": "Importer CSV",
+    "export": "Exporter CSV",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "deleteConfirm": "Supprimer le jeu de données \"{{name}}\" ?",
+    "none": "Aucun jeu de données",
+    "select": "Sélectionnez ou importez un jeu de données",
+    "name": "Nom",
+    "rows": "{{count}} lignes",
+    "addRow": "+ Ligne",
+    "addColumn": "+ Colonne",
+    "newColumn": "colonne",
+    "removeRow": "Supprimer la ligne",
+    "removeColumn": "Supprimer la colonne",
+    "renameColumn": "Nom de la colonne",
+    "pack": "pack : {{pack}}",
+    "failed": "Échec de l'opération : {{message}}"
+  },
+  "packs": {
+    "open": "Packs",
+    "title": "Packs de fournisseurs",
+    "close": "Fermer",
+    "import": "Importer un pack",
+    "install": "Installer",
+    "update": "Mettre à jour",
+    "cancel": "Annuler",
+    "export": "Exporter",
+    "delete": "Supprimer",
+    "deleteConfirm": "Supprimer le pack « {{name}} » avec tous ses scénarios, jeux de données, sessions et dictionnaires ?",
+    "none": "Aucun pack installé",
+    "name": "Pack",
+    "version": "Version",
+    "provider": "Fournisseur",
+    "contents": "Contenu",
+    "installedAt": "Installé",
+    "counts": "{{scenarios}} scénarios · {{datasets}} jeux de données · {{sessions}} sessions · {{dictionaries}} dictionnaires",
+    "imported": "Pack {{id}} {{version}} importé :",
+    "replaces": "Remplace la version installée {{version}}",
+    "noValues": "Ce pack ne demande aucune valeur.",
+    "required": "Obligatoires : {{names}}",
+    "failed": "Échec de l'opération : {{message}}"
   },
   "palette": {
     "title": "Palette",
@@ -87,17 +145,21 @@
       "DELAY": "Délai",
       "HTTP_REQUEST": "Requête HTTP",
       "CALL_SCENARIO": "Appel Scénario",
+      "PARALLEL": "Parallèle",
       "END_PASS": "Fin OK",
       "END_FAIL": "Fin Erreur",
       "TIMEOUT": "Timeout",
-      "BRANCH": "Branchement"
+      "BRANCH": "Branchement",
+      "OPERATOR": "Opérateur"
     },
     "descriptions": {
       "RETRY": "Réexécute un sous-graphe jusqu'à N fois ; s'arrête au premier succès.",
       "LOOP": "Exécute un sous-graphe exactement N fois ; toutes les itérations doivent réussir.",
       "WAIT": "Bloque jusqu'au timeout ; action configurable (continuer / échouer / sauter).",
       "DELAY": "Pause fixe (ms). Continue toujours au succès — pas de branchement.",
-      "CALL_SCENARIO": "Exécute un autre scénario comme sous-flux synchrone réutilisable."
+      "CALL_SCENARIO": "Exécute un autre scénario comme sous-flux synchrone réutilisable.",
+      "PARALLEL": "Exécute le scénario enfant pour chaque ligne du jeu de données, en parallèle ; réussit si tous les enfants réussissent.",
+      "OPERATOR": "Attend qu'une personne ait effectué une étape dans un autre système et la confirme ou la refuse ici."
     }
   },
   "bottomPanel": {
@@ -253,6 +315,25 @@
       "from": "De",
       "to": "Vers",
       "noScenarios": "-- sélectionner scénario --"
+    },
+    "parallel": {
+      "desc": "Exécute le scénario enfant une fois par ligne sélectionnée du jeu de données de l'exécution, toutes en même temps sur cette session. Réussit quand tous les enfants réussissent. Le délai couvre tout le nœud.",
+      "targetScenario": "Scénario enfant",
+      "noScenario": "-- sélectionner scénario --",
+      "rows": "Lignes",
+      "allRows": "Toutes les lignes",
+      "selectedRows": "Lignes sélectionnées",
+      "rowsHint": "Index de ligne à partir de 0, séparés par des virgules",
+      "rowsSummary": "lignes {{rows}}",
+      "maxConcurrency": "Enfants simultanés max",
+      "inputVarsHint": "Copiées du parent dans chaque enfant. Chaque enfant voit aussi sa propre ligne (marqueurs row:Colonne)."
+    },
+    "operator": {
+      "desc": "Affiche l'instruction à la personne qui exécute le scénario et attend sa réponse. Confirmer suit success, échec suit failure ; la note est stockée dans operator:<nodeId>:note. Délai par défaut 10 minutes.",
+      "instruction": "Instruction",
+      "instructionHint": "Les paramètres comme {{var:x}} ou {{row:Colonne}} sont résolus à l'ouverture de l'invite.",
+      "confirmLabel": "Libellé du bouton de confirmation",
+      "failLabel": "Libellé du bouton d'échec"
     }
   },
   "executionReport": {
@@ -263,5 +344,26 @@
     "exportPdf": "PDF",
     "exportPdfBusy": "PDF...",
     "exportPdfTitle": "Exporter le diagramme en PDF"
+  },
+  "runDialog": {
+    "title": "Exécuter le scénario",
+    "dataset": "Jeu de données",
+    "noDataset": "(aucun)",
+    "row": "Ligne",
+    "allRows": "Toutes les lignes",
+    "allRowsHint": "Une exécution par ligne, {{count}} au total, l'une après l'autre",
+    "addVar": "+ Variable",
+    "varName": "Nom de la variable",
+    "varValue": "Valeur de la variable",
+    "removeVar": "Supprimer la variable",
+    "cancel": "Annuler",
+    "start": "Démarrer"
+  },
+  "operator": {
+    "title": "Action de l'opérateur requise",
+    "note": "Note (facultative)",
+    "confirm": "Fait",
+    "fail": "Échec",
+    "error": "La réponse n'a pas pu être envoyée"
   }
 }

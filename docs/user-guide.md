@@ -150,7 +150,7 @@ For loopback testing (simulator talks to itself), create one ACCEPTOR and one IN
 
 The **Active session** dropdown lets you switch between saved sessions. The currently selected session is used for all FIX blocks in the running scenario.
 
-> **Note:** After restarting the application, sessions must be reconnected manually — click Connect for each session you need.
+> **Note:** After restarting the application, a session is reconnected automatically only if **Connect at startup** is ticked in its form (acceptors connect before initiators; a session that fails to connect is logged and the others still start). Sessions without the flag must be reconnected manually — click Connect.
 
 ---
 
@@ -348,6 +348,44 @@ Pauses execution for a fixed number of milliseconds, then always continues on th
 
 **Stopped propagation:** If the child is stopped (e.g. execution cancelled), the parent is also stopped immediately.
 
+#### Parallel
+
+**Purpose:** Runs another scenario once per row of the execution's data set, all at the same time on the same FIX session — for example one RFQ inquiry per row, each child waiting for the quotes that carry its own inquiry id. The node passes when every child passes. It sits in the **Flow Control** group of the palette.
+
+**Canvas appearance:** Teal border (`#14b8a6`). Shows the child scenario name and which rows run. Has a success handle and a red failure handle.
+
+**Config fields:**
+
+| Field | Description |
+|---|---|
+| **Child scenario** | The scenario to run for each row. |
+| **Rows** | *All rows* (default) or *Selected rows*: 0-based row indexes, comma separated (e.g. `0, 2, 5`). |
+| **Max concurrent children** | How many children run at once (default 10); the others wait their turn. |
+| **Input Variables** | Copied from the parent into every child, as in Call Scenario. Each child also reads its own row with `{{row:Column}}`. |
+| **Timeout** | Covers the whole node. When it expires, children still running are stopped and count as failed (`TIMEOUT`). |
+
+**Data set:** run the parent with a data set (the *Data set* choice in the run dialog, or the scenario's data set). Without one the node fails.
+
+**Correlation:** in the child, give the Expect FIX both the MsgType and a correlation on the row value, e.g. tag `20117` = `{{row:inquiry}}`. When several children wait for the same MsgType, each message goes to the waiter whose conditions it matches with the most conditions; a waiter with no conditions only gets what nobody else wants.
+
+**Results:** the parent gets `parallel:<nodeId>:passed`, `parallel:<nodeId>:failed` and `parallel:<nodeId>:<row>:status` (usable as `{{var:...}}`), and the event log shows `"<passed>/<total> children passed"`. Child runs have no event log of their own.
+
+#### Operator
+
+**Purpose:** A manual step. The run pauses and shows a prompt; you do something in another system (a venue, a back office) and then confirm or fail the step here. It sits in the **Flow Control** group of the palette.
+
+**Canvas appearance:** Rose border (`#f43f5e`). Shows the instruction. Has a success handle and a red failure handle.
+
+**Config fields:**
+
+| Field | Description |
+|---|---|
+| **Instruction** | What the person must do. `{{var:..}}` and `{{row:..}}` placeholders are resolved when the prompt opens. |
+| **Confirm / Fail button label** | Optional; default *Done* / *Failed*. |
+| **Timeout** | How long to wait (default 10 minutes) and what to do after it, as for the other nodes. |
+
+**While running:** a prompt appears at the bottom right with the instruction and a note field. *Done* continues along the success edge, *Failed* along the failure edge. The note is kept as `{{var:operator:<nodeId>:note}}`. Stopping the run closes the prompt.
+
 **Typical use case:** Extract a reusable sub-flow (e.g. a RFQ handshake) into a separate scenario and call it from multiple parent scenarios.
 
 ---
@@ -487,6 +525,15 @@ In any block's properties, scroll down to **Variable Reference** and click it to
 
 Click **Run** (or **Esegui**) in the top bar. The button is greyed out if no session is connected.
 
+The **Run scenario** dialog opens:
+
+- **Data set**: optional. The scenario's own `datasetRef` is preselected. Its values are used in the scenario as `{{row:Column}}`. Choosing *no data set* does not override a `datasetRef`: the scenario still runs with its own data set.
+- **Row**: which row of the data set to use (row 0 by default); the first columns of each row are shown.
+- **All rows**: one execution per row, one after another. A failed row does not stop the next one. The canvas, the event log and the operator prompt follow the row that is running now: when a row ends the GUI moves on to the next one (block colours start again from blank, the log keeps the earlier rows). **Run** stays disabled until the last row has ended; the run's final status is *FAILED* if any row failed, else *STOPPED* if a row was stopped, else *PASSED*. **Stop** stops every row that has not ended (queued rows are skipped).
+- **+ Variable**: name/value pairs passed to the run as `{{var:name}}`, overriding the scenario's defaults.
+
+Press **Start** to run (an unsaved scenario is saved first).
+
 ### During execution
 
 - The currently executing block **pulses green**
@@ -625,6 +672,41 @@ edges:
 
 ---
 
+## Data sets
+
+A **data set** is a named table of values (columns and rows) kept by the simulator, for runs that take their
+values from a table. Open the page with the **Data sets** button at the bottom of the left panel.
+
+- **Import CSV**: pick a `.csv` file (header row first; commas, quoted fields and Excel exports with a BOM are fine).
+  The data set takes the file name. A file whose rows are shorter or longer than the header, or with a repeated
+  column name, is refused and the message names the line.
+- **+ New**: creates an empty data set with one column.
+- **Edit**: click a cell to change it; rename columns in the header; **+ Row** / **+ Column** add, the **x** buttons
+  remove. Press **Save** to store the changes. Names must be unique.
+- **Export CSV** downloads the data set; **Delete** removes it.
+
+## Provider packs
+
+A **provider pack** is a zip that sets the simulator up for one counterparty in one go: its FIX dictionaries, data
+sets, scenarios and sessions. Open the page with the **Packs** button at the bottom of the left panel.
+
+- **Import pack**: pick the `.zip`. The page shows the pack's name and version and a field for each value the pack
+  asks for (CompIDs, ports, ...), with its description; fields marked `*` are required, the others start from their
+  default. **Install** creates everything. The result lists what was created and any warnings.
+- Importing a newer version of an installed pack shows **Update**: the fields start from the values the pack was
+  installed with, and every object is updated in place. Scenarios, data sets and sessions the new version no longer
+  has are removed; your own objects are never touched. A connected session of the pack is reconnected only if its
+  configuration changed.
+- An import or delete is refused while an execution of the pack is running: stop it (or wait) and retry.
+- **Export** downloads the pack as it is now, your edits included; **Delete** removes the pack and everything it
+  installed.
+- In the scenario list, scenarios from a pack show `pack <id>`, and a filter above the list shows one pack, or only
+  the scenarios that are not from a pack.
+
+The pack format is described in [Provider packs](packs.md).
+
+---
+
 ## 12. FIX Session Configuration Guide
 
 ### All session fields
@@ -642,6 +724,7 @@ edges:
 | Heartbeat Interval (sec) | Seconds between heartbeat messages | `30` |
 | Reset on Logon | Reset sequence numbers on each logon | `No` |
 | Reset on Logout | Reset sequence numbers on logout | `No` |
+| Data dictionary | Optional custom QuickFIX/J dictionary for this session, chosen from the XML files uploaded via `POST /api/v1/dictionaries`. `Built-in` keeps the dictionary bundled with the FIX version. FIX 5.0 SP2 sessions show an app and a transport dictionary | `Built-in` |
 
 ### FIX versions
 
@@ -734,7 +817,7 @@ To test without an external counterparty:
 - **INITIATOR**: verify Host and Port match the acceptor's settings; ensure the acceptor is running
 - **ACCEPTOR**: the status shows DISCONNECTED while waiting for an initiator — this is normal
 - **CompID mismatch**: SenderCompID on one side must match TargetCompID on the other
-- **After app restart**: reconnect each session manually (connections are not persisted across restarts)
+- **After app restart**: sessions with **Connect at startup** ticked reconnect on their own; reconnect the others manually (connections are not persisted across restarts)
 
 ### Blocks are invisible after reload (visibility: hidden)
 

@@ -31,6 +31,26 @@ class VariableResolverTest {
     private String resolve(String template) { return resolver.resolveAll(template, ctx); }
 
     @Test
+    void row_placeholder() {
+        ctx.setRow(java.util.Map.of("Isin", "XS1", "Qty", "100"));
+        ctx.setRowIndex(3);
+        assertThat(resolve("{{row:Isin}}/{{row:Qty}}/{{row:#}}")).isEqualTo("XS1/100/3");
+    }
+
+    @Test
+    void unknown_row_column_names_it() {
+        ctx.setRow(java.util.Map.of("Isin", "XS1"));
+        assertThatThrownBy(() -> resolve("{{row:Nope}}"))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Nope");
+    }
+
+    @Test
+    void row_placeholder_without_row_names_the_column() {
+        assertThatThrownBy(() -> resolve("{{row:Isin}}"))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Isin");
+    }
+
+    @Test
     void nullTemplateReturnsNull() {
         assertThat(resolver.resolveAll(null, ctx)).isNull();
     }

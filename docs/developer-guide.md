@@ -184,7 +184,9 @@ record Scenario(
     String version,
     String sessionRef,
     List<ScenarioNode> nodes,
-    List<ScenarioEdge> edges
+    List<ScenarioEdge> edges,
+    // ... runtimePolicy, routing/correlation rules, variables, rawYaml, datasetRef
+    String packId              // provider pack that installed it; from the DB row, never from the YAML
 )
 ```
 
@@ -301,6 +303,10 @@ The engine's in-flight representation of a FIX message, carried between `FIXSess
 | `EventPublisherPort` | `StompEventPublisher` (STOMP over WebSocket) |
 | `ExecutionRepositoryPort` | `ExecutionRepositoryAdapter` (JPA/H2) |
 | `ScenarioRepositoryPort` | `ScenarioRepositoryAdapter` (JPA/H2) |
+| `DataSetRepositoryPort` | `DataSetRepositoryAdapter` (JPA/H2) |
+| `FIXSessionRepositoryPort` | `FIXSessionRepositoryAdapter` (JPA/H2) |
+| `DictionaryStorePort` | `DictionaryStore` (dictionary folder, QuickFIX/J validation) |
+| `PackRepositoryPort` | `PackRepositoryAdapter` (JPA/H2) |
 | `FIXSessionPort` | `QuickFIXAdapter` (QuickFIX/J) |
 | `InboundMessageListener` | `MessageRouter` (engine internal) |
 
@@ -343,11 +349,14 @@ Package root: `com.fixflow.engine`
 Central orchestrator. Spring `@Service`. Uses `Executors.newVirtualThreadPerTaskExecutor()` — each execution runs on its own virtual thread.
 
 ```java
-UUID start(UUID scenarioId, UUID sessionId)
+UUID start(UUID scenarioId, UUID sessionId)                       // = start(.., ExecutionInputs.none()).get(0)
+List<UUID> start(UUID scenarioId, UUID sessionId, ExecutionInputs inputs)
 void stop(UUID executionId)
 ExecutionStatus getStatus(UUID executionId)
 ExecutionContext getContext(UUID executionId)
 ```
+
+**Execution inputs.** `ExecutionInputs(datasetId, rowIndex, allRows, vars)` is validated before anything starts. A context is built per row: scenario `variables` defaults first, then `inputs.vars`, then the data set row (`ctx.row()`, `ctx.rowIndex()`, read by `{{row:..}}` through `VariableResolver.RowPlugin`). The data set is `inputs.datasetId`, else the scenario's `datasetRef` (id or name) looked up in `DataSetRepositoryPort`; the port is optional (null in the unit-test constructors means no data sets). With `allRows` the rows run one after another on one virtual thread (`runBatch`); every row ends in its own status, rows still queued when one is stopped are skipped, not interrupted. The whole data set is also bound to every context (`ctx.dataSet()`), so a PARALLEL node can read all its rows. `ChildRunner` (shared by `CallScenarioHandler` and `ParallelHandler`) builds child contexts: fresh execution id, parent session, the given row (CALL_SCENARIO: the parent's), the parent's data set, `call:depth` + 1 (max 5), `inputVars`; `StepListener.NOOP`, not registered in `SessionExecutionRegistry`.
 
 **Execution loop** (`runScenario`):
 
@@ -425,6 +434,9 @@ record NodeHandlerResult(
 | `RetryHandler` / `LoopHandler` | Executes sub-graph `maxAttempts` times with `delayMs` between attempts. |
 | `WaitHandler` / `DelayHandler` | `Thread.sleep(timeout.toMillis())`. Returns `onSuccess`. |
 | `HttpRequestHandler` | Issues HTTP request via `java.net.http.HttpClient`. Stores response body in context. |
+| `CallScenarioHandler` | Runs the target scenario synchronously through `ChildRunner`; copies `outputVars` back. |
+| `ParallelHandler` | Runs one child per selected data set row through `ChildRunner`, concurrently on a per-node virtual-thread executor capped by a `Semaphore(maxConcurrency)`; waits for all within the node timeout, then `shutdownNow()` interrupts the rest (their `ExpectFIXHandler` cancels its waiter on interrupt) and waits up to 5 s for them to unwind. Sets `parallel:<id>:passed/failed/<row>:status`. |
+| `OperatorHandler` | Opens a prompt on `OperatorGateway` (keyed by the context's execution id, remembering `ctx.ancestors()`), emits `OPERATOR_PROMPT` through `ctx.emitNodeEvent(type, nodeId, detail)`, waits on the future for the node timeout (default 10 min), then emits `OPERATOR_ANSWERED`. Interrupt rethrows, a cancelled prompt fails the node; the prompt is always closed in `finally`. `ExecutionManager.stop` calls `OperatorGateway.cancel`. `ChildRunner` gives a child its `ancestors` and the parent's detail emitter, so a prompt of a PARALLEL child is listed by `GET /executions/{parent}/operator` and its events land on the parent stream. |
 | `EndHandler` / `EndFailHandler` | Returns `success=true/false` with `nextNodeId=null`. |
 
 ### CorrelationEngine
@@ -442,11 +454,20 @@ correlation:
 
 The engine resolves `fromNode`'s stored message, extracts `targetTag`, then checks whether the inbound message's `sourceTag` equals that value. If `correlation` is absent, any message of the right `msgType` matches.
 
+**Selection among waiters.** `onMessage` considers every waiter of the session (EXPECT_FIX
+`CorrelationWaiter`s and ROUTE_FIX `MultiRouteWaiter`s together) whose matchers all hold, and
+completes the one with the most matchers; ties go to the earliest registered (each waiter carries
+a registration sequence number `seq`). A ROUTE_FIX waiter scores the matcher count of its first
+matching rule, 0 for its default rule. Selection and removal run under one lock so two messages
+handled at once can never both take the same waiter; completion happens outside the lock. This is
+what lets PARALLEL children wait on one session for the same MsgType, each on its own correlation
+value.
+
 ### MessageBuffer
 
 `com.fixflow.engine.fix.MessageBuffer`
 
-Thread-safe queue of inbound FIX messages. `ExpectFIXHandler` and `RouteFIXHandler` poll this buffer with backoff. `MessageRouter` (implements `InboundMessageListener`) feeds messages into it as they arrive from QuickFIX/J.
+Thread-safe queue of inbound FIX messages. `ExpectFIXHandler` and `RouteFIXHandler` poll this buffer with backoff. `MessageRouter` (implements `InboundMessageListener`) feeds messages into it as they arrive from QuickFIX/J. `poll(sessionId, matcher)` runs one caller at a time per session (it locks that session's deque): the matcher consumes the message by completing a correlation waiter, so two executions draining the same session at once (e.g. PARALLEL children) must never both take one buffered message. `MessageRouter.onMessage` offers a message to the correlation engine, and on a miss parks it, records it, then drains the session once more: a waiter that registered (and drained an empty buffer) between the miss and the park would otherwise never see it.
 
 ### ValidationEngine
 
@@ -522,6 +543,32 @@ In-memory map of `UUID → Scenario`. Populated by `ScenarioRegistryInitializer`
 
 Parses a YAML DSL string (via Jackson `YAMLMapper`) into a `Scenario` domain record. Called by `ScenarioRepositoryAdapter` when saving a scenario with a non-empty `yamlDsl` field.
 
+### Provider packs
+
+`com.fixflow.engine.pack` (format: [packs.md](packs.md))
+
+- `PackReader` — zip or folder → `PackContents`; refuses entries outside `pack.yaml` + the four folders, `..`,
+  absolute paths, more than 64 MB uncompressed.
+- `PackManifestCodec` — `pack.yaml` ↔ `PackManifest` (core record, with its `values`).
+- `PackReferenceResolver` — works on the scenario YAML as a Jackson tree so other keys and their order survive:
+  names → ids on import (`sessionRef`, `datasetRef`, node `config.targetScenario` → `targetScenarioId`), back on
+  export; `${NAME}` substitution in session files (string scalars only).
+- `PackImporter` — `importPack(zip, values)` validates everything before the first write, then upserts by
+  `(packId, name)` and removes what the pack dropped; `uninstall(id)`. Dictionaries are stored as
+  `<packId>__<file>`. Both methods are `synchronized`.
+- `PackExecutionGuard` — the `409` check: `ExecutionManager.unfinishedExecutionsOf(scenarioIds)` (top-level
+  executions still `RUNNING`) plus `SessionExecutionRegistry.executionsFor(sessionId)` for the pack's sessions.
+- `PackExporter` — current state → zip (sorted entries, fixed entry time, so the same state exports to the same
+  bytes).
+
+The pack tag is a column on each object (`scenarios.pack_id`, `data_sets.pack_id`, `fix_sessions.pack_id`), never in
+the YAML; `Scenario.packId()` is filled from the row. A save without a tag keeps the row's tag. The engine version
+for `engineMin` is `fixflow.version`, filled from the Maven project version in `application.yml`.
+
+The test pack `fix-flow-engine/src/test/resources/packs/demo/` is generic: QuickFIX/J's FIX50SP2 dictionary with
+one extra field (`DemoCustomTag` 20900 on `QuoteRequest`), one CSV, two scenarios (one calls the other by name) and
+one session template.
+
 ### HotReloadService
 
 `com.fixflow.engine.fix.HotReloadService`
@@ -547,6 +594,18 @@ JPA entities live in `com.fixflow.adapters.persistence.entity`. Entity names map
 | `FIXMessageEntity` | `fix_message` | Raw FIX string + direction |
 | `FIXSessionEntity` | `fix_session` | Session config; `connected` not persisted |
 | `ValidationErrorEntity` | `validation_error` | Per-field rule failures |
+| `DataSetEntity` | `data_sets` | Data set table: unique `name` (index `uk_data_sets_name`, see below), nullable `packId`, `columnsJson` / `rowsJson` CLOBs (JSON arrays of strings). CSV parsing and writing is `CsvCodec` in the engine module; the domain record is `DataSet` (`row(int)` gives column to value) |
+| `PackEntity` | `packs` | Installed provider packs: `id`, `name`, `version`, `provider`, `manifestYaml` CLOB (the parsed `pack.yaml` written back), `valuesJson` CLOB (values the pack was installed with), `installedAt`, `updatedAt` |
+
+`ScenarioEntity`, `DataSetEntity` and `FIXSessionEntity` carry a nullable `packId`: the pack that installed the row.
+
+**Unique data set names.** The application runs `ddl-auto: update` with `unique_constraint_strategy: SKIP` (so a
+restart does not re-issue existing constraints, issue #103), which means Hibernate never creates the
+`@UniqueConstraint` of `DataSetEntity`. `DataSetNameIndex` (adapters, runs after the `EntityManagerFactory` is built)
+creates it with `CREATE UNIQUE INDEX IF NOT EXISTS uk_data_sets_name ON data_sets(name)`. If the table already holds
+duplicate names it logs a WARN naming them and skips the index instead of failing startup; lookups stay deterministic
+because `JpaDataSetRepository.findFirstByNameOrderByCreatedAtAscIdAsc` answers the oldest row. `DataSetController`
+turns a `DataIntegrityViolationException` from the save (two creates racing past the name check) into `409`.
 
 Repository adapters (`ScenarioRepositoryAdapter`, `ExecutionRepositoryAdapter`, `FIXSessionRepositoryAdapter`) implement the core port interfaces by delegating to Spring Data JPA repositories.
 
@@ -680,7 +739,8 @@ Runs on `ApplicationReadyEvent`. Loads all scenarios from the DB and calls `Scen
 | Controller | Path prefix | Key operations |
 |-----------|-------------|----------------|
 | `SessionController` | `/api/v1/sessions` | CRUD, connect, disconnect |
-| `ScenarioController` | `/api/v1/scenarios` | CRUD, execute, import, export |
+| `ScenarioController` | `/api/v1/scenarios` | CRUD (`?packId=` filter; delete also unregisters), execute, import, export |
+| `PackController` | `/api/v1/packs` | list, inspect, import (install/update), export, delete |
 | `ExecutionController` | `/api/v1/executions` | list, get, stop, report |
 | `SystemController` | `/api/v1/system` | shutdown |
 | `HealthController` | `/api/v1/system` | health |
@@ -843,7 +903,9 @@ markDirty()             markClean()
 #### `executionStore`
 
 ```typescript
-activeExecutionId: string | null
+activeExecutionId: string | null   // the execution the GUI shows and subscribes to
+executionIds: string[]             // every execution of the current run, in row order
+finishedStatuses: Record<string, 'PASSED'|'FAILED'|'STOPPED'>
 executionStatus: ExecutionStatus | 'IDLE'
 events: ExecutionEvent[]
 messages: FIXMessage[]
@@ -858,10 +920,16 @@ addEvent(event)        // deduped by event.id
 addMessage(msg)        // deduped by msg.id
 setNodeStatus(nodeId, status)
 setStartedAt(iso)      setEndedAt(iso)
-reset()
+finishExecution(id, status, at)   // on EXECUTION_FINISHED
+unfinishedExecutionIds()          // what Stop stops
 ```
 
-`reset()` is called before each new execution to clear previous results.
+`TopBar` resets the store with one atomic `setState` before each new run (`executionIds` from the execute
+response). An all-rows run is followed row by row: `finishExecution` of the active id moves `activeExecutionId`
+to the next id in one `setState` (so `useExecutionSubscription` resubscribes, backfills and reads that row's operator
+prompt) and keeps the status; after the last row the status is `FAILED` if any row failed, else `STOPPED` if any was
+stopped, else `PASSED`. A finish of an id the run has already left (a backfill replay) is ignored. Stop calls
+`POST /executions/{id}/stop` for every unfinished id, queued rows first (no batch endpoint).
 
 #### `sessionStore`
 
@@ -1093,6 +1161,17 @@ Sessions are created via the GUI or `POST /api/v1/sessions`. QuickFIX/J handles 
 | `heartbeatInterval` | int | FIX tag 108, seconds (standard: 30) |
 | `resetOnLogon` | bool | Send reset flag on logon |
 | `resetOnLogout` | bool | Reset state on logout |
+| `appDataDictionary` | string, optional | Name of a stored dictionary (`DictionaryStore`, folder `fixflow.dictionaries.dir`, default `./dictionaries`) used as `DataDictionary` (FIX 4.x) or `AppDataDictionary` (FIXT.1.1); null = built-in classpath dictionary |
+| `transportDataDictionary` | string, optional | FIXT.1.1 `TransportDataDictionary`; null = `FIXT11.xml` |
+| `autoConnect` | bool, optional | Connected at startup by `SessionAutoConnector` (`ApplicationReadyEvent`): acceptors first, a failure is logged and does not stop the others |
+
+`FIXSessionConfig` also carries `packId`, persisted but not exposed in the REST DTOs.
+`QuickFIXAdapter.buildSettings` resolves a dictionary name through `DictionaryStore.resolve` and sets its absolute path
+(QuickFIX/J resolves a setting as URL, then file, then classpath). A missing or unparsable file throws
+`IllegalArgumentException`, which `GlobalExceptionHandler` answers as 400. `QuickFIXAdapter.connect` builds the
+settings before it stops the existing connector, so a reconnect with a bad dictionary fails without dropping the live
+session. On `PUT /sessions/{id}` an absent (`null`) dictionary keeps the stored value and `""` clears it (the
+session panel sends `""` for the built-in choice).
 
 ### Session lifecycle
 
